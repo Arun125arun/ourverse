@@ -1,5 +1,7 @@
 package com.lovenote.app.settings
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -55,6 +57,9 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     var showAbout by remember { mutableStateOf(false) }
     var confirmLogout by remember { mutableStateOf(false) }
+    var checkingUpdate by remember { mutableStateOf(false) }
+    var updateStatus by remember { mutableStateOf<String?>(null) }
+    var availableUpdate by remember { mutableStateOf<UpdateChecker.UpdateInfo?>(null) }
 
     Scaffold(
         topBar = {
@@ -139,6 +144,44 @@ fun SettingsScreen(
             HorizontalDivider()
             Spacer(Modifier.height(24.dp))
 
+            SectionTitle("App update")
+            Text(
+                text = "Installed version: ${UpdateChecker.installedVersionName(context)}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+            Spacer(Modifier.height(12.dp))
+            OutlinedButton(
+                onClick = {
+                    scope.launch {
+                        checkingUpdate = true
+                        updateStatus = null
+                        val latest = UpdateChecker.fetchLatest()
+                        checkingUpdate = false
+                        when {
+                            latest == null ->
+                                updateStatus = "Couldn't check — are you online?"
+                            latest.versionCode > UpdateChecker.installedVersionCode(context) ->
+                                availableUpdate = latest
+                            else ->
+                                updateStatus = "You're up to date ✓"
+                        }
+                    }
+                },
+                enabled = !checkingUpdate,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(if (checkingUpdate) "Checking…" else "Check for updates")
+            }
+            updateStatus?.let {
+                Spacer(Modifier.height(8.dp))
+                Text(it, style = MaterialTheme.typography.bodyMedium)
+            }
+
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(24.dp))
+
             SectionTitle("About")
             Text(
                 text = "About us",
@@ -151,6 +194,32 @@ fun SettingsScreen(
         }
     }
 
+    availableUpdate?.let { update ->
+        AlertDialog(
+            onDismissRequest = { availableUpdate = null },
+            title = { Text("Update available ❤") },
+            text = {
+                Text(
+                    "Version ${update.versionName} is ready. It will download in " +
+                        "your browser — open the file when it finishes to install.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    availableUpdate = null
+                    runCatching {
+                        context.startActivity(
+                            Intent(Intent.ACTION_VIEW, Uri.parse(update.url)),
+                        )
+                    }
+                }) { Text("Download") }
+            },
+            dismissButton = {
+                TextButton(onClick = { availableUpdate = null }) { Text("Later") }
+            },
+        )
+    }
+
     if (showAbout) {
         AlertDialog(
             onDismissRequest = { showAbout = false },
@@ -160,7 +229,7 @@ fun SettingsScreen(
             title = { Text("OurVerse ❤") },
             text = {
                 Text(
-                    "Version 0.1\n\n" +
+                    "Version ${UpdateChecker.installedVersionName(context)}\n\n" +
                         "OurVerse is a tiny universe for two people: chat with your " +
                         "partner, leave little notes on each other's home screen, and " +
                         "keep them close as your wallpaper.\n\n" +
