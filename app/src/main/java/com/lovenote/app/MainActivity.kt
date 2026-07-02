@@ -1,8 +1,11 @@
 package com.lovenote.app
 
+import android.Manifest
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -37,6 +40,9 @@ import com.lovenote.app.notes.NoteCache
 import com.lovenote.app.notes.NoteRepository
 import com.lovenote.app.notes.NotesHistoryScreen
 import com.lovenote.app.notes.SendNoteScreen
+import com.lovenote.app.notify.AppVisibility
+import com.lovenote.app.notify.Notifier
+import com.lovenote.app.notify.NotifyState
 import com.lovenote.app.pairing.PairingRepository
 import com.lovenote.app.settings.AppSettings
 import com.lovenote.app.settings.SettingsScreen
@@ -47,9 +53,26 @@ import com.lovenote.app.pairing.PairingScreen
 import com.lovenote.app.ui.theme.LoveNoteTheme
 
 class MainActivity : ComponentActivity() {
+
+    private val notificationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
+
+    override fun onResume() {
+        super.onResume()
+        AppVisibility.appVisible = true
+    }
+
+    override fun onPause() {
+        AppVisibility.appVisible = false
+        super.onPause()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppSettings.load(this)
+        if (Build.VERSION.SDK_INT >= 33) {
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
         setContent {
             LoveNoteTheme {
                 var signedIn by remember {
@@ -93,13 +116,43 @@ private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
     val usRepository = remember(coupleId) { UsRepository(coupleId) }
     var screen by remember { mutableStateOf(HomeScreen.CHAT) }
 
-    // Keep the widget's cached note fresh while the app is open.
+    // Keep the widget's cached note fresh while the app is open, and
+    // notify + vibrate on fresh notes.
     LaunchedEffect(coupleId) {
+        var firstEmission = true
         noteRepository.latestFromPartner().collect { note ->
             if (note != null) {
                 NoteCache.save(context, note)
                 NoteWidget().updateAll(context)
+                val millis = note.sentAt?.toDate()?.time ?: 0L
+                if (!firstEmission && millis > NotifyState.lastNoteMillis(context)) {
+                    Notifier.notifyNote(context, note.text)
+                }
+                NotifyState.setLastNote(context, millis)
+                firstEmission = false
             }
+        }
+    }
+
+    // Notify + vibrate on fresh partner messages while the app is open.
+    LaunchedEffect(coupleId) {
+        var firstEmission = true
+        chatRepository.messages().collect { list ->
+            val newest = list.firstOrNull { !it.isMine(chatRepository.myUid) }
+                ?: return@collect
+            val millis = newest.sentAt?.toDate()?.time ?: return@collect
+            if (!firstEmission && millis > NotifyState.lastMessageMillis(context)) {
+                if (AppVisibility.chatVisible) {
+                    Notifier.vibrate(context)
+                } else {
+                    Notifier.notifyMessage(
+                        context,
+                        if (newest.isPhoto) "📷 Photo" else newest.body,
+                    )
+                }
+            }
+            NotifyState.setLastMessage(context, millis)
+            firstEmission = false
         }
     }
 

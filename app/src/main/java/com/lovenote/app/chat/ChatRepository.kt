@@ -59,6 +59,17 @@ class ChatRepository(
         batch.commit().await()
     }
 
+    /** One-shot fetch of the partner's newest message (for background checks). */
+    suspend fun fetchLatestFromPartner(): Message? =
+        messagesRef
+            .orderBy("sentAt", Query.Direction.DESCENDING)
+            .limit(10)
+            .get()
+            .await()
+            .documents
+            .map { Message.fromMap(it.id, it.data ?: emptyMap()) }
+            .firstOrNull { !it.isMine(myUid) }
+
     suspend fun delete(messageId: String) {
         messagesRef.document(messageId).delete().await()
     }

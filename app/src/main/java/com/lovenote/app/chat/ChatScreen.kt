@@ -40,6 +40,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -55,6 +56,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.google.firebase.Timestamp
+import com.lovenote.app.notify.AppVisibility
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -84,6 +86,11 @@ fun ChatScreen(
     // Read receipts: stamp partner messages as seen while the chat is open.
     LaunchedEffect(messages) {
         runCatching { repository.markPartnerMessagesSeen(messages) }
+    }
+
+    DisposableEffect(Unit) {
+        AppVisibility.chatVisible = true
+        onDispose { AppVisibility.chatVisible = false }
     }
 
     // Typing indicator visibility with expiry.
