@@ -9,6 +9,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -16,10 +17,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import com.google.firebase.auth.FirebaseAuth
 import com.lovenote.app.auth.SignInScreen
 import com.lovenote.app.chat.ChatRepository
 import com.lovenote.app.chat.ChatScreen
+import com.lovenote.app.notes.NoteCache
+import com.lovenote.app.notes.NoteRepository
+import com.lovenote.app.notes.SendNoteScreen
 import com.lovenote.app.pairing.PairingRepository
 import com.lovenote.app.pairing.PairingScreen
 import com.lovenote.app.ui.theme.LoveNoteTheme
@@ -62,11 +67,29 @@ private fun PairedGate() {
 
 @Composable
 private fun Home(coupleId: String) {
+    val context = LocalContext.current
     val chatRepository = remember(coupleId) { ChatRepository(coupleId) }
-    ChatScreen(
-        repository = chatRepository,
-        onSendNoteClick = { /* wired to the note screen in the next task */ },
-    )
+    val noteRepository = remember(coupleId) { NoteRepository(coupleId) }
+    var composingNote by remember { mutableStateOf(false) }
+
+    // Keep the widget's cached note fresh while the app is open.
+    LaunchedEffect(coupleId) {
+        noteRepository.latestFromPartner().collect { note ->
+            if (note != null) NoteCache.save(context, note)
+        }
+    }
+
+    if (composingNote) {
+        SendNoteScreen(
+            repository = noteRepository,
+            onBack = { composingNote = false },
+        )
+    } else {
+        ChatScreen(
+            repository = chatRepository,
+            onSendNoteClick = { composingNote = true },
+        )
+    }
 }
 
 @Composable
