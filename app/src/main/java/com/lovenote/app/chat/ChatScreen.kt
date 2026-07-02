@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -63,6 +64,7 @@ private const val TYPING_HEARTBEAT_MILLIS = 2_000L
 fun ChatScreen(
     repository: ChatRepository,
     onSendNoteClick: () -> Unit,
+    onSettingsClick: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -117,6 +119,9 @@ fun ChatScreen(
                 actions = {
                     IconButton(onClick = onSendNoteClick) {
                         Icon(Icons.Filled.Edit, contentDescription = "Send a note")
+                    }
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Settings")
                     }
                 },
             )

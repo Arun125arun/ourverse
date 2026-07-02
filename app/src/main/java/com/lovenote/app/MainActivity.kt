@@ -27,6 +27,8 @@ import com.lovenote.app.notes.NoteCache
 import com.lovenote.app.notes.NoteRepository
 import com.lovenote.app.notes.SendNoteScreen
 import com.lovenote.app.pairing.PairingRepository
+import com.lovenote.app.settings.AppSettings
+import com.lovenote.app.settings.SettingsScreen
 import com.lovenote.app.widget.NoteWidget
 import com.lovenote.app.pairing.PairingScreen
 import com.lovenote.app.ui.theme.LoveNoteTheme
@@ -34,6 +36,7 @@ import com.lovenote.app.ui.theme.LoveNoteTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AppSettings.load(this)
         setContent {
             LoveNoteTheme {
                 var signedIn by remember {
@@ -42,7 +45,7 @@ class MainActivity : ComponentActivity() {
                 if (!signedIn) {
                     SignInScreen(onSignedIn = { signedIn = true })
                 } else {
-                    PairedGate()
+                    PairedGate(onLoggedOut = { signedIn = false })
                 }
             }
         }
@@ -51,7 +54,7 @@ class MainActivity : ComponentActivity() {
 
 /** Routes between pairing and the main app based on live couple status. */
 @Composable
-private fun PairedGate() {
+private fun PairedGate(onLoggedOut: () -> Unit) {
     val repository = remember { PairingRepository() }
     val status by remember { repository.observeStatus() }
         .collectAsState(initial = null)
@@ -63,16 +66,18 @@ private fun PairedGate() {
                 waitingCode = status?.takeIf { it.coupleId != null }?.inviteCode,
                 repository = repository,
             )
-        else -> Home(coupleId = status?.coupleId!!)
+        else -> Home(coupleId = status?.coupleId!!, onLoggedOut = onLoggedOut)
     }
 }
 
+private enum class HomeScreen { CHAT, NOTE, SETTINGS }
+
 @Composable
-private fun Home(coupleId: String) {
+private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
     val context = LocalContext.current
     val chatRepository = remember(coupleId) { ChatRepository(coupleId) }
     val noteRepository = remember(coupleId) { NoteRepository(coupleId) }
-    var composingNote by remember { mutableStateOf(false) }
+    var screen by remember { mutableStateOf(HomeScreen.CHAT) }
 
     // Keep the widget's cached note fresh while the app is open.
     LaunchedEffect(coupleId) {
@@ -84,15 +89,19 @@ private fun Home(coupleId: String) {
         }
     }
 
-    if (composingNote) {
-        SendNoteScreen(
+    when (screen) {
+        HomeScreen.NOTE -> SendNoteScreen(
             repository = noteRepository,
-            onBack = { composingNote = false },
+            onBack = { screen = HomeScreen.CHAT },
         )
-    } else {
-        ChatScreen(
+        HomeScreen.SETTINGS -> SettingsScreen(
+            onBack = { screen = HomeScreen.CHAT },
+            onLoggedOut = onLoggedOut,
+        )
+        HomeScreen.CHAT -> ChatScreen(
             repository = chatRepository,
-            onSendNoteClick = { composingNote = true },
+            onSendNoteClick = { screen = HomeScreen.NOTE },
+            onSettingsClick = { screen = HomeScreen.SETTINGS },
         )
     }
 }
