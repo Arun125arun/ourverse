@@ -5,7 +5,17 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,6 +40,8 @@ import com.lovenote.app.notes.SendNoteScreen
 import com.lovenote.app.pairing.PairingRepository
 import com.lovenote.app.settings.AppSettings
 import com.lovenote.app.settings.SettingsScreen
+import com.lovenote.app.us.UsRepository
+import com.lovenote.app.us.UsScreen
 import com.lovenote.app.widget.NoteWidget
 import com.lovenote.app.pairing.PairingScreen
 import com.lovenote.app.ui.theme.LoveNoteTheme
@@ -71,13 +83,14 @@ private fun PairedGate(onLoggedOut: () -> Unit) {
     }
 }
 
-private enum class HomeScreen { CHAT, NOTE, HISTORY, SETTINGS }
+private enum class HomeScreen { CHAT, US, NOTE, HISTORY, SETTINGS }
 
 @Composable
 private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
     val context = LocalContext.current
     val chatRepository = remember(coupleId) { ChatRepository(coupleId) }
     val noteRepository = remember(coupleId) { NoteRepository(coupleId) }
+    val usRepository = remember(coupleId) { UsRepository(coupleId) }
     var screen by remember { mutableStateOf(HomeScreen.CHAT) }
 
     // Keep the widget's cached note fresh while the app is open.
@@ -90,26 +103,54 @@ private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
         }
     }
 
-    when (screen) {
-        HomeScreen.NOTE -> SendNoteScreen(
-            repository = noteRepository,
-            onBack = { screen = HomeScreen.CHAT },
-            onHistoryClick = { screen = HomeScreen.HISTORY },
-        )
-        HomeScreen.HISTORY -> NotesHistoryScreen(
-            repository = noteRepository,
-            onBack = { screen = HomeScreen.NOTE },
-        )
-        HomeScreen.SETTINGS -> SettingsScreen(
-            onBack = { screen = HomeScreen.CHAT },
-            onLoggedOut = onLoggedOut,
-            chatRepository = chatRepository,
-        )
-        HomeScreen.CHAT -> ChatScreen(
-            repository = chatRepository,
-            onSendNoteClick = { screen = HomeScreen.NOTE },
-            onSettingsClick = { screen = HomeScreen.SETTINGS },
-        )
+    Scaffold(
+        bottomBar = {
+            NavigationBar {
+                NavigationBarItem(
+                    selected = screen == HomeScreen.CHAT || screen == HomeScreen.SETTINGS,
+                    onClick = { screen = HomeScreen.CHAT },
+                    icon = { Icon(Icons.Filled.Email, contentDescription = null) },
+                    label = { Text("Chat") },
+                )
+                NavigationBarItem(
+                    selected = screen == HomeScreen.US,
+                    onClick = { screen = HomeScreen.US },
+                    icon = { Icon(Icons.Filled.Favorite, contentDescription = null) },
+                    label = { Text("Us") },
+                )
+                NavigationBarItem(
+                    selected = screen == HomeScreen.NOTE || screen == HomeScreen.HISTORY,
+                    onClick = { screen = HomeScreen.NOTE },
+                    icon = { Icon(Icons.Filled.Edit, contentDescription = null) },
+                    label = { Text("Notes") },
+                )
+            }
+        },
+    ) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
+            when (screen) {
+                HomeScreen.NOTE -> SendNoteScreen(
+                    repository = noteRepository,
+                    onBack = { screen = HomeScreen.CHAT },
+                    onHistoryClick = { screen = HomeScreen.HISTORY },
+                )
+                HomeScreen.HISTORY -> NotesHistoryScreen(
+                    repository = noteRepository,
+                    onBack = { screen = HomeScreen.NOTE },
+                )
+                HomeScreen.SETTINGS -> SettingsScreen(
+                    onBack = { screen = HomeScreen.CHAT },
+                    onLoggedOut = onLoggedOut,
+                    chatRepository = chatRepository,
+                )
+                HomeScreen.US -> UsScreen(repository = usRepository)
+                HomeScreen.CHAT -> ChatScreen(
+                    repository = chatRepository,
+                    onSendNoteClick = { screen = HomeScreen.NOTE },
+                    onSettingsClick = { screen = HomeScreen.SETTINGS },
+                )
+            }
+        }
     }
 }
 
