@@ -18,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.glance.appwidget.updateAll
 import com.google.firebase.auth.FirebaseAuth
 import com.lovenote.app.auth.SignInScreen
 import com.lovenote.app.chat.ChatRepository
@@ -26,6 +27,7 @@ import com.lovenote.app.notes.NoteCache
 import com.lovenote.app.notes.NoteRepository
 import com.lovenote.app.notes.SendNoteScreen
 import com.lovenote.app.pairing.PairingRepository
+import com.lovenote.app.widget.NoteWidget
 import com.lovenote.app.pairing.PairingScreen
 import com.lovenote.app.ui.theme.LoveNoteTheme
 
@@ -75,7 +77,10 @@ private fun Home(coupleId: String) {
     // Keep the widget's cached note fresh while the app is open.
     LaunchedEffect(coupleId) {
         noteRepository.latestFromPartner().collect { note ->
-            if (note != null) NoteCache.save(context, note)
+            if (note != null) {
+                NoteCache.save(context, note)
+                NoteWidget().updateAll(context)
+            }
         }
     }
 
