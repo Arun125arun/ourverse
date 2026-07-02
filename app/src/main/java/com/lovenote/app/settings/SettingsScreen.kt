@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,22 +15,29 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -43,6 +51,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -88,145 +97,156 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            SectionTitle("Theme")
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AppSettings.ThemeMode.entries.forEach { mode ->
-                    FilterChip(
-                        selected = AppSettings.themeMode == mode,
-                        onClick = { AppSettings.setThemeMode(context, mode) },
-                        label = {
+            SettingsCard(title = "Appearance") {
+                ThemePreview()
+                Spacer(Modifier.height(16.dp))
+
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    val modes = AppSettings.ThemeMode.entries
+                    modes.forEachIndexed { index, mode ->
+                        SegmentedButton(
+                            selected = AppSettings.themeMode == mode,
+                            onClick = { AppSettings.setThemeMode(context, mode) },
+                            shape = SegmentedButtonDefaults.itemShape(index, modes.size),
+                        ) {
                             Text(
-                                mode.name.lowercase().replaceFirstChar { it.uppercase() },
-                            )
-                        },
-                    )
-                }
-            }
-            Spacer(Modifier.height(12.dp))
-            Text("Color", style = MaterialTheme.typography.bodyMedium)
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                AppSettings.ACCENTS.forEach { (name, color) ->
-                    Column(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(color, CircleShape)
-                            .border(
-                                width = if (AppSettings.accentName == name) 3.dp else 1.dp,
-                                color = if (AppSettings.accentName == name) {
-                                    MaterialTheme.colorScheme.onBackground
-                                } else {
-                                    Color(0x33000000)
+                                when (mode) {
+                                    AppSettings.ThemeMode.SYSTEM -> "Auto"
+                                    AppSettings.ThemeMode.LIGHT -> "Light"
+                                    AppSettings.ThemeMode.DARK -> "Dark"
                                 },
-                                shape = CircleShape,
                             )
-                            .clickable { AppSettings.setAccent(context, name) },
-                    ) {}
+                        }
+                    }
                 }
-            }
 
-            if (chatRepository != null) {
-                Spacer(Modifier.height(24.dp))
-                HorizontalDivider()
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(16.dp))
 
-                SectionTitle("Relationship")
-                val anniversary by chatRepository.anniversaryMillis()
-                    .collectAsState(initial = null)
-                val anniversaryText = anniversary?.let {
-                    SimpleDateFormat("MMMM d, yyyy", Locale.getDefault()).format(Date(it))
-                } ?: "Not set — tap to choose"
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showDatePicker = true }
-                        .padding(vertical = 8.dp),
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Text("Together since", style = MaterialTheme.typography.bodyLarge)
+                    AppSettings.ACCENTS.forEach { (name, color) ->
+                        AccentSwatch(
+                            selected = AppSettings.accentName == name,
+                            background = Brush.linearGradient(listOf(color, color)),
+                            onClick = { AppSettings.setAccent(context, name) },
+                        )
+                    }
+                    if (AppSettings.supportsDynamic()) {
+                        AccentSwatch(
+                            selected = AppSettings.accentName == AppSettings.DYNAMIC,
+                            background = Brush.sweepGradient(
+                                AppSettings.ACCENTS.values.toList() +
+                                    AppSettings.ACCENTS.values.first(),
+                            ),
+                            onClick = { AppSettings.setAccent(context, AppSettings.DYNAMIC) },
+                        )
+                    }
+                }
+                if (AppSettings.accentName == AppSettings.DYNAMIC) {
+                    Spacer(Modifier.height(8.dp))
                     Text(
-                        text = anniversaryText,
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = "Colors follow your wallpaper (Material You)",
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.secondary,
                     )
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(24.dp))
-
-            SectionTitle("Account")
-            val user = FirebaseAuth.getInstance().currentUser
-            Text(
-                text = user?.displayName ?: "",
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Text(
-                text = user?.email ?: "",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.secondary,
-            )
-            Spacer(Modifier.height(12.dp))
-            OutlinedButton(
-                onClick = { confirmLogout = true },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Log out")
-            }
-
-            Spacer(Modifier.height(24.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(24.dp))
-
-            SectionTitle("App update")
-            Text(
-                text = "Installed version: ${UpdateChecker.installedVersionName(context)}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.secondary,
-            )
-            Spacer(Modifier.height(12.dp))
-            OutlinedButton(
-                onClick = {
-                    scope.launch {
-                        checkingUpdate = true
-                        updateStatus = null
-                        val latest = UpdateChecker.fetchLatest()
-                        checkingUpdate = false
-                        when {
-                            latest == null ->
-                                updateStatus = "Couldn't check — are you online?"
-                            latest.versionCode > UpdateChecker.installedVersionCode(context) ->
-                                availableUpdate = latest
-                            else ->
-                                updateStatus = "You're up to date ✓"
-                        }
+            if (chatRepository != null) {
+                SettingsCard(title = "Relationship") {
+                    val anniversary by chatRepository.anniversaryMillis()
+                        .collectAsState(initial = null)
+                    val anniversaryText = anniversary?.let {
+                        SimpleDateFormat("MMMM d, yyyy", Locale.getDefault()).format(Date(it))
+                    } ?: "Not set — tap to choose"
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showDatePicker = true }
+                            .padding(vertical = 4.dp),
+                    ) {
+                        Text("Together since", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            text = anniversaryText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.secondary,
+                        )
                     }
-                },
-                enabled = !checkingUpdate,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(if (checkingUpdate) "Checking…" else "Check for updates")
-            }
-            updateStatus?.let {
-                Spacer(Modifier.height(8.dp))
-                Text(it, style = MaterialTheme.typography.bodyMedium)
+                }
             }
 
-            Spacer(Modifier.height(24.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(24.dp))
+            SettingsCard(title = "Account") {
+                val user = FirebaseAuth.getInstance().currentUser
+                Text(
+                    text = user?.displayName ?: "",
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Text(
+                    text = user?.email ?: "",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = { confirmLogout = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Log out")
+                }
+            }
 
-            SectionTitle("About")
-            Text(
-                text = "About us",
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showAbout = true }
-                    .padding(vertical = 12.dp),
-            )
+            SettingsCard(title = "App update") {
+                Text(
+                    text = "Installed version: ${UpdateChecker.installedVersionName(context)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = {
+                        scope.launch {
+                            checkingUpdate = true
+                            updateStatus = null
+                            val latest = UpdateChecker.fetchLatest()
+                            checkingUpdate = false
+                            when {
+                                latest == null ->
+                                    updateStatus = "Couldn't check — are you online?"
+                                latest.versionCode > UpdateChecker.installedVersionCode(context) ->
+                                    availableUpdate = latest
+                                else ->
+                                    updateStatus = "You're up to date ✓"
+                            }
+                        }
+                    },
+                    enabled = !checkingUpdate,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(if (checkingUpdate) "Checking…" else "Check for updates")
+                }
+                updateStatus?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(it, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+
+            SettingsCard(title = "About") {
+                Text(
+                    text = "About us",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showAbout = true }
+                        .padding(vertical = 8.dp),
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
         }
     }
 
@@ -321,11 +341,99 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SectionTitle(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.primary,
-    )
-    Spacer(Modifier.height(12.dp))
+private fun SettingsCard(title: String, content: @Composable () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.height(12.dp))
+            content()
+        }
+    }
+}
+
+/** Two live chat bubbles so theme changes are visible without leaving the screen. */
+@Composable
+private fun ThemePreview() {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.background,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                PreviewBubble(
+                    text = "Miss you ❤",
+                    container = MaterialTheme.colorScheme.primaryContainer,
+                    textColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                PreviewBubble(
+                    text = "Miss you more 🥰",
+                    container = MaterialTheme.colorScheme.primary,
+                    textColor = MaterialTheme.colorScheme.onPrimary,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PreviewBubble(text: String, container: Color, textColor: Color) {
+    Box(
+        modifier = Modifier
+            .widthIn(max = 220.dp)
+            .background(container, RoundedCornerShape(14.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        Text(text, color = textColor, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+@Composable
+private fun AccentSwatch(
+    selected: Boolean,
+    background: Brush,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .size(42.dp)
+            .background(background, CircleShape)
+            .border(
+                width = if (selected) 3.dp else 1.dp,
+                color = if (selected) {
+                    MaterialTheme.colorScheme.onBackground
+                } else {
+                    Color(0x33888888)
+                },
+                shape = CircleShape,
+            )
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (selected) {
+            Icon(
+                Icons.Filled.Check,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
 }
