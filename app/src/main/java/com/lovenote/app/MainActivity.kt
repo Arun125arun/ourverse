@@ -18,7 +18,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.google.firebase.auth.FirebaseAuth
 import com.lovenote.app.auth.SignInScreen
-import com.lovenote.app.pairing.CoupleStatus
+import com.lovenote.app.chat.ChatRepository
+import com.lovenote.app.chat.ChatScreen
 import com.lovenote.app.pairing.PairingRepository
 import com.lovenote.app.pairing.PairingScreen
 import com.lovenote.app.ui.theme.LoveNoteTheme
@@ -55,25 +56,22 @@ private fun PairedGate() {
                 waitingCode = status?.takeIf { it.coupleId != null }?.inviteCode,
                 repository = repository,
             )
-        else -> HomePlaceholder(status!!)
+        else -> Home(coupleId = status?.coupleId!!)
     }
+}
+
+@Composable
+private fun Home(coupleId: String) {
+    val chatRepository = remember(coupleId) { ChatRepository(coupleId) }
+    ChatScreen(
+        repository = chatRepository,
+        onSendNoteClick = { /* wired to the note screen in the next task */ },
+    )
 }
 
 @Composable
 private fun LoadingScreen() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator()
-    }
-}
-
-// Replaced by the chat screen in the next task.
-@Composable
-private fun HomePlaceholder(status: CoupleStatus) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(
-            text = "Paired! ❤",
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.primary,
-        )
     }
 }
