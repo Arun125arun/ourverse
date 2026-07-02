@@ -20,7 +20,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -28,7 +28,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -52,6 +54,10 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.google.firebase.Timestamp
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -70,6 +76,7 @@ fun ChatScreen(
     val scope = rememberCoroutineScope()
     val messages by repository.messages().collectAsState(initial = emptyList())
     val partnerTypingAt by repository.partnerTypingAt().collectAsState(initial = null)
+    val anniversary by repository.anniversaryMillis().collectAsState(initial = null)
     var input by remember { mutableStateOf("") }
     var reactingTo by remember { mutableStateOf<String?>(null) }
     var lastHeartbeat by remember { mutableStateOf(0L) }
@@ -107,9 +114,14 @@ fun ChatScreen(
                 title = {
                     Column {
                         Text("OurVerse ❤")
-                        if (partnerTyping) {
+                        val subtitle = when {
+                            partnerTyping -> "typing…"
+                            anniversary != null -> "Day ${daysTogether(anniversary!!)} together ❤"
+                            else -> null
+                        }
+                        subtitle?.let {
                             Text(
-                                text = "typing…",
+                                text = it,
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.secondary,
                             )
@@ -158,27 +170,37 @@ fun ChatScreen(
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    items(messages, key = { it.id }) { message ->
-                        MessageRow(
-                            message = message,
-                            mine = message.isMine(repository.myUid),
-                            showSeen = message.id == newestSeenMineId,
-                            reactionPickerOpen = reactingTo == message.id,
-                            onLongPress = { reactingTo = message.id },
-                            onDismissPicker = { reactingTo = null },
-                            onReact = { emoji ->
-                                reactingTo = null
-                                scope.launch {
-                                    val current = message.reactions[repository.myUid]
-                                    runCatching {
-                                        repository.react(
-                                            message.id,
-                                            if (current == emoji) null else emoji,
-                                        )
+                    itemsIndexed(messages, key = { _, m -> m.id }) { index, message ->
+                        // reverseLayout: chip rendered above the bubble marks a new day
+                        val startsNewDay = index == messages.lastIndex ||
+                            !sameDay(message.sentAt, messages[index + 1].sentAt)
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            if (startsNewDay) DayChip(dayLabel(message.sentAt))
+                            MessageRow(
+                                message = message,
+                                mine = message.isMine(repository.myUid),
+                                showSeen = message.id == newestSeenMineId,
+                                reactionPickerOpen = reactingTo == message.id,
+                                onLongPress = { reactingTo = message.id },
+                                onDismissPicker = { reactingTo = null },
+                                onDelete = {
+                                    reactingTo = null
+                                    scope.launch { runCatching { repository.delete(message.id) } }
+                                },
+                                onReact = { emoji ->
+                                    reactingTo = null
+                                    scope.launch {
+                                        val current = message.reactions[repository.myUid]
+                                        runCatching {
+                                            repository.react(
+                                                message.id,
+                                                if (current == emoji) null else emoji,
+                                            )
+                                        }
                                     }
-                                }
-                            },
-                        )
+                                },
+                            )
+                        }
                     }
                 }
             }
@@ -242,6 +264,7 @@ private fun MessageRow(
     reactionPickerOpen: Boolean,
     onLongPress: () -> Unit,
     onDismissPicker: () -> Unit,
+    onDelete: () -> Unit,
     onReact: (String) -> Unit,
 ) {
     Column(
@@ -302,6 +325,13 @@ private fun MessageRow(
                         )
                     }
                 }
+                if (mine) {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    DropdownMenuItem(
+                        text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                        onClick = onDelete,
+                    )
+                }
             }
         }
 
@@ -319,13 +349,62 @@ private fun MessageRow(
             }
         }
 
-        if (showSeen) {
+        val caption = listOfNotNull(
+            timeLabel(message.sentAt),
+            "Seen ✓✓".takeIf { showSeen },
+        ).joinToString(" · ")
+        if (caption.isNotEmpty()) {
             Text(
-                text = "Seen ✓✓",
+                text = caption,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.secondary,
             )
         }
+    }
+}
+
+@Composable
+private fun DayChip(label: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.primaryContainer,
+        ) {
+            Text(
+                text = label,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+        }
+    }
+}
+
+private fun daysTogether(anniversaryMillis: Long): Long =
+    (System.currentTimeMillis() - anniversaryMillis) / 86_400_000L + 1
+
+private fun timeLabel(sentAt: Timestamp?): String? =
+    sentAt?.toDate()?.let { SimpleDateFormat("h:mm a", Locale.getDefault()).format(it) }
+
+private fun sameDay(a: Timestamp?, b: Timestamp?): Boolean {
+    if (a == null || b == null) return true
+    val fmt = SimpleDateFormat("yyyyMMdd", Locale.US)
+    return fmt.format(a.toDate()) == fmt.format(b.toDate())
+}
+
+private fun dayLabel(sentAt: Timestamp?): String {
+    val date = sentAt?.toDate() ?: return "Today"
+    val now = System.currentTimeMillis()
+    val fmt = SimpleDateFormat("yyyyMMdd", Locale.US)
+    return when (fmt.format(date)) {
+        fmt.format(Date(now)) -> "Today"
+        fmt.format(Date(now - 86_400_000L)) -> "Yesterday"
+        else -> SimpleDateFormat("MMM d", Locale.getDefault()).format(date)
     }
 }
 

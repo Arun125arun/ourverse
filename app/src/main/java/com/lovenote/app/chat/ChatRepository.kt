@@ -59,6 +59,21 @@ class ChatRepository(
         batch.commit().await()
     }
 
+    suspend fun delete(messageId: String) {
+        messagesRef.document(messageId).delete().await()
+    }
+
+    suspend fun setAnniversary(millis: Long) {
+        db.collection("couples").document(coupleId)
+            .update("anniversaryMillis", millis)
+            .await()
+    }
+
+    /** Epoch millis of the couple's "together since" date, or null if unset. */
+    fun anniversaryMillis(): Flow<Long?> =
+        db.collection("couples").document(coupleId).snapshots()
+            .map { it.getLong("anniversaryMillis") }
+
     /** Sets or clears (emoji == null) my reaction on a message. */
     suspend fun react(messageId: String, emoji: String?) {
         messagesRef.document(messageId)

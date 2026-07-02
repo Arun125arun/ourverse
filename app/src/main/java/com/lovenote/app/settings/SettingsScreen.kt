@@ -20,6 +20,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -31,7 +33,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,6 +49,10 @@ import androidx.compose.ui.unit.dp
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import com.google.firebase.auth.FirebaseAuth
+import com.lovenote.app.chat.ChatRepository
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,6 +60,7 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     onBack: () -> Unit,
     onLoggedOut: () -> Unit,
+    chatRepository: ChatRepository? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -60,6 +69,7 @@ fun SettingsScreen(
     var checkingUpdate by remember { mutableStateOf(false) }
     var updateStatus by remember { mutableStateOf<String?>(null) }
     var availableUpdate by remember { mutableStateOf<UpdateChecker.UpdateInfo?>(null) }
+    var showDatePicker by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -114,6 +124,32 @@ fun SettingsScreen(
                             )
                             .clickable { AppSettings.setAccent(context, name) },
                     ) {}
+                }
+            }
+
+            if (chatRepository != null) {
+                Spacer(Modifier.height(24.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(24.dp))
+
+                SectionTitle("Relationship")
+                val anniversary by chatRepository.anniversaryMillis()
+                    .collectAsState(initial = null)
+                val anniversaryText = anniversary?.let {
+                    SimpleDateFormat("MMMM d, yyyy", Locale.getDefault()).format(Date(it))
+                } ?: "Not set — tap to choose"
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showDatePicker = true }
+                        .padding(vertical = 8.dp),
+                ) {
+                    Text("Together since", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        text = anniversaryText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
                 }
             }
 
@@ -218,6 +254,26 @@ fun SettingsScreen(
                 TextButton(onClick = { availableUpdate = null }) { Text("Later") }
             },
         )
+    }
+
+    if (showDatePicker && chatRepository != null) {
+        val dateState = rememberDatePickerState()
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    dateState.selectedDateMillis?.let { millis ->
+                        scope.launch { runCatching { chatRepository.setAnniversary(millis) } }
+                    }
+                    showDatePicker = false
+                }) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+            },
+        ) {
+            DatePicker(state = dateState)
+        }
     }
 
     if (showAbout) {

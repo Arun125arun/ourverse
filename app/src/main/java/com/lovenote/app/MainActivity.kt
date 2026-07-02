@@ -25,6 +25,7 @@ import com.lovenote.app.chat.ChatRepository
 import com.lovenote.app.chat.ChatScreen
 import com.lovenote.app.notes.NoteCache
 import com.lovenote.app.notes.NoteRepository
+import com.lovenote.app.notes.NotesHistoryScreen
 import com.lovenote.app.notes.SendNoteScreen
 import com.lovenote.app.pairing.PairingRepository
 import com.lovenote.app.settings.AppSettings
@@ -70,7 +71,7 @@ private fun PairedGate(onLoggedOut: () -> Unit) {
     }
 }
 
-private enum class HomeScreen { CHAT, NOTE, SETTINGS }
+private enum class HomeScreen { CHAT, NOTE, HISTORY, SETTINGS }
 
 @Composable
 private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
@@ -93,10 +94,16 @@ private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
         HomeScreen.NOTE -> SendNoteScreen(
             repository = noteRepository,
             onBack = { screen = HomeScreen.CHAT },
+            onHistoryClick = { screen = HomeScreen.HISTORY },
+        )
+        HomeScreen.HISTORY -> NotesHistoryScreen(
+            repository = noteRepository,
+            onBack = { screen = HomeScreen.NOTE },
         )
         HomeScreen.SETTINGS -> SettingsScreen(
             onBack = { screen = HomeScreen.CHAT },
             onLoggedOut = onLoggedOut,
+            chatRepository = chatRepository,
         )
         HomeScreen.CHAT -> ChatScreen(
             repository = chatRepository,

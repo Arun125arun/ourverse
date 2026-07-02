@@ -14,7 +14,7 @@ class NoteRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance(),
 ) {
-    private val myUid: String
+    val myUid: String
         get() = auth.currentUser?.uid ?: error("Not signed in")
 
     private val notesRef
@@ -46,6 +46,16 @@ class NoteRepository(
                 snapshot.documents
                     .map { Note.fromMap(it.id, it.data ?: emptyMap()) }
                     .firstOrNull { it.senderUid != myUid }
+            }
+
+    /** All recent notes from both partners, newest first. */
+    fun history(): Flow<List<Note>> =
+        notesRef
+            .orderBy("sentAt", Query.Direction.DESCENDING)
+            .limit(50)
+            .snapshots()
+            .map { snapshot ->
+                snapshot.documents.map { Note.fromMap(it.id, it.data ?: emptyMap()) }
             }
 
     /** One-shot variant of [latestFromPartner] for background widget refresh. */
