@@ -18,6 +18,8 @@ data class Mood(val emoji: String, val dateKey: String)
 
 data class Profile(val name: String, val photoUrl: String)
 
+data class QuizEntry(val answer: Int, val guess: Int)
+
 data class CoupleEvent(
     val id: String,
     val title: String,
@@ -108,6 +110,33 @@ class UsRepository(
                         val uid = k as? String ?: return@mapNotNull null
                         val text = v as? String ?: return@mapNotNull null
                         uid to text
+                    }
+                    .toMap()
+            }
+
+    // --- Couple quiz ---
+
+    /** My own pick plus my guess at the partner's pick, both option indexes. */
+    suspend fun submitQuiz(dateKey: String, myAnswer: Int, guessForPartner: Int) {
+        coupleRef.collection("quiz").document(dateKey)
+            .set(
+                mapOf(myUid to mapOf("answer" to myAnswer, "guess" to guessForPartner)),
+                SetOptions.merge(),
+            )
+            .await()
+    }
+
+    /** uid → (answer, guess) for the given day. */
+    fun quizEntries(dateKey: String): Flow<Map<String, QuizEntry>> =
+        coupleRef.collection("quiz").document(dateKey).snapshots()
+            .map { doc ->
+                (doc.data ?: emptyMap())
+                    .entries
+                    .mapNotNull { (k, v) ->
+                        val m = v as? Map<*, *> ?: return@mapNotNull null
+                        val answer = (m["answer"] as? Number)?.toInt() ?: return@mapNotNull null
+                        val guess = (m["guess"] as? Number)?.toInt() ?: return@mapNotNull null
+                        k to QuizEntry(answer, guess)
                     }
                     .toMap()
             }

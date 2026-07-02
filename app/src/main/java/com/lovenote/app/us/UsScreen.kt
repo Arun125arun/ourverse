@@ -64,6 +64,7 @@ fun UsScreen(repository: UsRepository) {
     val events by repository.events().collectAsState(initial = emptyList())
     val me by repository.myProfile().collectAsState(initial = null)
     val partner by repository.partnerProfile().collectAsState(initial = null)
+    val quizEntries by repository.quizEntries(today).collectAsState(initial = emptyMap())
     val anniversary by repository.anniversaryMillis().collectAsState(initial = null)
     var showAddEvent by remember { mutableStateOf(false) }
 
@@ -104,6 +105,20 @@ fun UsScreen(repository: UsRepository) {
                     ?.value,
                 onSubmit = { text ->
                     scope.launch { runCatching { repository.submitAnswer(today, text) } }
+                },
+            )
+
+            Spacer(Modifier.height(24.dp))
+
+            QuizCard(
+                question = QuizDeck.forDate(today),
+                partnerName = partner?.name?.substringBefore(' ') ?: "them",
+                mine = quizEntries[repository.myUid],
+                theirs = quizEntries.entries
+                    .firstOrNull { it.key != repository.myUid }
+                    ?.value,
+                onSubmit = { answer, guess ->
+                    scope.launch { runCatching { repository.submitQuiz(today, answer, guess) } }
                 },
             )
 
@@ -195,9 +210,24 @@ private fun CoupleHero(
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
+            MILESTONES.firstOrNull { milestone -> milestone > days }?.let { next ->
+                val remaining = next - days
+                Text(
+                    text = if (remaining == 0L) {
+                        "🎉 Today is day $next!"
+                    } else {
+                        "🎉 $next days in $remaining ${if (remaining == 1L) "day" else "days"}"
+                    },
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+            }
         }
     }
 }
+
+private val MILESTONES =
+    listOf(100L, 200L, 300L, 365L, 500L, 730L, 1000L, 1461L, 1825L, 2000L, 3650L)
 
 @Composable
 private fun MoodSection(
@@ -331,6 +361,138 @@ private fun AnswerBlock(label: String, text: String) {
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(10.dp),
             )
+        }
+    }
+}
+
+@Composable
+private fun QuizCard(
+    question: QuizQuestion,
+    partnerName: String,
+    mine: QuizEntry?,
+    theirs: QuizEntry?,
+    onSubmit: (answer: Int, guess: Int) -> Unit,
+) {
+    var myPick by remember(question.prompt) { mutableStateOf<Int?>(null) }
+    var myGuess by remember(question.prompt) { mutableStateOf<Int?>(null) }
+
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Couple quiz 🎯",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(question.prompt, style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(12.dp))
+
+            when {
+                mine == null -> {
+                    Text("Your pick:", style = MaterialTheme.typography.labelMedium)
+                    Spacer(Modifier.height(6.dp))
+                    OptionGrid(question.options, myPick) { myPick = it }
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "What did $partnerName pick?",
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    OptionGrid(question.options, myGuess) { myGuess = it }
+                    Spacer(Modifier.height(12.dp))
+                    Button(
+                        onClick = { onSubmit(myPick!!, myGuess!!) },
+                        enabled = myPick != null && myGuess != null,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Lock it in")
+                    }
+                }
+                theirs == null -> {
+                    Text(
+                        "You picked “${question.options[mine.answer]}” and guessed " +
+                            "they'd pick “${question.options[mine.guess]}”.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "Waiting for $partnerName to play…",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
+                }
+                else -> {
+                    val iWasRight = mine.guess == theirs.answer
+                    val theyWereRight = theirs.guess == mine.answer
+                    Text(
+                        "They picked: “${question.options[theirs.answer]}”",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        if (iWasRight) {
+                            "Your guess was right! 🎉"
+                        } else {
+                            "You guessed “${question.options[mine.guess]}” — not quite 😅"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        if (theyWereRight) {
+                            "$partnerName guessed your pick correctly too ❤"
+                        } else {
+                            "$partnerName thought you'd pick " +
+                                "“${question.options[theirs.guess]}” 😄"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun OptionGrid(
+    options: List<String>,
+    selected: Int?,
+    onSelect: (Int) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        options.chunked(2).forEachIndexed { rowIndex, rowOptions ->
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                rowOptions.forEachIndexed { colIndex, option ->
+                    val index = rowIndex * 2 + colIndex
+                    val isSelected = selected == index
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.surface
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { onSelect(index) },
+                    ) {
+                        Text(
+                            text = option,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (isSelected) {
+                                MaterialTheme.colorScheme.onPrimary
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            },
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
+                        )
+                    }
+                }
+            }
         }
     }
 }
