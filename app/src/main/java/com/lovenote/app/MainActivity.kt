@@ -4,6 +4,7 @@ import android.Manifest
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -26,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -117,6 +119,19 @@ private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
     val noteRepository = remember(coupleId) { NoteRepository(coupleId) }
     val usRepository = remember(coupleId) { UsRepository(coupleId) }
     var screen by remember { mutableStateOf(HomeScreen.CHAT) }
+    val backStack = remember { mutableStateListOf<HomeScreen>() }
+
+    fun navigate(to: HomeScreen) {
+        if (to != screen) {
+            backStack.add(screen)
+            screen = to
+        }
+    }
+
+    // System back retraces visited screens instead of closing the app.
+    BackHandler(enabled = backStack.isNotEmpty()) {
+        screen = backStack.removeAt(backStack.lastIndex)
+    }
 
     // Presence heartbeat so the partner sees "Active now".
     LaunchedEffect(coupleId) {
@@ -171,19 +186,19 @@ private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
             NavigationBar {
                 NavigationBarItem(
                     selected = screen == HomeScreen.CHAT || screen == HomeScreen.SETTINGS,
-                    onClick = { screen = HomeScreen.CHAT },
+                    onClick = { navigate(HomeScreen.CHAT) },
                     icon = { Icon(Icons.Filled.Email, contentDescription = null) },
                     label = { Text("Chat") },
                 )
                 NavigationBarItem(
                     selected = screen == HomeScreen.US,
-                    onClick = { screen = HomeScreen.US },
+                    onClick = { navigate(HomeScreen.US) },
                     icon = { Icon(Icons.Filled.Favorite, contentDescription = null) },
                     label = { Text("Us") },
                 )
                 NavigationBarItem(
                     selected = screen == HomeScreen.NOTE || screen == HomeScreen.HISTORY,
-                    onClick = { screen = HomeScreen.NOTE },
+                    onClick = { navigate(HomeScreen.NOTE) },
                     icon = { Icon(Icons.Filled.Edit, contentDescription = null) },
                     label = { Text("Notes") },
                 )
@@ -194,23 +209,23 @@ private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
             when (screen) {
                 HomeScreen.NOTE -> SendNoteScreen(
                     repository = noteRepository,
-                    onBack = { screen = HomeScreen.CHAT },
-                    onHistoryClick = { screen = HomeScreen.HISTORY },
+                    onBack = { navigate(HomeScreen.CHAT) },
+                    onHistoryClick = { navigate(HomeScreen.HISTORY) },
                 )
                 HomeScreen.HISTORY -> NotesHistoryScreen(
                     repository = noteRepository,
-                    onBack = { screen = HomeScreen.NOTE },
+                    onBack = { navigate(HomeScreen.NOTE) },
                 )
                 HomeScreen.SETTINGS -> SettingsScreen(
-                    onBack = { screen = HomeScreen.CHAT },
+                    onBack = { navigate(HomeScreen.CHAT) },
                     onLoggedOut = onLoggedOut,
                     chatRepository = chatRepository,
                 )
                 HomeScreen.US -> UsScreen(repository = usRepository)
                 HomeScreen.CHAT -> ChatScreen(
                     repository = chatRepository,
-                    onSendNoteClick = { screen = HomeScreen.NOTE },
-                    onSettingsClick = { screen = HomeScreen.SETTINGS },
+                    onSendNoteClick = { navigate(HomeScreen.NOTE) },
+                    onSettingsClick = { navigate(HomeScreen.SETTINGS) },
                 )
             }
         }
