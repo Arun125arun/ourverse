@@ -27,6 +27,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -56,7 +57,10 @@ private val MOOD_EMOJIS = listOf("🥰", "😊", "😐", "😔", "😤", "😴")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UsScreen(repository: UsRepository) {
+fun UsScreen(
+    repository: UsRepository,
+    onMemoriesClick: () -> Unit,
+) {
     val scope = rememberCoroutineScope()
     val today = Questions.dateKey()
     val moods by repository.moods().collectAsState(initial = emptyMap())
@@ -83,6 +87,15 @@ fun UsScreen(repository: UsRepository) {
                 partner = partner,
                 anniversaryMillis = anniversary,
             )
+
+            Spacer(Modifier.height(16.dp))
+
+            OutlinedButton(
+                onClick = onMemoriesClick,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("📖 Our story — memories")
+            }
 
             Spacer(Modifier.height(24.dp))
 

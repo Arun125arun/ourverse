@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -61,6 +62,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.google.firebase.Timestamp
 import com.lovenote.app.notify.AppVisibility
+import com.lovenote.app.notify.Notifier
 import com.lovenote.app.ui.Avatar
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -157,6 +159,18 @@ fun ChatScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = {
+                        scope.launch {
+                            runCatching { repository.send("❤ Thinking of you") }
+                            Notifier.vibrate(context)
+                        }
+                    }) {
+                        Icon(
+                            Icons.Filled.Favorite,
+                            contentDescription = "Send a nudge",
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
                     IconButton(onClick = onSendNoteClick) {
                         Icon(Icons.Filled.Edit, contentDescription = "Send a note")
                     }

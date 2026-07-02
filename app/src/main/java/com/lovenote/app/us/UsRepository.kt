@@ -20,6 +20,13 @@ data class Profile(val name: String, val photoUrl: String)
 
 data class QuizEntry(val answer: Int, val guess: Int)
 
+data class Memory(
+    val id: String,
+    val title: String,
+    val photoBase64: String?,
+    val dateMillis: Long,
+)
+
 data class CoupleEvent(
     val id: String,
     val title: String,
@@ -139,6 +146,40 @@ class UsRepository(
                         k to QuizEntry(answer, guess)
                     }
                     .toMap()
+            }
+
+    // --- Memories ("Our story") ---
+
+    suspend fun addMemory(title: String, dateMillis: Long, photoBase64: String?) {
+        val name = title.trim()
+        if (name.isEmpty()) return
+        coupleRef.collection("memories").add(
+            mapOf(
+                "title" to name,
+                "photo" to photoBase64,
+                "dateMillis" to dateMillis,
+                "createdBy" to myUid,
+                "createdAt" to FieldValue.serverTimestamp(),
+            ),
+        ).await()
+    }
+
+    suspend fun deleteMemory(id: String) {
+        coupleRef.collection("memories").document(id).delete().await()
+    }
+
+    /** Newest moment first. */
+    fun memories(): Flow<List<Memory>> =
+        coupleRef.collection("memories")
+            .orderBy("dateMillis", Query.Direction.DESCENDING)
+            .limit(100)
+            .snapshots()
+            .map { snapshot ->
+                snapshot.documents.mapNotNull { doc ->
+                    val title = doc.getString("title") ?: return@mapNotNull null
+                    val millis = doc.getLong("dateMillis") ?: return@mapNotNull null
+                    Memory(doc.id, title, doc.getString("photo"), millis)
+                }
             }
 
     // --- Special dates ---

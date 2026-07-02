@@ -49,6 +49,7 @@ import com.lovenote.app.notify.NotifyState
 import com.lovenote.app.pairing.PairingRepository
 import com.lovenote.app.settings.AppSettings
 import com.lovenote.app.settings.SettingsScreen
+import com.lovenote.app.us.MemoriesScreen
 import com.lovenote.app.us.UsRepository
 import com.lovenote.app.us.UsScreen
 import com.lovenote.app.widget.NoteWidget
@@ -110,7 +111,7 @@ private fun PairedGate(onLoggedOut: () -> Unit) {
     }
 }
 
-private enum class HomeScreen { CHAT, US, NOTE, HISTORY, SETTINGS }
+private enum class HomeScreen { CHAT, US, MEMORIES, NOTE, HISTORY, SETTINGS }
 
 @Composable
 private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
@@ -191,7 +192,7 @@ private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                     label = { Text("Chat") },
                 )
                 NavigationBarItem(
-                    selected = screen == HomeScreen.US,
+                    selected = screen == HomeScreen.US || screen == HomeScreen.MEMORIES,
                     onClick = { navigate(HomeScreen.US) },
                     icon = { Icon(Icons.Filled.Favorite, contentDescription = null) },
                     label = { Text("Us") },
@@ -221,7 +222,14 @@ private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                     onLoggedOut = onLoggedOut,
                     chatRepository = chatRepository,
                 )
-                HomeScreen.US -> UsScreen(repository = usRepository)
+                HomeScreen.US -> UsScreen(
+                    repository = usRepository,
+                    onMemoriesClick = { navigate(HomeScreen.MEMORIES) },
+                )
+                HomeScreen.MEMORIES -> MemoriesScreen(
+                    repository = usRepository,
+                    onBack = { navigate(HomeScreen.US) },
+                )
                 HomeScreen.CHAT -> ChatScreen(
                     repository = chatRepository,
                     onSendNoteClick = { navigate(HomeScreen.NOTE) },
