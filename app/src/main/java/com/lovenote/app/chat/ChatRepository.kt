@@ -33,6 +33,56 @@ class ChatRepository(
         ).await()
     }
 
+    suspend fun sendPhoto(base64Jpeg: String) {
+        messagesRef.add(
+            mapOf(
+                "senderUid" to myUid,
+                "type" to "photo",
+                "body" to base64Jpeg,
+                "sentAt" to FieldValue.serverTimestamp(),
+            ),
+        ).await()
+    }
+
+    /** Stamps seenAt on every unseen partner message (read receipts). */
+    suspend fun markPartnerMessagesSeen(messages: List<Message>) {
+        val unseen = messages.filter { !it.isMine(myUid) && !it.seen }
+        if (unseen.isEmpty()) return
+        val batch = db.batch()
+        unseen.forEach { message ->
+            batch.update(
+                messagesRef.document(message.id),
+                "seenAt",
+                FieldValue.serverTimestamp(),
+            )
+        }
+        batch.commit().await()
+    }
+
+    /** Sets or clears (emoji == null) my reaction on a message. */
+    suspend fun react(messageId: String, emoji: String?) {
+        messagesRef.document(messageId)
+            .update("reactions.$myUid", emoji ?: FieldValue.delete())
+            .await()
+    }
+
+    /** Heartbeat written while I'm typing; partner shows it briefly. */
+    suspend fun setTyping() {
+        db.collection("couples").document(coupleId)
+            .update("typing.$myUid", FieldValue.serverTimestamp())
+            .await()
+    }
+
+    /** Epoch millis of the partner's latest typing heartbeat, or null. */
+    fun partnerTypingAt(): Flow<Long?> =
+        db.collection("couples").document(coupleId).snapshots()
+            .map { doc ->
+                val typing = doc.get("typing") as? Map<*, *> ?: return@map null
+                typing.entries
+                    .firstOrNull { it.key != myUid }
+                    ?.let { (it.value as? com.google.firebase.Timestamp)?.toDate()?.time }
+            }
+
     /** Newest first (matches a reversed LazyColumn). */
     fun messages(): Flow<List<Message>> =
         messagesRef
