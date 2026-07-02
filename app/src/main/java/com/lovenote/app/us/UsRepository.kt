@@ -6,11 +6,17 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.snapshots
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 
 data class Mood(val emoji: String, val dateKey: String)
+
+data class Profile(val name: String, val photoUrl: String)
 
 data class CoupleEvent(
     val id: String,
@@ -28,18 +34,21 @@ class UsRepository(
 
     private val coupleRef get() = db.collection("couples").document(coupleId)
 
-    // --- Mood check-in (stored on the couple doc) ---
+    // Members-only doc shared with ChatRepository (typing/anniversary/moods).
+    private val stateRef get() = coupleRef.collection("state").document("shared")
+
+    // --- Mood check-in ---
 
     suspend fun setMood(emoji: String) {
-        coupleRef.update(
-            "moods.$myUid",
-            mapOf("emoji" to emoji, "dateKey" to Questions.dateKey()),
+        stateRef.set(
+            mapOf("moods" to mapOf(myUid to mapOf("emoji" to emoji, "dateKey" to Questions.dateKey()))),
+            SetOptions.merge(),
         ).await()
     }
 
     /** uid → mood; callers filter for today's dateKey. */
     fun moods(): Flow<Map<String, Mood>> =
-        coupleRef.snapshots().map { doc ->
+        stateRef.snapshots().map { doc ->
             (doc.get("moods") as? Map<*, *>).orEmpty()
                 .entries
                 .mapNotNull { (k, v) ->
@@ -51,6 +60,33 @@ class UsRepository(
                 }
                 .toMap()
         }
+
+    // --- Profiles for the hero header ---
+
+    fun myProfile(): Flow<Profile?> = profileOf(myUid)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun partnerProfile(): Flow<Profile?> =
+        coupleRef.snapshots()
+            .map { doc ->
+                (doc.get("members") as? List<*>)
+                    ?.filterIsInstance<String>()
+                    ?.firstOrNull { it != myUid }
+            }
+            .distinctUntilChanged()
+            .flatMapLatest { uid -> if (uid == null) flowOf(null) else profileOf(uid) }
+
+    private fun profileOf(uid: String): Flow<Profile?> =
+        db.collection("users").document(uid).snapshots().map { doc ->
+            Profile(
+                name = doc.getString("displayName").orEmpty(),
+                photoUrl = doc.getString("photoUrl").orEmpty(),
+            )
+        }
+
+    /** "Together since" date, shared with the chat header and settings. */
+    fun anniversaryMillis(): Flow<Long?> =
+        stateRef.snapshots().map { it.getLong("anniversaryMillis") }
 
     // --- Daily question ---
 

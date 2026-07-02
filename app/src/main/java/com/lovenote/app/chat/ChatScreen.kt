@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -53,10 +54,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.google.firebase.Timestamp
 import com.lovenote.app.notify.AppVisibility
+import com.lovenote.app.ui.Avatar
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -79,6 +84,8 @@ fun ChatScreen(
     val messages by repository.messages().collectAsState(initial = emptyList())
     val partnerTypingAt by repository.partnerTypingAt().collectAsState(initial = null)
     val anniversary by repository.anniversaryMillis().collectAsState(initial = null)
+    val partner by repository.partnerProfile().collectAsState(initial = null)
+    var viewingPhoto by remember { mutableStateOf<Message?>(null) }
     var input by remember { mutableStateOf("") }
     var reactingTo by remember { mutableStateOf<String?>(null) }
     var lastHeartbeat by remember { mutableStateOf(0L) }
@@ -119,19 +126,33 @@ fun ChatScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text("OurVerse ❤")
-                        val subtitle = when {
-                            partnerTyping -> "typing…"
-                            anniversary != null -> "Day ${daysTogether(anniversary!!)} together ❤"
-                            else -> null
-                        }
-                        subtitle?.let {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Avatar(
+                            name = partner?.name ?: "",
+                            photoUrl = partner?.photoUrl ?: "",
+                            size = 38.dp,
+                        )
+                        Column(modifier = Modifier.padding(start = 10.dp)) {
                             Text(
-                                text = it,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.secondary,
+                                text = partner?.name?.takeIf { it.isNotBlank() } ?: "OurVerse ❤",
+                                style = MaterialTheme.typography.titleMedium,
                             )
+                            val subtitle = when {
+                                partnerTyping -> "typing…"
+                                else -> presenceLabel(partner?.lastActiveMillis)
+                                    ?: anniversary?.let { "Day ${daysTogether(it)} together ❤" }
+                            }
+                            subtitle?.let {
+                                Text(
+                                    text = it,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = if (it == "Active now" || it == "typing…") {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.secondary
+                                    },
+                                )
+                            }
                         }
                     }
                 },
@@ -181,12 +202,17 @@ fun ChatScreen(
                         // reverseLayout: chip rendered above the bubble marks a new day
                         val startsNewDay = index == messages.lastIndex ||
                             !sameDay(message.sentAt, messages[index + 1].sentAt)
+                        // reversed list: index-1 is the *next* (newer) message
+                        val lastOfRun = index == 0 ||
+                            messages[index - 1].senderUid != message.senderUid
                         Column(modifier = Modifier.fillMaxWidth()) {
                             if (startsNewDay) DayChip(dayLabel(message.sentAt))
                             MessageRow(
                                 message = message,
                                 mine = message.isMine(repository.myUid),
+                                showCaption = lastOfRun,
                                 showSeen = message.id == newestSeenMineId,
+                                onPhotoClick = { viewingPhoto = message },
                                 reactionPickerOpen = reactingTo == message.id,
                                 onLongPress = { reactingTo = message.id },
                                 onDismissPicker = { reactingTo = null },
@@ -260,6 +286,10 @@ fun ChatScreen(
             }
         }
     }
+
+    viewingPhoto?.let { photo ->
+        FullscreenPhoto(message = photo, onDismiss = { viewingPhoto = null })
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -267,11 +297,13 @@ fun ChatScreen(
 private fun MessageRow(
     message: Message,
     mine: Boolean,
+    showCaption: Boolean,
     showSeen: Boolean,
     reactionPickerOpen: Boolean,
     onLongPress: () -> Unit,
     onDismissPicker: () -> Unit,
     onDelete: () -> Unit,
+    onPhotoClick: () -> Unit,
     onReact: (String) -> Unit,
 ) {
     Column(
@@ -296,7 +328,7 @@ private fun MessageRow(
                         ),
                     )
                     .combinedClickable(
-                        onClick = {},
+                        onClick = { if (message.isPhoto) onPhotoClick() },
                         onLongClick = onLongPress,
                     )
                     .padding(if (message.isPhoto) 4.dp else 0.dp),
@@ -357,7 +389,7 @@ private fun MessageRow(
         }
 
         val caption = listOfNotNull(
-            timeLabel(message.sentAt),
+            timeLabel(message.sentAt).takeIf { showCaption },
             "Seen ✓✓".takeIf { showSeen },
         ).joinToString(" · ")
         if (caption.isNotEmpty()) {
@@ -367,6 +399,46 @@ private fun MessageRow(
                 color = MaterialTheme.colorScheme.secondary,
             )
         }
+    }
+}
+
+@Composable
+private fun FullscreenPhoto(message: Message, onDismiss: () -> Unit) {
+    val bitmap = remember(message.id) {
+        runCatching {
+            val bytes = Base64.decode(message.body, Base64.NO_WRAP)
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+        }.getOrNull()
+    } ?: return
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xE6000000))
+                .clickable(onClick = onDismiss),
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                bitmap = bitmap,
+                contentDescription = "Photo",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+private fun presenceLabel(lastActiveMillis: Long?): String? {
+    if (lastActiveMillis == null) return null
+    val minutes = (System.currentTimeMillis() - lastActiveMillis) / 60_000L
+    return when {
+        minutes < 2 -> "Active now"
+        minutes < 60 -> "Active ${minutes}m ago"
+        minutes < 60 * 24 -> "Active ${minutes / 60}h ago"
+        else -> null
     }
 }
 

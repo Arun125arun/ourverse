@@ -46,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lovenote.app.ui.Avatar
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -61,6 +62,9 @@ fun UsScreen(repository: UsRepository) {
     val moods by repository.moods().collectAsState(initial = emptyMap())
     val answers by repository.answers(today).collectAsState(initial = emptyMap())
     val events by repository.events().collectAsState(initial = emptyList())
+    val me by repository.myProfile().collectAsState(initial = null)
+    val partner by repository.partnerProfile().collectAsState(initial = null)
+    val anniversary by repository.anniversaryMillis().collectAsState(initial = null)
     var showAddEvent by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -73,6 +77,14 @@ fun UsScreen(repository: UsRepository) {
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
         ) {
+            CoupleHero(
+                me = me,
+                partner = partner,
+                anniversaryMillis = anniversary,
+            )
+
+            Spacer(Modifier.height(24.dp))
+
             MoodSection(
                 myMood = moods[repository.myUid]?.takeIf { it.dateKey == today },
                 partnerMood = moods.entries
@@ -139,6 +151,51 @@ fun UsScreen(repository: UsRepository) {
                 scope.launch { runCatching { repository.addEvent(title, millis) } }
             },
         )
+    }
+}
+
+@Composable
+private fun CoupleHero(
+    me: Profile?,
+    partner: Profile?,
+    anniversaryMillis: Long?,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Avatar(name = me?.name ?: "", photoUrl = me?.photoUrl ?: "", size = 64.dp)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = me?.name?.substringBefore(' ') ?: "",
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
+            Text(
+                text = "❤",
+                fontSize = 26.sp,
+                modifier = Modifier.padding(horizontal = 20.dp),
+            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Avatar(name = partner?.name ?: "", photoUrl = partner?.photoUrl ?: "", size = 64.dp)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = partner?.name?.substringBefore(' ') ?: "",
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
+        }
+        anniversaryMillis?.let {
+            Spacer(Modifier.height(12.dp))
+            val days = (System.currentTimeMillis() - it) / 86_400_000L + 1
+            Text(
+                text = "$days days together",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
     }
 }
 

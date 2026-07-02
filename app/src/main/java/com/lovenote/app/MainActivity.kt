@@ -118,6 +118,14 @@ private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
     val usRepository = remember(coupleId) { UsRepository(coupleId) }
     var screen by remember { mutableStateOf(HomeScreen.CHAT) }
 
+    // Presence heartbeat so the partner sees "Active now".
+    LaunchedEffect(coupleId) {
+        while (true) {
+            runCatching { chatRepository.heartbeatPresence() }
+            kotlinx.coroutines.delay(60_000)
+        }
+    }
+
     // Keep the widget's cached note fresh while the app is open, and
     // notify + vibrate on fresh notes.
     LaunchedEffect(coupleId) {

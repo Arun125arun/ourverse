@@ -4,10 +4,22 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.snapshots
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
+
+data class PartnerProfile(
+    val name: String,
+    val photoUrl: String,
+    val lastActiveMillis: Long?,
+)
 
 class ChatRepository(
     private val coupleId: String,
@@ -17,8 +29,16 @@ class ChatRepository(
     val myUid: String
         get() = auth.currentUser?.uid ?: error("Not signed in")
 
+    private val coupleRef
+        get() = db.collection("couples").document(coupleId)
+
     private val messagesRef
-        get() = db.collection("couples").document(coupleId).collection("messages")
+        get() = coupleRef.collection("messages")
+
+    // Members-only doc for typing/mood/anniversary (the couple doc itself is
+    // readable during pairing, so private state lives here instead).
+    private val stateRef
+        get() = coupleRef.collection("state").document("shared")
 
     suspend fun send(text: String) {
         val body = text.trim()
@@ -75,15 +95,49 @@ class ChatRepository(
     }
 
     suspend fun setAnniversary(millis: Long) {
-        db.collection("couples").document(coupleId)
-            .update("anniversaryMillis", millis)
-            .await()
+        stateRef.set(mapOf("anniversaryMillis" to millis), SetOptions.merge()).await()
     }
 
     /** Epoch millis of the couple's "together since" date, or null if unset. */
     fun anniversaryMillis(): Flow<Long?> =
-        db.collection("couples").document(coupleId).snapshots()
-            .map { it.getLong("anniversaryMillis") }
+        combine(stateRef.snapshots(), coupleRef.snapshots()) { state, couple ->
+            // legacy fallback: early versions stored this on the couple doc
+            state.getLong("anniversaryMillis") ?: couple.getLong("anniversaryMillis")
+        }
+
+    /** Firestore uid of the partner, or null while unpaired. */
+    fun partnerUid(): Flow<String?> =
+        coupleRef.snapshots()
+            .map { doc ->
+                (doc.get("members") as? List<*>)
+                    ?.filterIsInstance<String>()
+                    ?.firstOrNull { it != myUid }
+            }
+            .distinctUntilChanged()
+
+    /** Live name/photo/presence of the partner. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun partnerProfile(): Flow<PartnerProfile?> =
+        partnerUid().flatMapLatest { uid ->
+            if (uid == null) {
+                flowOf(null)
+            } else {
+                db.collection("users").document(uid).snapshots().map { doc ->
+                    PartnerProfile(
+                        name = doc.getString("displayName").orEmpty(),
+                        photoUrl = doc.getString("photoUrl").orEmpty(),
+                        lastActiveMillis = doc.getTimestamp("lastActiveAt")?.toDate()?.time,
+                    )
+                }
+            }
+        }
+
+    /** Called periodically while the app is open so the partner sees presence. */
+    suspend fun heartbeatPresence() {
+        db.collection("users").document(myUid)
+            .set(mapOf("lastActiveAt" to FieldValue.serverTimestamp()), SetOptions.merge())
+            .await()
+    }
 
     /** Sets or clears (emoji == null) my reaction on a message. */
     suspend fun react(messageId: String, emoji: String?) {
@@ -94,14 +148,15 @@ class ChatRepository(
 
     /** Heartbeat written while I'm typing; partner shows it briefly. */
     suspend fun setTyping() {
-        db.collection("couples").document(coupleId)
-            .update("typing.$myUid", FieldValue.serverTimestamp())
-            .await()
+        stateRef.set(
+            mapOf("typing" to mapOf(myUid to FieldValue.serverTimestamp())),
+            SetOptions.merge(),
+        ).await()
     }
 
     /** Epoch millis of the partner's latest typing heartbeat, or null. */
     fun partnerTypingAt(): Flow<Long?> =
-        db.collection("couples").document(coupleId).snapshots()
+        stateRef.snapshots()
             .map { doc ->
                 val typing = doc.get("typing") as? Map<*, *> ?: return@map null
                 typing.entries
