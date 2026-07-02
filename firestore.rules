@@ -30,6 +30,9 @@ service cloud.firestore {
         && request.resource.data.members.size() == 1
         && request.resource.data.members[0] == request.auth.uid;
 
+      // Account deletion: a member may delete the couple and its data.
+      allow delete: if request.auth != null && request.auth.uid in resource.data.members;
+
       // Updating: either you're already a member, or you're joining an
       // incomplete couple by appending yourself as the second member.
       allow update: if request.auth != null && (

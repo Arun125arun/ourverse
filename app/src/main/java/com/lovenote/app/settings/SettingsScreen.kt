@@ -57,8 +57,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
+import androidx.glance.appwidget.updateAll
 import com.google.firebase.auth.FirebaseAuth
+import com.lovenote.app.auth.AuthRepository
 import com.lovenote.app.chat.ChatRepository
+import com.lovenote.app.widget.NoteWidget
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -75,6 +78,9 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     var showAbout by remember { mutableStateOf(false) }
     var confirmLogout by remember { mutableStateOf(false) }
+    var confirmDelete by remember { mutableStateOf(false) }
+    var deleting by remember { mutableStateOf(false) }
+    var deleteError by remember { mutableStateOf<String?>(null) }
     var checkingUpdate by remember { mutableStateOf(false) }
     var updateStatus by remember { mutableStateOf<String?>(null) }
     var availableUpdate by remember { mutableStateOf<UpdateChecker.UpdateInfo?>(null) }
@@ -198,6 +204,24 @@ fun SettingsScreen(
                 ) {
                     Text("Log out")
                 }
+                Spacer(Modifier.height(8.dp))
+                TextButton(
+                    onClick = { confirmDelete = true },
+                    enabled = !deleting,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = if (deleting) "Deleting everything…" else "Delete account",
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+                deleteError?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
             }
 
             SettingsCard(title = "App update") {
@@ -315,6 +339,44 @@ fun SettingsScreen(
                         "📞 9763526677\n" +
                         "✉ adhikariarun549@gmail.com",
                 )
+            },
+        )
+    }
+
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text("Delete your account?") },
+            text = {
+                Text(
+                    "This permanently erases everything, for both of you: all " +
+                        "messages and photos, every note, your daily answers, " +
+                        "special dates, and the pairing itself. Your partner will " +
+                        "be unpaired.\n\nThis cannot be undone.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmDelete = false
+                    deleting = true
+                    deleteError = null
+                    scope.launch {
+                        try {
+                            AuthRepository().deleteAccount(context)
+                            NoteWidget().updateAll(context)
+                            onLoggedOut()
+                        } catch (e: Exception) {
+                            deleteError = e.message ?: "Couldn't delete — try again"
+                        } finally {
+                            deleting = false
+                        }
+                    }
+                }) {
+                    Text("Delete everything", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDelete = false }) { Text("Cancel") }
             },
         )
     }
