@@ -1,5 +1,8 @@
 package com.lovenote.app.notes
 
+import android.app.WallpaperManager
+import android.content.ComponentName
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -35,8 +39,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.lovenote.app.wallpaper.NoteWallpaperService
 import kotlinx.coroutines.launch
 
 /** Background colors for each note style; the widget uses these too. */
@@ -54,6 +60,7 @@ fun SendNoteScreen(
     repository: NoteRepository,
     onBack: () -> Unit,
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var text by remember { mutableStateOf("") }
     var style by remember { mutableStateOf(Note.DEFAULT_STYLE) }
@@ -163,6 +170,23 @@ fun SendNoteScreen(
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium,
                 )
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            TextButton(
+                onClick = {
+                    val intent = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER).apply {
+                        putExtra(
+                            WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT,
+                            ComponentName(context, NoteWallpaperService::class.java),
+                        )
+                    }
+                    runCatching { context.startActivity(intent) }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Show their notes as my wallpaper")
             }
         }
     }

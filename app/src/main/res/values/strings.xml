@@ -2,4 +2,5 @@
 <resources>
     <string name="app_name">LoveNote</string>
     <string name="widget_description">Shows the latest note from your partner</string>
+    <string name="wallpaper_description">Your partner\'s latest note as your wallpaper</string>
 </resources>
