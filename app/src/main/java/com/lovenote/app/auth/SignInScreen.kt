@@ -39,7 +39,7 @@ fun SignInScreen(onSignedIn: () -> Unit) {
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = "LoveNote ❤",
+            text = "OurVerse ❤",
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.primary,
         )

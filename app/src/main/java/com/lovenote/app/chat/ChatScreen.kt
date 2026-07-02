@@ -104,7 +104,7 @@ fun ChatScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("LoveNote ❤")
+                        Text("OurVerse ❤")
                         if (partnerTyping) {
                             Text(
                                 text = "typing…",

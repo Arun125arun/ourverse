@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1002607358199",
+    "project_id": "ourverse-98c44",
+    "storage_bucket": "ourverse-98c44.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1002607358199:android:85deedebe1475bd8d7a3f2",
+        "android_client_info": {
+          "package_name": "com.lovenote.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB9uW5FM-dOyxRj8YUzXpoEQKoIbjiFmvs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

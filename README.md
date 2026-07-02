@@ -1,4 +1,7 @@
-# LoveNote ❤
+# OurVerse ❤
+
+*(formerly LoveNote — internal package id is still `com.lovenote.app`, which
+users never see and which stays fixed because Firebase is registered to it)*
 
 An Android app for two people. Pair up once with an invite code, then chat
 and leave notes that appear on your partner's home screen widget.
