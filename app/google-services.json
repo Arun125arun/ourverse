@@ -12,7 +12,20 @@
           "package_name": "com.lovenote.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "1002607358199-fa6cuepo22udp4j4o1ro988ipmjlqgoq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.lovenote.app",
+            "certificate_hash": "41386436952ed9e9cff8e02a54cc2d30c99d5298"
+          }
+        },
+        {
+          "client_id": "1002607358199-cifm1j69dlgmtng59u6jnlmqc2u5fv09.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyB9uW5FM-dOyxRj8YUzXpoEQKoIbjiFmvs"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1002607358199-cifm1j69dlgmtng59u6jnlmqc2u5fv09.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
