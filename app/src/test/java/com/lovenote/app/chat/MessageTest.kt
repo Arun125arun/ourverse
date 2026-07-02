@@ -19,9 +19,37 @@ class MessageTest {
             type = "text",
             body = "hi love",
             sentAt = sent,
+            seenAt = Timestamp(Date(1_700_000_060_000L)),
+            reactions = mapOf("bob" to "❤", "alice" to "😂"),
         )
         val restored = Message.fromMap("m1", original.toMap())
         assertEquals(original, restored)
+    }
+
+    @Test
+    fun `photo message round-trips`() {
+        val original = Message(
+            id = "p1",
+            senderUid = "bob",
+            type = "photo",
+            body = "aGVsbG8=",
+        )
+        val restored = Message.fromMap("p1", original.toMap())
+        assertEquals("photo", restored.type)
+        assertEquals("aGVsbG8=", restored.body)
+    }
+
+    @Test
+    fun `seen is true only when seenAt is set`() {
+        assertFalse(Message(id = "m5").seen)
+        assertTrue(Message(id = "m6", seenAt = Timestamp(Date(0L))).seen)
+    }
+
+    @Test
+    fun `reactions default to empty and ignore non-string entries`() {
+        val message = Message.fromMap("m7", mapOf("reactions" to mapOf("alice" to 42)))
+        assertTrue(message.reactions.isEmpty())
+        assertTrue(Message.fromMap("m8", emptyMap()).reactions.isEmpty())
     }
 
     @Test
