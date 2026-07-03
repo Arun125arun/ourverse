@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -103,6 +104,12 @@ fun ChatScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val messages by repository.messages().collectAsState(initial = emptyList())
+    val listState = rememberLazyListState()
+
+    // Snap to the newest message whenever one is sent or received.
+    LaunchedEffect(messages.firstOrNull()?.id) {
+        if (messages.isNotEmpty()) listState.animateScrollToItem(0)
+    }
     val partnerTypingAt by repository.partnerTypingAt().collectAsState(initial = null)
     val anniversary by repository.anniversaryMillis().collectAsState(initial = null)
     val partner by repository.partnerProfile().collectAsState(initial = null)
@@ -280,6 +287,7 @@ fun ChatScreen(
                     .firstOrNull { it.isMine(repository.myUid) && it.seen }
                     ?.id
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
