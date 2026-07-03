@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.Crossfade
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -226,7 +227,8 @@ private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                 .padding(padding)
                 .consumeWindowInsets(padding),
         ) {
-            when (screen) {
+            Crossfade(targetState = screen, label = "screens") { screen ->
+                when (screen) {
                 HomeScreen.NOTE -> SendNoteScreen(
                     repository = noteRepository,
                     onBack = { navigate(HomeScreen.CHAT) },
@@ -254,6 +256,7 @@ private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                     onSendNoteClick = { navigate(HomeScreen.NOTE) },
                     onSettingsClick = { navigate(HomeScreen.SETTINGS) },
                 )
+                }
             }
         }
     }
