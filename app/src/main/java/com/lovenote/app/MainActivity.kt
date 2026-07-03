@@ -9,6 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -210,7 +211,11 @@ private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
             }
         },
     ) { padding ->
-        Box(modifier = Modifier.padding(padding)) {
+        Box(
+            modifier = Modifier
+                .padding(padding)
+                .consumeWindowInsets(padding),
+        ) {
             when (screen) {
                 HomeScreen.NOTE -> SendNoteScreen(
                     repository = noteRepository,
