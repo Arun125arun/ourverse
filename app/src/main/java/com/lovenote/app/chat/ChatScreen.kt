@@ -216,17 +216,18 @@ fun ChatScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                expandedHeight = 52.dp,
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Avatar(
                             name = partner?.name ?: "",
                             photoUrl = partner?.photoUrl ?: "",
-                            size = 38.dp,
+                            size = 32.dp,
                         )
                         Column(modifier = Modifier.padding(start = 10.dp)) {
                             Text(
                                 text = partner?.name?.takeIf { it.isNotBlank() } ?: "OurVerse ❤",
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.titleSmall,
                             )
                             if (partnerTyping) {
                                 TypingDots()
