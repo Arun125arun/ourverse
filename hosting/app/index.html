@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#17131a">
+<title>OurVerse ❤</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  * { box-sizing: border-box; margin: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    font-family: system-ui, sans-serif;
+    background: #17131a; color: #f4eef2;
+    display: flex; flex-direction: column;
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+  .screen { flex: 1; display: none; flex-direction: column; min-height: 0; }
+  .screen.active { display: flex; }
+  .center { justify-content: center; align-items: center; text-align: center; padding: 32px; }
+  h1 { color: #ff5c8a; margin-bottom: 6px; }
+  .muted { color: #b09aa8; font-size: 14px; line-height: 1.5; }
+  button {
+    border: 0; border-radius: 24px; padding: 13px 24px; font-size: 16px;
+    background: #e91e63; color: #fff; font-weight: 600; cursor: pointer;
+  }
+  button.ghost { background: transparent; border: 1px solid #6d5364; color: #f4eef2; }
+  button:disabled { opacity: 0.5; }
+  input, textarea {
+    width: 100%; border: 1px solid #52394a; border-radius: 14px; padding: 12px;
+    background: #241a22; color: #f4eef2; font-size: 16px; outline: none;
+  }
+  .gap { height: 14px; }
+  /* top bar */
+  .topbar {
+    display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+    background: #241a22; border-bottom: 1px solid #382631;
+  }
+  .topbar img.avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+  .topbar .title { font-weight: 700; }
+  .topbar .sub { font-size: 12px; color: #b09aa8; }
+  .topbar .spacer { flex: 1; }
+  /* messages */
+  #messages { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+  .day { align-self: center; background: #3a2433; color: #e8cfdd; font-size: 12px;
+         border-radius: 10px; padding: 3px 10px; margin: 8px 0; }
+  .msg { max-width: 78%; padding: 9px 13px; border-radius: 16px; font-size: 16px;
+         line-height: 1.35; word-wrap: break-word; }
+  .msg.me { align-self: flex-end; background: #e91e63; color: #fff; border-bottom-right-radius: 4px; }
+  .msg.them { align-self: flex-start; background: #3a2433; border-bottom-left-radius: 4px; }
+  .msg img { max-width: 100%; border-radius: 10px; display: block; }
+  .msg audio { width: 210px; }
+  .caption { font-size: 11px; color: #9c8391; margin: 0 6px 4px; }
+  .caption.me { align-self: flex-end; }
+  .caption.them { align-self: flex-start; }
+  /* composer */
+  .composer { display: flex; gap: 8px; padding: 10px 12px; background: #241a22;
+              border-top: 1px solid #382631; align-items: flex-end; }
+  .composer .field { flex: 1; display: flex; align-items: center; background: #17131a;
+                     border-radius: 24px; border: 1px solid #52394a; }
+  .composer input { border: 0; background: transparent; }
+  .iconbtn { background: transparent; border: 0; font-size: 20px; padding: 8px 10px; color: #b09aa8; }
+  .sendbtn { width: 46px; height: 46px; border-radius: 50%; font-size: 18px; padding: 0; flex: none; }
+  /* tabs */
+  .tabs { display: flex; background: #241a22; border-top: 1px solid #382631; }
+  .tabs button { flex: 1; background: transparent; color: #b09aa8; border-radius: 0;
+                 padding: 10px; font-size: 13px; }
+  .tabs button.on { color: #ff5c8a; }
+  /* note composer */
+  .notebox { padding: 18px; overflow-y: auto; }
+  .preview { border-radius: 18px; padding: 26px 16px; text-align: center; color: #333;
+             font-size: 17px; min-height: 90px; display: flex; align-items: center; justify-content: center; }
+  .swatches { display: flex; gap: 12px; justify-content: center; margin: 14px 0; }
+  .swatch { width: 38px; height: 38px; border-radius: 50%; border: 2px solid transparent; padding: 0; }
+  .swatch.on { border-color: #fff; }
+  #overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.92); display: none;
+             align-items: center; justify-content: center; z-index: 10; }
+  #overlay img { max-width: 100%; max-height: 100%; }
+  .code { font-size: 34px; letter-spacing: 8px; color: #ff5c8a; font-weight: 800; margin: 12px 0; }
+  .row { display: flex; gap: 8px; align-items: center; }
+</style>
+</head>
+<body>
+
+<div id="screen-auth" class="screen center active">
+  <h1>OurVerse ❤</h1>
+  <p class="muted">A tiny universe for two people</p>
+  <div class="gap"></div>
+  <button id="btn-signin">Continue with Google</button>
+  <div class="gap"></div>
+  <p class="muted" id="auth-error"></p>
+  <p class="muted">Tip: use Safari's Share → “Add to Home Screen” to install this like an app.</p>
+</div>
+
+<div id="screen-pair" class="screen center">
+  <h1>Link with your partner</h1>
+  <div class="gap"></div>
+  <div id="pair-create">
+    <button id="btn-create">Get an invite code</button>
+    <div class="gap"></div>
+    <p class="muted">— or —</p>
+    <div class="gap"></div>
+    <input id="join-code" placeholder="Partner's code" autocapitalize="characters" maxlength="6" style="text-align:center">
+    <div class="gap"></div>
+    <button id="btn-join" class="ghost">Join</button>
+  </div>
+  <div id="pair-wait" style="display:none">
+    <p>Share this code with your partner:</p>
+    <div class="code" id="my-code"></div>
+    <p class="muted">Waiting for them to join…</p>
+  </div>
+  <div class="gap"></div>
+  <p class="muted" id="pair-error"></p>
+  <button id="btn-signout-pair" class="ghost">Log out</button>
+</div>
+
+<div id="screen-main" class="screen">
+  <div class="topbar">
+    <img class="avatar" id="p-avatar" src="icon-192.png" alt="">
+    <div>
+      <div class="title" id="p-name">OurVerse ❤</div>
+      <div class="sub" id="p-status"></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="iconbtn" id="btn-signout" title="Log out">⎋</button>
+  </div>
+
+  <div id="tab-chat" style="display:flex;flex-direction:column;flex:1;min-height:0">
+    <div id="messages"></div>
+    <div class="composer">
+      <div class="field">
+        <input id="input" placeholder="Message" autocomplete="off">
+        <button class="iconbtn" id="btn-photo">🖼</button>
+        <input type="file" id="file" accept="image/*" hidden>
+      </div>
+      <button class="sendbtn" id="btn-send">➤</button>
+    </div>
+  </div>
+
+  <div id="tab-note" class="notebox" style="display:none">
+    <div class="preview" id="note-preview">Your note will look like this ❤</div>
+    <div class="swatches" id="swatches"></div>
+    <textarea id="note-text" rows="3" maxlength="140" placeholder="Your note…"></textarea>
+    <div class="gap"></div>
+    <button id="btn-send-note" style="width:100%">Send to their home screen ❤</button>
+    <p class="muted" style="margin-top:10px">It appears on your partner's Android widget & wallpaper.</p>
+  </div>
+
+  <div class="tabs">
+    <button id="tabbtn-chat" class="on">💬 Chat</button>
+    <button id="tabbtn-note">📝 Note</button>
+  </div>
+</div>
+
+<div id="overlay"><img id="overlay-img" alt=""></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, onAuthStateChanged, signOut }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, collection, onSnapshot, query, orderBy, limit, addDoc, setDoc,
+         updateDoc, serverTimestamp, getDocs, where, runTransaction }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyDlP6zBPFt9lQ3jfU8jAPYY8sC7m-LEZJ0",
+  authDomain: "ourverse-98c44.firebaseapp.com",
+  projectId: "ourverse-98c44",
+  storageBucket: "ourverse-98c44.firebasestorage.app",
+  messagingSenderId: "1002607358199",
+  appId: "1:1002607358199:web:e3933abef9eace3fd7a3f2",
+});
+const auth = getAuth(app);
+const db = getFirestore(app);
+const $ = (id) => document.getElementById(id);
+const show = (id) => {
+  for (const s of document.querySelectorAll(".screen")) s.classList.remove("active");
+  $(id).classList.add("active");
+};
+
+let me = null, coupleId = null, partnerUid = null;
+let unsubMsgs = null, unsubCouple = null, unsubUser = null, unsubPartner = null;
+
+const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+const genCode = () => Array.from({length: 6}, () => ALPHABET[Math.floor(Math.random()*ALPHABET.length)]).join("");
+
+$("btn-signin").onclick = async () => {
+  try { await signInWithPopup(auth, new GoogleAuthProvider()); }
+  catch (e) {
+    try { await signInWithRedirect(auth, new GoogleAuthProvider()); }
+    catch (e2) { $("auth-error").textContent = e2.message; }
+  }
+};
+$("btn-signout").onclick = () => signOut(auth);
+$("btn-signout-pair").onclick = () => signOut(auth);
+
+onAuthStateChanged(auth, async (user) => {
+  me = user;
+  if (!user) { cleanup(); show("screen-auth"); return; }
+  await setDoc(doc(db, "users", user.uid), {
+    displayName: user.displayName || "", photoUrl: user.photoURL || "",
+  }, { merge: true });
+  heartbeat(); setInterval(heartbeat, 60000);
+  unsubUser = onSnapshot(doc(db, "users", user.uid), (snap) => {
+    const cid = snap.get("coupleId");
+    if (cid && cid !== coupleId) { coupleId = cid; watchCouple(); }
+    else if (!cid) { coupleId = null; show("screen-pair"); }
+  });
+});
+
+async function heartbeat() {
+  if (me) await setDoc(doc(db, "users", me.uid), { lastActiveAt: serverTimestamp() }, { merge: true }).catch(()=>{});
+}
+
+function cleanup() { for (const u of [unsubMsgs, unsubCouple, unsubUser, unsubPartner]) u && u(); }
+
+function watchCouple() {
+  unsubCouple && unsubCouple();
+  unsubCouple = onSnapshot(doc(db, "couples", coupleId), (snap) => {
+    const members = snap.get("members") || [];
+    if (members.length >= 2) {
+      partnerUid = members.find((m) => m !== me.uid);
+      watchPartner(); watchMessages(); show("screen-main");
+    } else {
+      $("pair-create").style.display = "none";
+      $("pair-wait").style.display = "block";
+      $("my-code").textContent = snap.get("inviteCode") || "";
+      show("screen-pair");
+    }
+  });
+}
+
+$("btn-create").onclick = async () => {
+  try {
+    const code = genCode();
+    const ref = await addDoc(collection(db, "couples"), {
+      members: [me.uid], inviteCode: code, createdAt: serverTimestamp(),
+    });
+    await setDoc(doc(db, "users", me.uid), { coupleId: ref.id }, { merge: true });
+  } catch (e) { $("pair-error").textContent = e.message; }
+};
+
+$("btn-join").onclick = async () => {
+  try {
+    const code = $("join-code").value.trim().toUpperCase();
+    if (code.length !== 6) throw new Error("Code should be 6 characters.");
+    const snap = await getDocs(query(collection(db, "couples"), where("inviteCode", "==", code), limit(1)));
+    if (snap.empty) throw new Error("No couple found with that code.");
+    const target = snap.docs[0];
+    await runTransaction(db, async (tx) => {
+      const fresh = await tx.get(target.ref);
+      const members = fresh.get("members") || [];
+      if (members.includes(me.uid)) throw new Error("That's your own code.");
+      if (members.length >= 2) throw new Error("That code has already been used.");
+      tx.update(target.ref, { members: [...members, me.uid] });
+    });
+    await setDoc(doc(db, "users", me.uid), { coupleId: target.id }, { merge: true });
+  } catch (e) { $("pair-error").textContent = e.message; }
+};
+
+function watchPartner() {
+  unsubPartner && unsubPartner();
+  unsubPartner = onSnapshot(doc(db, "users", partnerUid), (snap) => {
+    $("p-name").textContent = snap.get("displayName") || "OurVerse ❤";
+    const photo = snap.get("photoUrl");
+    if (photo) $("p-avatar").src = photo;
+    const last = snap.get("lastActiveAt");
+    if (last) {
+      const mins = (Date.now() - last.toMillis()) / 60000;
+      $("p-status").textContent =
+        mins < 2 ? "Active now" :
+        mins < 60 ? `Active ${Math.floor(mins)}m ago` :
+        mins < 1440 ? `Active ${Math.floor(mins/60)}h ago` : "";
+    }
+  });
+}
+
+function watchMessages() {
+  unsubMsgs && unsubMsgs();
+  const q = query(collection(db, "couples", coupleId, "messages"), orderBy("sentAt", "desc"), limit(100));
+  unsubMsgs = onSnapshot(q, (snap) => {
+    render(snap.docs.slice().reverse());
+    for (const d of snap.docs) {
+      if (d.get("senderUid") !== me.uid && !d.get("seenAt")) {
+        updateDoc(d.ref, { seenAt: serverTimestamp() }).catch(()=>{});
+      }
+    }
+  });
+}
+
+function render(docs) {
+  const box = $("messages");
+  box.innerHTML = "";
+  let lastDay = "";
+  for (const d of docs) {
+    const sentAt = d.get("sentAt");
+    const day = sentAt ? sentAt.toDate().toDateString() : "";
+    if (day && day !== lastDay) {
+      lastDay = day;
+      const chip = document.createElement("div");
+      chip.className = "day";
+      const today = new Date().toDateString();
+      const yest = new Date(Date.now() - 86400000).toDateString();
+      chip.textContent = day === today ? "Today" : day === yest ? "Yesterday" :
+        sentAt.toDate().toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      box.appendChild(chip);
+    }
+    const mine = d.get("senderUid") === me.uid;
+    const el = document.createElement("div");
+    el.className = "msg " + (mine ? "me" : "them");
+    const type = d.get("type"), body = d.get("body");
+    if (type === "photo" && d.get("once")) {
+      el.textContent = body ? "🔥 One-time photo — tap to view" : "🔥 Opened";
+      if (body) el.onclick = () => viewOnce(d, mine);
+    } else if (type === "photo") {
+      const img = document.createElement("img");
+      img.src = "data:image/jpeg;base64," + body;
+      img.onclick = () => { $("overlay-img").src = img.src; $("overlay").style.display = "flex"; };
+      el.appendChild(img);
+    } else if (type === "voice") {
+      const a = document.createElement("audio");
+      a.controls = true;
+      a.src = "data:audio/mp4;base64," + body;
+      el.appendChild(a);
+    } else {
+      el.textContent = body;
+    }
+    box.appendChild(el);
+    const reactions = d.get("reactions");
+    if (reactions && Object.keys(reactions).length) {
+      const r = document.createElement("div");
+      r.className = "caption " + (mine ? "me" : "them");
+      r.textContent = Object.values(reactions).join(" ");
+      box.appendChild(r);
+    }
+  }
+  box.scrollTop = box.scrollHeight;
+}
+
+function viewOnce(d, mine) {
+  $("overlay-img").src = "data:image/jpeg;base64," + d.get("body");
+  $("overlay").style.display = "flex";
+  $("overlay").dataset.consume = mine ? "" : d.ref.path;
+}
+$("overlay").onclick = () => {
+  $("overlay").style.display = "none";
+  const path = $("overlay").dataset.consume;
+  if (path) { updateDoc(doc(db, path), { body: "" }).catch(()=>{}); $("overlay").dataset.consume = ""; }
+  $("overlay-img").src = "";
+};
+
+async function sendText() {
+  const text = $("input").value.trim();
+  if (!text) return;
+  $("input").value = "";
+  await addDoc(collection(db, "couples", coupleId, "messages"), {
+    senderUid: me.uid, type: "text", body: text, sentAt: serverTimestamp(),
+  });
+}
+$("btn-send").onclick = sendText;
+$("input").addEventListener("keydown", (e) => { if (e.key === "Enter") sendText(); });
+
+$("btn-photo").onclick = () => $("file").click();
+$("file").onchange = async () => {
+  const file = $("file").files[0];
+  if (!file) return;
+  const bmp = await createImageBitmap(file);
+  const scale = Math.min(1, 1280 / Math.max(bmp.width, bmp.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bmp.width * scale);
+  canvas.height = Math.round(bmp.height * scale);
+  canvas.getContext("2d").drawImage(bmp, 0, 0, canvas.width, canvas.height);
+  let quality = 0.7, dataUrl = canvas.toDataURL("image/jpeg", quality);
+  while (dataUrl.length > 900000 && quality > 0.3) {
+    quality -= 0.1; dataUrl = canvas.toDataURL("image/jpeg", quality);
+  }
+  const once = confirm("Send as a one-time photo? 🔥\n(OK = view once, Cancel = normal photo)");
+  await addDoc(collection(db, "couples", coupleId, "messages"), {
+    senderUid: me.uid, type: "photo", body: dataUrl.split(",")[1], once,
+    sentAt: serverTimestamp(),
+  });
+  $("file").value = "";
+};
+
+// --- Notes tab ---
+const STYLES = { peach:"#FFDAB9", rose:"#F8BBD0", sky:"#B3E5FC", mint:"#C8E6C9", lavender:"#D1C4E9" };
+let noteStyle = "peach";
+const sw = $("swatches");
+for (const [name, color] of Object.entries(STYLES)) {
+  const b = document.createElement("button");
+  b.className = "swatch" + (name === noteStyle ? " on" : "");
+  b.style.background = color;
+  b.onclick = () => {
+    noteStyle = name;
+    for (const x of sw.children) x.classList.remove("on");
+    b.classList.add("on");
+    $("note-preview").style.background = color;
+  };
+  sw.appendChild(b);
+}
+$("note-preview").style.background = STYLES[noteStyle];
+$("note-text").oninput = () => {
+  $("note-preview").textContent = $("note-text").value || "Your note will look like this ❤";
+};
+$("btn-send-note").onclick = async () => {
+  const text = $("note-text").value.trim();
+  if (!text) return;
+  await addDoc(collection(db, "couples", coupleId, "notes"), {
+    senderUid: me.uid, text, style: noteStyle, sentAt: serverTimestamp(),
+  });
+  $("note-text").value = "";
+  $("note-preview").textContent = "Sent ❤";
+};
+
+$("tabbtn-chat").onclick = () => switchTab("chat");
+$("tabbtn-note").onclick = () => switchTab("note");
+function switchTab(t) {
+  $("tab-chat").style.display = t === "chat" ? "flex" : "none";
+  $("tab-note").style.display = t === "note" ? "block" : "none";
+  $("tabbtn-chat").classList.toggle("on", t === "chat");
+  $("tabbtn-note").classList.toggle("on", t === "note");
+}
+</script>
+</body>
+</html>
