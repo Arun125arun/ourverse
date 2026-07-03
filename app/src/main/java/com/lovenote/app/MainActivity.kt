@@ -10,6 +10,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.Crossfade
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,6 +18,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
@@ -54,7 +57,9 @@ import com.lovenote.app.notify.Notifier
 import com.lovenote.app.notify.NotifyState
 import com.lovenote.app.pairing.PairingRepository
 import com.lovenote.app.settings.AppSettings
+import com.lovenote.app.settings.Changelog
 import com.lovenote.app.settings.SettingsScreen
+import com.lovenote.app.settings.UpdateChecker
 import com.lovenote.app.us.MemoriesScreen
 import com.lovenote.app.us.UsRepository
 import com.lovenote.app.us.UsScreen
@@ -84,8 +89,39 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= 33) {
             notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
+
+        // Show "What's new" once after an update (not on first install).
+        val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
+        val currentVersion = UpdateChecker.installedVersionCode(this)
+        val lastSeenVersion = prefs.getLong("lastSeenVersion", -1L)
+        val updatedFromOlder = lastSeenVersion in 1 until currentVersion
+        prefs.edit().putLong("lastSeenVersion", currentVersion).apply()
+
         setContent {
             LoveNoteTheme {
+                var showWhatsNew by remember { mutableStateOf(updatedFromOlder) }
+                if (showWhatsNew) {
+                    AlertDialog(
+                        onDismissRequest = { showWhatsNew = false },
+                        confirmButton = {
+                            TextButton(onClick = { showWhatsNew = false }) { Text("Nice ❤") }
+                        },
+                        title = {
+                            Text("What's new in ${UpdateChecker.installedVersionName(this)}")
+                        },
+                        text = {
+                            Column {
+                                Changelog.notesFor(currentVersion).forEach { note ->
+                                    Text(
+                                        text = note,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.padding(vertical = 4.dp),
+                                    )
+                                }
+                            }
+                        },
+                    )
+                }
                 var signedIn by remember {
                     mutableStateOf(FirebaseAuth.getInstance().currentUser != null)
                 }
