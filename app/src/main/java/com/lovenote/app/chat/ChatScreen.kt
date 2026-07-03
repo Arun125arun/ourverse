@@ -1,6 +1,8 @@
 package com.lovenote.app.chat
 
+import android.Manifest
 import android.graphics.BitmapFactory
+import android.net.Uri
 import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -15,17 +17,23 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Settings
@@ -39,7 +47,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -58,8 +69,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.content.FileProvider
+import java.io.File
 import com.google.firebase.Timestamp
 import com.lovenote.app.notify.AppVisibility
 import com.lovenote.app.notify.Notifier
@@ -114,13 +128,68 @@ fun ChatScreen(
         partnerTyping = false
     }
 
+    var pendingPhoto by remember { mutableStateOf<String?>(null) }
+    var pendingOnce by remember { mutableStateOf(false) }
+    var recording by remember { mutableStateOf(false) }
+    var recordSeconds by remember { mutableStateOf(0) }
+    var playingVoiceId by remember { mutableStateOf<String?>(null) }
+    val recorder = remember { VoiceRecorder(context) }
+
     val photoPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia(),
     ) { uri ->
         if (uri != null) {
             scope.launch {
-                runCatching { repository.sendPhoto(PhotoEncoder.encode(context, uri)) }
+                pendingPhoto = runCatching { PhotoEncoder.encode(context, uri) }.getOrNull()
             }
+        }
+    }
+
+    var cameraTarget by remember { mutableStateOf<Uri?>(null) }
+    val cameraLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicture(),
+    ) { saved ->
+        val uri = cameraTarget
+        if (saved && uri != null) {
+            scope.launch {
+                pendingPhoto = runCatching { PhotoEncoder.encode(context, uri) }.getOrNull()
+            }
+        }
+    }
+
+    fun launchCamera() {
+        val dir = File(context.cacheDir, "camera").apply { mkdirs() }
+        val file = File(dir, "shot_${System.currentTimeMillis()}.jpg")
+        val uri = FileProvider.getUriForFile(context, "com.lovenote.app.fileprovider", file)
+        cameraTarget = uri
+        cameraLauncher.launch(uri)
+    }
+
+    fun stopAndSendVoice() {
+        val result = runCatching { recorder.stop() }.getOrNull()
+        recording = false
+        result?.let { (audio, duration) ->
+            scope.launch { runCatching { repository.sendVoice(audio, duration) } }
+        }
+    }
+
+    val micPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted) {
+            runCatching { recorder.start() }.onSuccess {
+                recording = true
+                recordSeconds = 0
+            }
+        }
+    }
+
+    // Recording timer with auto-stop at the length limit.
+    LaunchedEffect(recording) {
+        while (recording) {
+            delay(1_000)
+            recordSeconds++
+            if (recordSeconds >= VoiceRecorder.MAX_SECONDS) stopAndSendVoice()
         }
     }
 
@@ -226,7 +295,18 @@ fun ChatScreen(
                                 mine = message.isMine(repository.myUid),
                                 showCaption = lastOfRun,
                                 showSeen = message.id == newestSeenMineId,
-                                onPhotoClick = { viewingPhoto = message },
+                                onPhotoClick = {
+                                    if (!message.onceConsumed) viewingPhoto = message
+                                },
+                                playingVoice = playingVoiceId == message.id,
+                                onVoiceToggle = {
+                                    val nowPlaying = VoicePlayer.toggle(
+                                        context,
+                                        message.id,
+                                        message.body,
+                                    ) { playingVoiceId = null }
+                                    playingVoiceId = if (nowPlaying) message.id else null
+                                },
                                 reactionPickerOpen = reactingTo == message.id,
                                 onLongPress = { reactingTo = message.id },
                                 onDismissPicker = { reactingTo = null },
@@ -252,57 +332,189 @@ fun ChatScreen(
                 }
             }
 
+            // Photo preview strip with the view-once toggle.
+            pendingPhoto?.let { encoded ->
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp),
+                    shape = RoundedCornerShape(16.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        val thumb = remember(encoded) {
+                            runCatching {
+                                val bytes = Base64.decode(encoded, Base64.NO_WRAP)
+                                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                                    ?.asImageBitmap()
+                            }.getOrNull()
+                        }
+                        thumb?.let {
+                            Image(
+                                bitmap = it,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clip(RoundedCornerShape(10.dp)),
+                            )
+                        }
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 10.dp),
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Switch(
+                                    checked = pendingOnce,
+                                    onCheckedChange = { pendingOnce = it },
+                                )
+                                Text(
+                                    text = "View once 🔥",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.padding(start = 6.dp),
+                                )
+                            }
+                        }
+                        IconButton(onClick = {
+                            pendingPhoto = null
+                            pendingOnce = false
+                        }) {
+                            Icon(Icons.Filled.Close, contentDescription = "Cancel")
+                        }
+                        IconButton(onClick = {
+                            val photo = encoded
+                            val once = pendingOnce
+                            pendingPhoto = null
+                            pendingOnce = false
+                            scope.launch { runCatching { repository.sendPhoto(photo, once) } }
+                        }) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.Send,
+                                contentDescription = "Send photo",
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                }
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.Bottom,
             ) {
-                IconButton(onClick = {
-                    photoPicker.launch(
-                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
-                    )
-                }) {
-                    Icon(
-                        Icons.Filled.Add,
-                        contentDescription = "Send a photo",
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                }
-                OutlinedTextField(
-                    value = input,
-                    onValueChange = {
-                        input = it
-                        val now = System.currentTimeMillis()
-                        if (it.isNotBlank() && now - lastHeartbeat > TYPING_HEARTBEAT_MILLIS) {
-                            lastHeartbeat = now
-                            scope.launch { runCatching { repository.setTyping() } }
-                        }
-                    },
-                    placeholder = { Text("Message…") },
+                Surface(
+                    shape = RoundedCornerShape(26.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                     modifier = Modifier.weight(1f),
-                    maxLines = 4,
-                )
-                IconButton(
-                    onClick = {
-                        val text = input
-                        input = ""
-                        scope.launch { repository.send(text) }
-                    },
-                    enabled = input.isNotBlank(),
                 ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "Send",
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
+                    if (recording) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = "🔴 Recording… ${recordSeconds}s",
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(start = 10.dp),
+                            )
+                            IconButton(onClick = {
+                                recorder.cancel()
+                                recording = false
+                            }) {
+                                Icon(Icons.Filled.Delete, contentDescription = "Cancel recording")
+                            }
+                        }
+                    } else {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            TextField(
+                                value = input,
+                                onValueChange = {
+                                    input = it
+                                    val now = System.currentTimeMillis()
+                                    if (it.isNotBlank() &&
+                                        now - lastHeartbeat > TYPING_HEARTBEAT_MILLIS
+                                    ) {
+                                        lastHeartbeat = now
+                                        scope.launch { runCatching { repository.setTyping() } }
+                                    }
+                                },
+                                placeholder = { Text("Message") },
+                                modifier = Modifier.weight(1f),
+                                maxLines = 4,
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = Color.Transparent,
+                                    unfocusedContainerColor = Color.Transparent,
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent,
+                                    disabledIndicatorColor = Color.Transparent,
+                                ),
+                            )
+                            IconButton(onClick = { launchCamera() }) {
+                                Text("📷", fontSize = 20.sp)
+                            }
+                            IconButton(onClick = {
+                                photoPicker.launch(
+                                    PickVisualMediaRequest(
+                                        ActivityResultContracts.PickVisualMedia.ImageOnly,
+                                    ),
+                                )
+                            }) {
+                                Text("🖼", fontSize = 20.sp)
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .background(MaterialTheme.colorScheme.primary, CircleShape)
+                        .clickable {
+                            when {
+                                recording -> stopAndSendVoice()
+                                input.isNotBlank() -> {
+                                    val text = input
+                                    input = ""
+                                    scope.launch { repository.send(text) }
+                                }
+                                else -> micPermission.launch(Manifest.permission.RECORD_AUDIO)
+                            }
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (recording || input.isNotBlank()) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Send,
+                            contentDescription = "Send",
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    } else {
+                        Text("🎤", fontSize = 22.sp)
+                    }
                 }
             }
         }
     }
 
     viewingPhoto?.let { photo ->
-        FullscreenPhoto(message = photo, onDismiss = { viewingPhoto = null })
+        FullscreenPhoto(
+            message = photo,
+            onDismiss = {
+                viewingPhoto = null
+                // View-once photos self-destruct after the partner sees them.
+                if (photo.once && !photo.isMine(repository.myUid)) {
+                    scope.launch { runCatching { repository.consumeOncePhoto(photo.id) } }
+                }
+            },
+        )
     }
 }
 
@@ -318,6 +530,8 @@ private fun MessageRow(
     onDismissPicker: () -> Unit,
     onDelete: () -> Unit,
     onPhotoClick: () -> Unit,
+    playingVoice: Boolean,
+    onVoiceToggle: () -> Unit,
     onReact: (String) -> Unit,
 ) {
     Column(
@@ -342,12 +556,45 @@ private fun MessageRow(
                         ),
                     )
                     .combinedClickable(
-                        onClick = { if (message.isPhoto) onPhotoClick() },
+                        onClick = {
+                            when {
+                                message.isPhoto && !message.once -> onPhotoClick()
+                                message.isPhoto && message.once -> onPhotoClick()
+                                message.isVoice -> onVoiceToggle()
+                            }
+                        },
                         onLongClick = onLongPress,
                     )
-                    .padding(if (message.isPhoto) 4.dp else 0.dp),
+                    .padding(if (message.isPhoto && !message.once) 4.dp else 0.dp),
             ) {
-                if (message.isPhoto) {
+                if (message.isVoice) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(if (playingVoice) "⏹" else "▶", fontSize = 20.sp)
+                        Text(
+                            text = "  Voice note · ${message.durationSec ?: 0}s",
+                            color = if (mine) {
+                                MaterialTheme.colorScheme.onPrimary
+                            } else {
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                            },
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                } else if (message.isPhoto && message.once) {
+                    Text(
+                        text = if (message.onceConsumed) "🔥 Opened" else "🔥 One-time photo — tap to view",
+                        color = if (mine) {
+                            MaterialTheme.colorScheme.onPrimary
+                        } else {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        },
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    )
+                } else if (message.isPhoto) {
                     PhotoBubble(message)
                 } else {
                     Text(

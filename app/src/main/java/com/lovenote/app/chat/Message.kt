@@ -10,10 +10,17 @@ data class Message(
     val sentAt: Timestamp? = null,
     val seenAt: Timestamp? = null,
     val reactions: Map<String, String> = emptyMap(),
+    val durationSec: Long? = null,
+    val once: Boolean = false,
 ) {
     val seen: Boolean get() = seenAt != null
 
     val isPhoto: Boolean get() = type == "photo"
+
+    val isVoice: Boolean get() = type == "voice"
+
+    /** A view-once photo whose content has already been destroyed. */
+    val onceConsumed: Boolean get() = once && body.isEmpty()
 
     fun isMine(uid: String): Boolean = senderUid == uid
 
@@ -24,6 +31,8 @@ data class Message(
         "sentAt" to sentAt,
         "seenAt" to seenAt,
         "reactions" to reactions,
+        "durationSec" to durationSec,
+        "once" to once,
     )
 
     companion object {
@@ -43,6 +52,8 @@ data class Message(
                     key to value
                 }
                 .toMap(),
+            durationSec = (map["durationSec"] as? Number)?.toLong(),
+            once = map["once"] as? Boolean ?: false,
         )
     }
 }

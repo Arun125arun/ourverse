@@ -53,15 +53,33 @@ class ChatRepository(
         ).await()
     }
 
-    suspend fun sendPhoto(base64Jpeg: String) {
+    suspend fun sendPhoto(base64Jpeg: String, once: Boolean = false) {
         messagesRef.add(
             mapOf(
                 "senderUid" to myUid,
                 "type" to "photo",
                 "body" to base64Jpeg,
+                "once" to once,
                 "sentAt" to FieldValue.serverTimestamp(),
             ),
         ).await()
+    }
+
+    suspend fun sendVoice(base64Audio: String, durationSec: Long) {
+        messagesRef.add(
+            mapOf(
+                "senderUid" to myUid,
+                "type" to "voice",
+                "body" to base64Audio,
+                "durationSec" to durationSec,
+                "sentAt" to FieldValue.serverTimestamp(),
+            ),
+        ).await()
+    }
+
+    /** Destroys a view-once photo's content after the partner has seen it. */
+    suspend fun consumeOncePhoto(messageId: String) {
+        messagesRef.document(messageId).update("body", "").await()
     }
 
     /** Stamps seenAt on every unseen partner message (read receipts). */

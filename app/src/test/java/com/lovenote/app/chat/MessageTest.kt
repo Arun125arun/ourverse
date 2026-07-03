@@ -63,6 +63,31 @@ class MessageTest {
     }
 
     @Test
+    fun `voice message round-trips with duration`() {
+        val original = Message(
+            id = "v1",
+            senderUid = "alice",
+            type = "voice",
+            body = "aGVsbG8=",
+            durationSec = 12,
+        )
+        val restored = Message.fromMap("v1", original.toMap())
+        assertEquals(original, restored)
+        assertTrue(restored.isVoice)
+    }
+
+    @Test
+    fun `one-time photo flag round-trips and consumed state works`() {
+        val fresh = Message(id = "o1", senderUid = "bob", type = "photo", body = "eA==", once = true)
+        val restored = Message.fromMap("o1", fresh.toMap())
+        assertTrue(restored.once)
+        assertFalse(restored.onceConsumed)
+
+        val consumed = Message.fromMap("o2", mapOf("type" to "photo", "once" to true, "body" to ""))
+        assertTrue(consumed.onceConsumed)
+    }
+
+    @Test
     fun `isMine matches sender uid`() {
         val message = Message(id = "m3", senderUid = "alice", body = "hey")
         assertTrue(message.isMine("alice"))

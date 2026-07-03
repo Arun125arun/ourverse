@@ -57,7 +57,11 @@ class WidgetRefreshWorker(
                         NotifyState.setLastMessage(context, msgMillis)
                         Notifier.notifyMessage(
                             context,
-                            if (message.isPhoto) "📷 Photo" else message.body,
+                            when {
+                                message.isPhoto -> "📷 Photo"
+                                message.isVoice -> "🎤 Voice note"
+                                else -> message.body
+                            },
                         )
                     }
                 }

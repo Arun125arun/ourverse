@@ -173,7 +173,11 @@ private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                 } else {
                     Notifier.notifyMessage(
                         context,
-                        if (newest.isPhoto) "📷 Photo" else newest.body,
+                        when {
+                            newest.isPhoto -> "📷 Photo"
+                            newest.isVoice -> "🎤 Voice note"
+                            else -> newest.body
+                        },
                     )
                 }
             }
