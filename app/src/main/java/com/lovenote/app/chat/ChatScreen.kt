@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -67,7 +68,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -75,6 +78,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
 import java.io.File
 import com.google.firebase.Timestamp
+import com.lovenote.app.R
 import com.lovenote.app.notify.AppVisibility
 import com.lovenote.app.notify.Notifier
 import com.lovenote.app.ui.Avatar
@@ -458,7 +462,11 @@ fun ChatScreen(
                                 ),
                             )
                             IconButton(onClick = { launchCamera() }) {
-                                Text("📷", fontSize = 20.sp)
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_camera),
+                                    contentDescription = "Camera",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                             IconButton(onClick = {
                                 photoPicker.launch(
@@ -467,7 +475,11 @@ fun ChatScreen(
                                     ),
                                 )
                             }) {
-                                Text("🖼", fontSize = 20.sp)
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_gallery),
+                                    contentDescription = "Gallery",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                         }
                     }
@@ -497,7 +509,11 @@ fun ChatScreen(
                             tint = MaterialTheme.colorScheme.onPrimary,
                         )
                     } else {
-                        Text("🎤", fontSize = 22.sp)
+                        Icon(
+                            painter = painterResource(R.drawable.ic_mic),
+                            contentDescription = "Record a voice note",
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                        )
                     }
                 }
             }
@@ -572,7 +588,20 @@ private fun MessageRow(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(if (playingVoice) "⏹" else "▶", fontSize = 20.sp)
+                        Icon(
+                            painter = if (playingVoice) {
+                                painterResource(R.drawable.ic_pause)
+                            } else {
+                                rememberVectorPainter(Icons.Filled.PlayArrow)
+                            },
+                            contentDescription = if (playingVoice) "Pause" else "Play",
+                            tint = if (mine) {
+                                MaterialTheme.colorScheme.onPrimary
+                            } else {
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                            },
+                            modifier = Modifier.size(26.dp),
+                        )
                         Text(
                             text = "  Voice note · ${message.durationSec ?: 0}s",
                             color = if (mine) {
