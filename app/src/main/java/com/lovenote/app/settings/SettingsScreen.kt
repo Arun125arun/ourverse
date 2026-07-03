@@ -2,6 +2,8 @@ package com.lovenote.app.settings
 
 import android.content.Intent
 import android.net.Uri
+import android.os.PowerManager
+import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -221,6 +223,45 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                     )
+                }
+            }
+
+            SettingsCard(title = "Notifications") {
+                val powerManager = context.getSystemService(PowerManager::class.java)
+                var unrestricted by remember {
+                    mutableStateOf(
+                        powerManager.isIgnoringBatteryOptimizations(context.packageName),
+                    )
+                }
+                Text(
+                    text = if (unrestricted) {
+                        "Reliable ✓ — the system won't put OurVerse to sleep"
+                    } else {
+                        "Your phone may delay notifications by putting OurVerse " +
+                            "to sleep in the background."
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+                if (!unrestricted) {
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedButton(
+                        onClick = {
+                            runCatching {
+                                context.startActivity(
+                                    Intent(
+                                        Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                                        Uri.parse("package:${context.packageName}"),
+                                    ),
+                                )
+                            }
+                            unrestricted = powerManager
+                                .isIgnoringBatteryOptimizations(context.packageName)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Make notifications reliable")
+                    }
                 }
             }
 

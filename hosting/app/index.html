@@ -215,8 +215,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, onAuthStateChanged, signOut }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, collection, onSnapshot, query, orderBy, limit, addDoc, setDoc,
-         updateDoc, deleteDoc, serverTimestamp, getDocs, where, runTransaction }
+import { initializeFirestore, persistentLocalCache, doc, collection, onSnapshot, query,
+         orderBy, limit, addDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, getDocs,
+         where, runTransaction }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
@@ -228,7 +229,9 @@ const app = initializeApp({
   appId: "1:1002607358199:web:e3933abef9eace3fd7a3f2",
 });
 const auth = getAuth(app);
-const db = getFirestore(app);
+let db;
+try { db = initializeFirestore(app, { localCache: persistentLocalCache() }); }
+catch (e) { db = initializeFirestore(app, {}); }
 const $ = (id) => document.getElementById(id);
 const show = (id) => {
   for (const s of document.querySelectorAll(".screen")) s.classList.remove("active");
