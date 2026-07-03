@@ -612,7 +612,7 @@ private fun MessageRow(
         Box {
             Box(
                 modifier = Modifier
-                    .widthIn(max = 280.dp)
+                    .widthIn(max = 260.dp)
                     .background(
                         color = if (mine) {
                             MaterialTheme.colorScheme.primary
@@ -640,7 +640,7 @@ private fun MessageRow(
             ) {
                 if (message.isVoice) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
@@ -664,7 +664,7 @@ private fun MessageRow(
                             } else {
                                 MaterialTheme.colorScheme.onPrimaryContainer
                             },
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = MaterialTheme.typography.bodyMedium,
                         )
                     }
                 } else if (message.isPhoto && message.once) {
@@ -675,8 +675,8 @@ private fun MessageRow(
                         } else {
                             MaterialTheme.colorScheme.onPrimaryContainer
                         },
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
                     )
                 } else if (message.isPhoto) {
                     PhotoBubble(message)
@@ -688,8 +688,8 @@ private fun MessageRow(
                         } else {
                             MaterialTheme.colorScheme.onPrimaryContainer
                         },
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                     )
                 }
             }
