@@ -9,9 +9,13 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
@@ -189,7 +193,13 @@ private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
+            // Slim bar that stays behind the keyboard when typing.
+            NavigationBar(
+                modifier = Modifier
+                    .navigationBarsPadding()
+                    .height(64.dp),
+                windowInsets = WindowInsets(0, 0, 0, 0),
+            ) {
                 NavigationBarItem(
                     selected = screen == HomeScreen.CHAT || screen == HomeScreen.SETTINGS,
                     onClick = { navigate(HomeScreen.CHAT) },
