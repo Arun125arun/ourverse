@@ -81,6 +81,14 @@
   #overlay img { max-width: 100%; max-height: 100%; }
   .code { font-size: 34px; letter-spacing: 8px; color: #ff5c8a; font-weight: 800; margin: 12px 0; }
   .row { display: flex; gap: 8px; align-items: center; }
+  .uscard { background: #241a22; border: 1px solid #382631; border-radius: 18px; padding: 16px; }
+  .uslabel { font-size: 12px; color: #ff5c8a; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+  .answerbox { background: #17131a; border-radius: 12px; padding: 10px; margin-top: 6px; }
+  .opt { display: block; width: 100%; text-align: left; background: #17131a; color: #f4eef2;
+         border: 1px solid #52394a; border-radius: 12px; padding: 10px 12px; margin-top: 6px;
+         font-size: 15px; font-weight: 400; }
+  .opt.on { background: #e91e63; border-color: #e91e63; color: #fff; }
+  .qhint { font-size: 13px; color: #b09aa8; margin: 10px 0 4px; }
 </style>
 </head>
 <body>
@@ -149,8 +157,23 @@
     <p class="muted" style="margin-top:10px">It appears on your partner's Android widget & wallpaper.</p>
   </div>
 
+  <div id="tab-us" class="notebox" style="display:none">
+    <div class="uscard">
+      <div class="uslabel">Today's question</div>
+      <div id="dq-question" style="font-weight:600;margin:6px 0 12px"></div>
+      <div id="dq-body"></div>
+    </div>
+    <div class="gap"></div>
+    <div class="uscard">
+      <div class="uslabel">Couple quiz 🎯</div>
+      <div id="qz-question" style="font-weight:600;margin:6px 0 12px"></div>
+      <div id="qz-body"></div>
+    </div>
+  </div>
+
   <div class="tabs">
     <button id="tabbtn-chat" class="on">💬 Chat</button>
+    <button id="tabbtn-us">❤ Us</button>
     <button id="tabbtn-note">📝 Note</button>
   </div>
 </div>
@@ -223,7 +246,7 @@ function watchCouple() {
     const members = snap.get("members") || [];
     if (members.length >= 2) {
       partnerUid = members.find((m) => m !== me.uid);
-      watchPartner(); watchMessages(); show("screen-main");
+      watchPartner(); watchMessages(); watchUs(); show("screen-main");
     } else {
       $("pair-create").style.display = "none";
       $("pair-wait").style.display = "block";
@@ -416,12 +439,175 @@ $("btn-send-note").onclick = async () => {
 };
 
 $("tabbtn-chat").onclick = () => switchTab("chat");
+$("tabbtn-us").onclick = () => switchTab("us");
 $("tabbtn-note").onclick = () => switchTab("note");
 function switchTab(t) {
   $("tab-chat").style.display = t === "chat" ? "flex" : "none";
+  $("tab-us").style.display = t === "us" ? "block" : "none";
   $("tab-note").style.display = t === "note" ? "block" : "none";
   $("tabbtn-chat").classList.toggle("on", t === "chat");
+  $("tabbtn-us").classList.toggle("on", t === "us");
   $("tabbtn-note").classList.toggle("on", t === "note");
+}
+
+// --- Us tab: daily question + couple quiz (same decks & rotation as Android) ---
+const QUESTIONS = [
+  "What's a small thing I do that makes you feel loved?",
+  "What was your first impression of me, honestly?",
+  "Which memory of us do you replay the most?",
+  "What's something you've always wanted us to try together?",
+  "What song makes you think of me?",
+  "If we could teleport anywhere right now, where would you take us?",
+  "What do you think is my hidden talent?",
+  "What's one thing you'd love me to do more often?",
+  "What's your favorite photo of us, and why?",
+  "When did you first realize you liked me?",
+  "What's a dream you've never told me about?",
+  "What food reminds you of home?",
+  "If we had a whole day with no responsibilities, how would we spend it?",
+  "What's something I taught you without realizing it?",
+  "Which of my habits secretly makes you smile?",
+  "What's the best gift you've ever received — from anyone?",
+  "What are you most proud of from this past year?",
+  "What's one fear you'd like to conquer together?",
+  "If our love story were a movie, what would it be called?",
+  "What's your idea of a perfect lazy Sunday with me?",
+  "What did you want to be when you were a kid?",
+  "What's one place from your childhood you'd love to show me?",
+  "What compliment do you wish you heard more often?",
+  "What's something new you learned about me recently?",
+  "If we could master one skill together, what should it be?",
+  "What's your favorite way to be comforted after a hard day?",
+  "Which fictional couple reminds you of us?",
+  "What tiny everyday moment with me do you treasure?",
+  "What would you cook for me if we had a fancy dinner tonight?",
+  "What's a tradition you'd like to start, just for us two?",
+  "What's the most spontaneous thing you've ever done?",
+  "When do you feel closest to me?",
+  "What's one thing you admire about how I handle problems?",
+  "If we wrote a book together, what would it be about?",
+  "What smell instantly brings back a memory for you?",
+  "What's your favorite thing about waking up next to a message from me?",
+  "What adventure is at the top of your bucket list for us?",
+  "What's something silly that always makes you laugh?",
+  "How do you like to celebrate small wins?",
+  "What's one way I could support your dreams better?",
+  "If you could relive one of our dates, which one?",
+  "What's the kindest thing a stranger ever did for you?",
+  "What's your comfort movie, and will you watch it with me?",
+  "What are you looking forward to most in our future?",
+  "What's a question you've always wanted to ask me?",
+  "What does 'home' mean to you?",
+  "If we had a pet together, what would we name it?",
+  "What little thing did you notice about me today?",
+];
+const QUIZ = [
+  ["Perfect vacation?", ["Beach 🏖", "Mountains 🏔", "City lights 🌆", "Cozy home 🏠"]],
+  ["Movie night pick?", ["Romance 💕", "Action 💥", "Horror 👻", "Comedy 😂"]],
+  ["Ideal breakfast?", ["Big & savory 🍳", "Sweet 🥞", "Just coffee ☕", "Sleep instead 😴"]],
+  ["Dream pet?", ["Dog 🐶", "Cat 🐱", "Bird 🐦", "No pets 🙅"]],
+  ["Rainy day plan?", ["Movies in bed 🎬", "Cooking together 🍲", "Board games 🎲", "Long nap 💤"]],
+  ["Superpower of choice?", ["Fly ✈", "Read minds 🧠", "Time travel ⏳", "Invisibility 🫥"]],
+  ["Go-to comfort food?", ["Noodles 🍜", "Pizza 🍕", "Momo 🥟", "Ice cream 🍨"]],
+  ["Morning person or night owl?", ["Early bird 🌅", "Night owl 🦉", "Depends ☯", "Always tired 😪"]],
+  ["Best gift to receive?", ["Something handmade 🎨", "Surprise trip 🧳", "Tech gadget 📱", "Just time together ⏰"]],
+  ["Karaoke song energy?", ["Romantic ballad 🎤", "Rock anthem 🎸", "Pop hit 💃", "Never singing 🙈"]],
+  ["Dream home?", ["City apartment 🏙", "Countryside house 🌾", "Beach cottage 🌊", "Mountain cabin 🌲"]],
+  ["Money windfall — first move?", ["Travel ✈", "Save it 🏦", "Shopping spree 🛍", "Gift for you ❤"]],
+  ["Party style?", ["Life of the party 🎉", "Small circle chat 🗣", "Quiet corner 🍹", "Rather stay home 🏡"]],
+  ["Scariest thing?", ["Spiders 🕷", "Heights 🪂", "Public speaking 🎙", "Nothing 😎"]],
+  ["Ideal date night?", ["Fancy dinner 🍷", "Street food walk 🌯", "Movie & cuddle 🛋", "Adventure day 🎢"]],
+  ["Phone habit?", ["Always replies fast ⚡", "Forgets phone exists 📵", "Endless scrolling 🌀", "Calls over texts 📞"]],
+  ["Cooking skills?", ["Chef level 👨‍🍳", "Can survive 🍚", "Instant noodles only 🍜", "Kitchen disaster 🔥"]],
+  ["Dream ride?", ["Motorbike 🏍", "Classic car 🚗", "Bicycle 🚲", "Chauffeur please 🧑‍✈️"]],
+  ["Weekend energy?", ["Out exploring 🥾", "Friends & family 👨‍👩‍👧", "Chores & order 🧹", "Full recharge mode 🔋"]],
+  ["Sweet or spicy?", ["Sweet tooth 🍬", "Spice lover 🌶", "Both, always 🤤", "Plain & simple 🍞"]],
+  ["Lost in a new city — what now?", ["Ask locals 🗣", "Map everything 🗺", "Wander happily 🚶", "Panic quietly 😅"]],
+  ["Favorite season?", ["Spring 🌸", "Summer ☀", "Autumn 🍁", "Winter ❄"]],
+  ["Game night pick?", ["Cards 🃏", "Video games 🎮", "Charades 🎭", "Just talking 💬"]],
+  ["Social media style?", ["Posts everything 📸", "Silent watcher 👀", "Meme sender 😹", "Barely online 🌿"]],
+];
+
+const epochDay = Math.floor(Date.now() / 86400000);
+const dateKey = new Date().toISOString().slice(0, 10);
+const dqIndex = epochDay % QUESTIONS.length;
+const qzIndex = (epochDay * 7 + 3) % QUIZ.length;
+let unsubDaily = null, unsubQuiz = null;
+let qzPick = null, qzGuess = null;
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const partnerFirst = () => ($("p-name").textContent || "them").split(" ")[0];
+
+function watchUs() {
+  $("dq-question").textContent = QUESTIONS[dqIndex];
+  $("qz-question").textContent = QUIZ[qzIndex][0];
+
+  unsubDaily && unsubDaily();
+  unsubDaily = onSnapshot(doc(db, "couples", coupleId, "daily", dateKey), (snap) => {
+    const answers = snap.get("answers") || {};
+    const mine = answers[me.uid];
+    const theirs = Object.entries(answers).find(([k]) => k !== me.uid)?.[1];
+    const box = $("dq-body");
+    if (!mine) {
+      box.innerHTML = `<textarea id="dq-input" rows="2" placeholder="Your answer…"></textarea>
+        <div class="gap"></div><button id="dq-send" style="width:100%">Answer</button>
+        <div class="qhint">Their answer unlocks when you've answered too.</div>`;
+      $("dq-send").onclick = async () => {
+        const text = $("dq-input").value.trim();
+        if (!text) return;
+        await setDoc(doc(db, "couples", coupleId, "daily", dateKey),
+          { answers: { [me.uid]: text } }, { merge: true });
+      };
+    } else if (!theirs) {
+      box.innerHTML = `<div class="qhint">You</div><div class="answerbox">${esc(mine)}</div>
+        <div class="qhint">Waiting for ${esc(partnerFirst())} to answer…</div>`;
+    } else {
+      box.innerHTML = `<div class="qhint">You</div><div class="answerbox">${esc(mine)}</div>
+        <div class="qhint">Them ❤</div><div class="answerbox">${esc(theirs)}</div>`;
+    }
+  });
+
+  unsubQuiz && unsubQuiz();
+  unsubQuiz = onSnapshot(doc(db, "couples", coupleId, "quiz", dateKey), (snap) => {
+    const data = snap.data() || {};
+    const mine = data[me.uid];
+    const theirs = Object.entries(data).find(([k]) => k !== me.uid)?.[1];
+    const options = QUIZ[qzIndex][1];
+    const box = $("qz-body");
+    if (!mine) {
+      const grid = (group) => options.map((o, i) =>
+        `<button class="opt" data-g="${group}" data-i="${i}">${esc(o)}</button>`).join("");
+      box.innerHTML = `<div class="qhint">Your pick:</div>${grid("pick")}
+        <div class="qhint">What did ${esc(partnerFirst())} pick?</div>${grid("guess")}
+        <div class="gap"></div>
+        <button id="qz-send" style="width:100%" disabled>Lock it in</button>`;
+      for (const b of box.querySelectorAll(".opt")) {
+        b.onclick = () => {
+          const group = b.dataset.g, i = Number(b.dataset.i);
+          if (group === "pick") qzPick = i; else qzGuess = i;
+          for (const x of box.querySelectorAll(`.opt[data-g="${group}"]`)) x.classList.remove("on");
+          b.classList.add("on");
+          $("qz-send").disabled = qzPick === null || qzGuess === null;
+        };
+      }
+      $("qz-send").onclick = async () => {
+        await setDoc(doc(db, "couples", coupleId, "quiz", dateKey),
+          { [me.uid]: { answer: qzPick, guess: qzGuess } }, { merge: true });
+      };
+    } else if (!theirs) {
+      box.innerHTML = `<div class="qhint">You picked “${esc(options[mine.answer])}” and guessed
+        they'd pick “${esc(options[mine.guess])}”.</div>
+        <div class="qhint">Waiting for ${esc(partnerFirst())} to play…</div>`;
+    } else {
+      const iWasRight = mine.guess === theirs.answer;
+      const theyWereRight = theirs.guess === mine.answer;
+      box.innerHTML = `<div class="qhint">They picked: “${esc(options[theirs.answer])}”</div>
+        <div class="answerbox">${iWasRight ? "Your guess was right! 🎉"
+          : `You guessed “${esc(options[mine.guess])}” — not quite 😅`}</div>
+        <div class="answerbox">${theyWereRight
+          ? esc(partnerFirst()) + " guessed your pick correctly too ❤"
+          : esc(partnerFirst()) + ` thought you'd pick “${esc(options[theirs.guess])}” 😄`}</div>`;
+    }
+  });
 }
 </script>
 </body>
