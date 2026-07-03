@@ -18,13 +18,21 @@ android {
         applicationId = "com.lovenote.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 21
-        versionName = "0.21"
+        versionCode = 22
+        versionName = "0.22"
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // Optimized builds are what make Compose scrolling smooth.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+            // Same key as debug so updates install over existing installs.
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 

@@ -7,7 +7,7 @@ cd "$(dirname "$0")"
 export JAVA_HOME="${JAVA_HOME:-$HOME/.local/jdk}"
 export ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"
 
-./gradlew assembleDebug
+./gradlew assembleRelease
 
 VC=$(grep -oP 'versionCode = \K[0-9]+' app/build.gradle.kts)
 VN=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
@@ -17,7 +17,7 @@ APK_URL="https://github.com/$REPO/releases/latest/download/ourverse.apk"
 GHUB="$HOME/.local/bin/ghub"
 
 # APK lives on GitHub Releases (Firebase's free plan forbids hosting APKs).
-cp app/build/outputs/apk/debug/app-debug.apk /tmp/ourverse.apk
+cp app/build/outputs/apk/release/app-release.apk /tmp/ourverse.apk
 if "$GHUB" release view "v$VN" -R "$REPO" >/dev/null 2>&1; then
     "$GHUB" release upload "v$VN" /tmp/ourverse.apk -R "$REPO" --clobber
 else

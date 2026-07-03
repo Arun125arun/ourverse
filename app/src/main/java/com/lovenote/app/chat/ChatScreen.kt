@@ -68,6 +68,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -340,8 +341,7 @@ fun ChatScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .animateItem()
-                                .animateContentSize(),
+                                .animateItem(),
                         ) {
                             if (startsNewDay) DayChip(dayLabel(message.sentAt))
                             MessageRow(
@@ -749,12 +749,10 @@ private fun MessageRow(
 
 @Composable
 private fun FullscreenPhoto(message: Message, onDismiss: () -> Unit) {
-    val bitmap = remember(message.id) {
-        runCatching {
-            val bytes = Base64.decode(message.body, Base64.NO_WRAP)
-            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
-        }.getOrNull()
-    } ?: return
+    val bitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, message.id) {
+        value = BubbleBitmaps.full(message.body)
+    }
+    val loaded = bitmap ?: return
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -767,7 +765,7 @@ private fun FullscreenPhoto(message: Message, onDismiss: () -> Unit) {
             contentAlignment = Alignment.Center,
         ) {
             Image(
-                bitmap = bitmap,
+                bitmap = loaded,
                 contentDescription = "Photo",
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxWidth(),
@@ -863,26 +861,22 @@ private fun dayLabel(sentAt: Timestamp?): String {
 
 @Composable
 private fun PhotoBubble(message: Message) {
-    val bitmap = remember(message.id) {
-        runCatching {
-            val bytes = Base64.decode(message.body, Base64.NO_WRAP)
-            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
-        }.getOrNull()
+    val bitmap by produceState(initialValue = BubbleBitmaps.peek(message.id), message.id) {
+        if (value == null) value = BubbleBitmaps.bubble(message.id, message.body)
     }
-    if (bitmap != null) {
+    bitmap?.let {
         Image(
-            bitmap = bitmap,
+            bitmap = it,
             contentDescription = "Photo",
             contentScale = ContentScale.FillWidth,
             modifier = Modifier
-                .widthIn(max = 272.dp)
+                .widthIn(max = 252.dp)
                 .clip(RoundedCornerShape(14.dp)),
         )
-    } else {
-        Text(
-            text = "Photo unavailable",
-            modifier = Modifier.padding(12.dp),
-            style = MaterialTheme.typography.bodyMedium,
-        )
-    }
+    } ?: Box(
+        modifier = Modifier
+            .size(width = 220.dp, height = 160.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+    )
 }
