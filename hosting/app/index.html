@@ -89,6 +89,15 @@
          font-size: 15px; font-weight: 400; }
   .opt.on { background: #e91e63; border-color: #e91e63; color: #fff; }
   .qhint { font-size: 13px; color: #b09aa8; margin: 10px 0 4px; }
+  .mood { width: 44px; height: 44px; border-radius: 50%; font-size: 20px; padding: 0;
+          background: #17131a; border: 1px solid #52394a; }
+  .mood.on { background: #e91e63; border-color: #e91e63; }
+  .mem { background: #17131a; border-radius: 14px; margin-top: 10px; overflow: hidden; }
+  .mem img { width: 100%; display: block; }
+  .mem .body { display: flex; align-items: center; padding: 10px 12px; gap: 8px; }
+  .mem .t { flex: 1; }
+  .mem .d { font-size: 12px; color: #b09aa8; }
+  .mem .del { background: transparent; border: 0; color: #b09aa8; font-size: 16px; padding: 4px; }
 </style>
 </head>
 <body>
@@ -159,6 +168,12 @@
 
   <div id="tab-us" class="notebox" style="display:none">
     <div class="uscard">
+      <div class="uslabel">How are you feeling today?</div>
+      <div id="mood-row" style="display:flex;gap:8px;margin-top:10px"></div>
+      <div class="qhint" id="mood-partner"></div>
+    </div>
+    <div class="gap"></div>
+    <div class="uscard">
       <div class="uslabel">Today's question</div>
       <div id="dq-question" style="font-weight:600;margin:6px 0 12px"></div>
       <div id="dq-body"></div>
@@ -168,6 +183,22 @@
       <div class="uslabel">Couple quiz 🎯</div>
       <div id="qz-question" style="font-weight:600;margin:6px 0 12px"></div>
       <div id="qz-body"></div>
+    </div>
+    <div class="gap"></div>
+    <div class="uscard">
+      <div class="uslabel">Our story 📖</div>
+      <div id="mem-form" style="margin-top:10px">
+        <input id="mem-title" placeholder="What happened? ❤">
+        <div class="gap" style="height:8px"></div>
+        <div class="row">
+          <input id="mem-date" type="date" style="flex:1">
+          <button id="mem-photo-btn" class="ghost" style="padding:11px 14px">📷</button>
+          <input type="file" id="mem-file" accept="image/*" hidden>
+        </div>
+        <div class="gap" style="height:8px"></div>
+        <button id="mem-save" style="width:100%">Save memory</button>
+      </div>
+      <div id="mem-list" style="margin-top:14px"></div>
     </div>
   </div>
 
@@ -185,7 +216,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, onAuthStateChanged, signOut }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, collection, onSnapshot, query, orderBy, limit, addDoc, setDoc,
-         updateDoc, serverTimestamp, getDocs, where, runTransaction }
+         updateDoc, deleteDoc, serverTimestamp, getDocs, where, runTransaction }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
@@ -386,10 +417,7 @@ async function sendText() {
 $("btn-send").onclick = sendText;
 $("input").addEventListener("keydown", (e) => { if (e.key === "Enter") sendText(); });
 
-$("btn-photo").onclick = () => $("file").click();
-$("file").onchange = async () => {
-  const file = $("file").files[0];
-  if (!file) return;
+async function compressImage(file) {
   const bmp = await createImageBitmap(file);
   const scale = Math.min(1, 1280 / Math.max(bmp.width, bmp.height));
   const canvas = document.createElement("canvas");
@@ -400,9 +428,17 @@ $("file").onchange = async () => {
   while (dataUrl.length > 900000 && quality > 0.3) {
     quality -= 0.1; dataUrl = canvas.toDataURL("image/jpeg", quality);
   }
+  return dataUrl.split(",")[1];
+}
+
+$("btn-photo").onclick = () => $("file").click();
+$("file").onchange = async () => {
+  const file = $("file").files[0];
+  if (!file) return;
+  const body = await compressImage(file);
   const once = confirm("Send as a one-time photo? 🔥\n(OK = view once, Cancel = normal photo)");
   await addDoc(collection(db, "couples", coupleId, "messages"), {
-    senderUid: me.uid, type: "photo", body: dataUrl.split(",")[1], once,
+    senderUid: me.uid, type: "photo", body, once,
     sentAt: serverTimestamp(),
   });
   $("file").value = "";
@@ -537,9 +573,93 @@ let qzPick = null, qzGuess = null;
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const partnerFirst = () => ($("p-name").textContent || "them").split(" ")[0];
 
+const MOODS = ["🥰", "😊", "😐", "😔", "😤", "😴"];
+let unsubMood = null, unsubMem = null;
+
 function watchUs() {
   $("dq-question").textContent = QUESTIONS[dqIndex];
   $("qz-question").textContent = QUIZ[qzIndex][0];
+
+  // Mood check-in (shared with Android via the couple's state doc)
+  const stateRef = doc(db, "couples", coupleId, "state", "shared");
+  unsubMood && unsubMood();
+  unsubMood = onSnapshot(stateRef, (snap) => {
+    const moods = snap.get("moods") || {};
+    const mine = moods[me.uid];
+    const theirs = Object.entries(moods).find(([k]) => k !== me.uid)?.[1];
+    const row = $("mood-row");
+    row.innerHTML = "";
+    for (const emoji of MOODS) {
+      const b = document.createElement("button");
+      b.className = "mood" + (mine?.emoji === emoji && mine?.dateKey === dateKey ? " on" : "");
+      b.textContent = emoji;
+      b.onclick = () => setDoc(stateRef,
+        { moods: { [me.uid]: { emoji, dateKey } } }, { merge: true });
+      row.appendChild(b);
+    }
+    $("mood-partner").textContent =
+      theirs && theirs.dateKey === dateKey
+        ? `They're feeling ${theirs.emoji} today`
+        : "They haven't checked in yet today";
+  });
+
+  // Memories ("Our story")
+  unsubMem && unsubMem();
+  unsubMem = onSnapshot(
+    query(collection(db, "couples", coupleId, "memories"), orderBy("dateMillis", "desc"), limit(100)),
+    (snap) => {
+      const list = $("mem-list");
+      list.innerHTML = "";
+      if (snap.empty) {
+        list.innerHTML = `<div class="qhint">Save the moments that matter — your first date, a trip, an ordinary day that felt special ❤</div>`;
+      }
+      for (const d of snap.docs) {
+        const el = document.createElement("div");
+        el.className = "mem";
+        const photo = d.get("photo");
+        if (photo) {
+          const img = document.createElement("img");
+          img.src = "data:image/jpeg;base64," + photo;
+          img.loading = "lazy";
+          el.appendChild(img);
+        }
+        const body = document.createElement("div");
+        body.className = "body";
+        const date = new Date(d.get("dateMillis") || 0)
+          .toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+        body.innerHTML = `<div class="t">${esc(d.get("title") || "")}<div class="d">${date}</div></div>`;
+        const del = document.createElement("button");
+        del.className = "del";
+        del.textContent = "🗑";
+        del.onclick = () => { if (confirm("Delete this memory?")) deleteDoc(d.ref); };
+        body.appendChild(del);
+        el.appendChild(body);
+        list.appendChild(el);
+      }
+    },
+  );
+}
+
+let memPhoto = null;
+$("mem-photo-btn").onclick = () => $("mem-file").click();
+$("mem-file").onchange = async () => {
+  const file = $("mem-file").files[0];
+  if (!file) return;
+  memPhoto = await compressImage(file);
+  $("mem-photo-btn").textContent = "📷✓";
+};
+$("mem-date").value = new Date().toISOString().slice(0, 10);
+$("mem-save").onclick = async () => {
+  const title = $("mem-title").value.trim();
+  const dateVal = $("mem-date").value;
+  if (!title || !dateVal) return;
+  await addDoc(collection(db, "couples", coupleId, "memories"), {
+    title, photo: memPhoto, dateMillis: new Date(dateVal + "T12:00:00").getTime(),
+    createdBy: me.uid, createdAt: serverTimestamp(),
+  });
+  $("mem-title").value = ""; memPhoto = null; $("mem-photo-btn").textContent = "📷";
+  $("mem-file").value = "";
+};
 
   unsubDaily && unsubDaily();
   unsubDaily = onSnapshot(doc(db, "couples", coupleId, "daily", dateKey), (snap) => {
