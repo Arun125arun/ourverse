@@ -119,7 +119,7 @@ private val REACTION_EMOJIS = listOf("❤", "😂", "😍", "😢", "👍")
 private const val TYPING_VISIBLE_MILLIS = 6_000L
 private const val TYPING_HEARTBEAT_MILLIS = 2_000L
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ChatScreen(
     repository: ChatRepository,
