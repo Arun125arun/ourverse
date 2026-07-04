@@ -1,5 +1,7 @@
 package com.lovenote.app.call
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -14,6 +16,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -22,10 +28,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.lovenote.app.R
 import com.lovenote.app.notify.Notifier
 import com.lovenote.app.ui.Avatar
 import org.webrtc.SurfaceViewRenderer
@@ -100,27 +110,76 @@ fun CallOverlay(partnerName: String, partnerPhoto: String) {
                 is CallManager.State.Incoming -> {
                     LaunchedEffect(Unit) { Notifier.vibrate(context) }
                     Row(horizontalArrangement = Arrangement.spacedBy(40.dp)) {
-                        RoundButton("📵", Color(0xFFD32F2F)) { CallManager.decline() }
-                        RoundButton("📞", Color(0xFF2E7D32)) { CallManager.accept(context) }
+                        RoundButton(
+                            painter = painterResource(R.drawable.ic_call_end),
+                            background = Color(0xFFD32F2F),
+                        ) { CallManager.decline() }
+                        RoundButton(
+                            icon = Icons.Filled.Call,
+                            background = Color(0xFF2E7D32),
+                        ) { CallManager.accept(context) }
                     }
                 }
                 else -> {
+                    val projectionLauncher = rememberLauncherForActivityResult(
+                        ActivityResultContracts.StartActivityForResult(),
+                    ) { result ->
+                        val data = result.data
+                        if (result.resultCode == android.app.Activity.RESULT_OK && data != null) {
+                            CallManager.requestScreenShare(context, data)
+                        }
+                    }
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         RoundButton(
-                            if (CallManager.muted) "🔇" else "🎙",
-                            Color(0x33FFFFFF),
+                            painter = painterResource(
+                                if (CallManager.muted) R.drawable.ic_mic_off else R.drawable.ic_mic,
+                            ),
+                            background = if (CallManager.muted) Color.White else Color(0x33FFFFFF),
+                            tint = if (CallManager.muted) Color.Black else Color.White,
                         ) { CallManager.toggleMute() }
                         RoundButton(
-                            if (CallManager.speakerOn) "🔊" else "🔈",
-                            Color(0x33FFFFFF),
+                            painter = painterResource(
+                                if (CallManager.speakerOn) {
+                                    R.drawable.ic_volume_up
+                                } else {
+                                    R.drawable.ic_volume_mute
+                                },
+                            ),
+                            background = if (CallManager.speakerOn) Color.White else Color(0x33FFFFFF),
+                            tint = if (CallManager.speakerOn) Color.Black else Color.White,
                         ) { CallManager.toggleSpeaker() }
-                        if (isVideo) {
-                            RoundButton("🔄", Color(0x33FFFFFF)) { CallManager.switchCamera() }
+                        if (isVideo && !CallManager.screenSharing) {
+                            RoundButton(
+                                icon = Icons.Filled.Refresh,
+                                background = Color(0x33FFFFFF),
+                            ) { CallManager.switchCamera() }
                         }
-                        RoundButton("📵", Color(0xFFD32F2F)) { CallManager.hangup() }
+                        if (isVideo) {
+                            RoundButton(
+                                painter = painterResource(R.drawable.ic_screen_share),
+                                background = if (CallManager.screenSharing) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    Color(0x33FFFFFF)
+                                },
+                            ) {
+                                if (CallManager.screenSharing) {
+                                    CallManager.stopScreenShare(context)
+                                } else {
+                                    val manager = context.getSystemService(
+                                        android.media.projection.MediaProjectionManager::class.java,
+                                    )
+                                    projectionLauncher.launch(manager.createScreenCaptureIntent())
+                                }
+                            }
+                        }
+                        RoundButton(
+                            painter = painterResource(R.drawable.ic_call_end),
+                            background = Color(0xFFD32F2F),
+                        ) { CallManager.hangup() }
                     }
                 }
             }
@@ -129,15 +188,34 @@ fun CallOverlay(partnerName: String, partnerPhoto: String) {
 }
 
 @Composable
-private fun RoundButton(label: String, background: Color, onClick: () -> Unit) {
+private fun RoundButton(
+    background: Color,
+    painter: Painter? = null,
+    icon: ImageVector? = null,
+    tint: Color = Color.White,
+    onClick: () -> Unit,
+) {
     Box(
         modifier = Modifier
-            .size(64.dp)
+            .size(60.dp)
             .background(background, CircleShape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(label, fontSize = 26.sp)
+        when {
+            painter != null -> Icon(
+                painter = painter,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(28.dp),
+            )
+            icon != null -> Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(28.dp),
+            )
+        }
     }
 }
 

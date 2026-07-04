@@ -3,6 +3,11 @@ package com.lovenote.app.settings
 /** Release notes shown in the "What's new" dialog after each update. */
 object Changelog {
     private val NOTES = mapOf(
+        27L to listOf(
+            "📞 Proper call buttons — real icons for mute, speaker, flip & end",
+            "📺 Screen sharing during video calls",
+            "✉ Tap the developer email in About to write directly",
+        ),
         26L to listOf(
             "📞 Voice & video calls — talk live, free, just you two",
             "⚡ Instant notifications — no more 15-minute delays",

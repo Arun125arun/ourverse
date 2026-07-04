@@ -369,17 +369,28 @@ fun SettingsScreen(
             },
             title = { Text("OurVerse ❤") },
             text = {
-                Text(
-                    "Version ${UpdateChecker.installedVersionName(context)}\n\n" +
-                        "OurVerse is a tiny universe for two people: chat with your " +
-                        "partner, leave little notes on each other's home screen, and " +
-                        "keep them close as your wallpaper.\n\n" +
-                        "Made with love, for the two of you.\n\n" +
-                        "Developer\n" +
-                        "Arun Adhikari\n" +
-                        "📞 9763526677\n" +
-                        "✉ adhikariarun549@gmail.com",
-                )
+                Column {
+                    Text(
+                        "Version ${UpdateChecker.installedVersionName(context)}\n\n" +
+                            "OurVerse is a tiny universe for two people: chat with your " +
+                            "partner, leave little notes on each other's home screen, and " +
+                            "keep them close as your wallpaper.\n\n" +
+                            "Made with love, for the two of you.\n\n" +
+                            "Developer: Arun Adhikari",
+                    )
+                    TextButton(onClick = {
+                        runCatching {
+                            context.startActivity(
+                                Intent(
+                                    Intent.ACTION_SENDTO,
+                                    Uri.parse("mailto:adhikariarun549@gmail.com"),
+                                ),
+                            )
+                        }
+                    }) {
+                        Text("✉ adhikariarun549@gmail.com")
+                    }
+                }
             },
         )
     }

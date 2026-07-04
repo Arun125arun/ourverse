@@ -48,6 +48,8 @@ object CallManager {
         private set
     var speakerOn by mutableStateOf(false)
         private set
+    var screenSharing by mutableStateOf(false)
+        private set
 
     val eglBase: EglBase by lazy { EglBase.create() }
 
@@ -57,6 +59,11 @@ object CallManager {
     private var capturer: VideoCapturer? = null
     private var videoSource: VideoSource? = null
     private var surfaceHelper: SurfaceTextureHelper? = null
+    private var cameraVideoTrack: VideoTrack? = null
+    private var screenCapturer: VideoCapturer? = null
+    private var screenSource: VideoSource? = null
+    private var screenHelper: SurfaceTextureHelper? = null
+    private var pendingProjection: android.content.Intent? = null
     private var registrations = mutableListOf<ListenerRegistration>()
     private var coupleId: String? = null
     private var myUid: String? = null
@@ -209,9 +216,56 @@ object CallManager {
             videoSource = f.createVideoSource(cap.isScreencast)
             cap.initialize(surfaceHelper, context, videoSource!!.capturerObserver)
             cap.startCapture(960, 540, 24)
-            localVideoTrack = f.createVideoTrack("video0", videoSource)
+            cameraVideoTrack = f.createVideoTrack("video0", videoSource)
+            localVideoTrack = cameraVideoTrack
         }
     }
+
+    // --- Screen sharing (requires the mediaProjection foreground service) ---
+
+    fun requestScreenShare(context: Context, projectionData: android.content.Intent) {
+        pendingProjection = projectionData
+        ScreenShareService.start(context)
+    }
+
+    /** Called by [ScreenShareService] once it is in the foreground. */
+    fun onProjectionServiceReady(context: Context) {
+        val data = pendingProjection ?: return
+        pendingProjection = null
+        val f = factory ?: return
+        val metrics = context.resources.displayMetrics
+        val cap = org.webrtc.ScreenCapturerAndroid(
+            data,
+            object : android.media.projection.MediaProjection.Callback() {},
+        )
+        screenHelper = SurfaceTextureHelper.create("screen", eglBase.eglBaseContext)
+        screenSource = f.createVideoSource(true)
+        cap.initialize(screenHelper, context, screenSource!!.capturerObserver)
+        cap.startCapture(metrics.widthPixels / 2, metrics.heightPixels / 2, 15)
+        screenCapturer = cap
+        val track = f.createVideoTrack("screen0", screenSource)
+        runCatching { capturer?.stopCapture() }
+        videoSender()?.setTrack(track, false)
+        localVideoTrack = track
+        screenSharing = true
+    }
+
+    fun stopScreenShare(context: Context) {
+        runCatching { screenCapturer?.stopCapture() }
+        runCatching { screenCapturer?.dispose() }
+        screenCapturer = null
+        runCatching { screenHelper?.dispose() }
+        screenHelper = null
+        screenSource = null
+        ScreenShareService.stop(context)
+        runCatching { capturer?.startCapture(960, 540, 24) }
+        cameraVideoTrack?.let { videoSender()?.setTrack(it, false) }
+        localVideoTrack = cameraVideoTrack
+        screenSharing = false
+    }
+
+    private fun videoSender() =
+        peer?.senders?.firstOrNull { it.track()?.kind() == "video" }
 
     private fun createPeer(context: Context, video: Boolean, candidateField: String) {
         val f = ensureFactory(context)
@@ -259,6 +313,17 @@ object CallManager {
     }
 
     private fun cleanup() {
+        if (screenSharing) {
+            runCatching { screenCapturer?.stopCapture() }
+            runCatching { screenCapturer?.dispose() }
+            screenCapturer = null
+            runCatching { screenHelper?.dispose() }
+            screenHelper = null
+            screenSource = null
+            appContext?.let { ScreenShareService.stop(it) }
+            screenSharing = false
+        }
+        cameraVideoTrack = null
         runCatching { capturer?.stopCapture() }
         runCatching { capturer?.dispose() }
         capturer = null
