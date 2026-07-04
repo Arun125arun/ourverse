@@ -112,6 +112,14 @@ class ChatRepository(
         messagesRef.document(messageId).delete().await()
     }
 
+    suspend fun edit(messageId: String, newText: String) {
+        val body = newText.trim()
+        if (body.isEmpty()) return
+        messagesRef.document(messageId).update(
+            mapOf("body" to body, "editedAt" to FieldValue.serverTimestamp()),
+        ).await()
+    }
+
     suspend fun setAnniversary(millis: Long) {
         stateRef.set(mapOf("anniversaryMillis" to millis), SetOptions.merge()).await()
     }

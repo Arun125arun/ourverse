@@ -3,6 +3,10 @@ package com.lovenote.app.settings
 /** Release notes shown in the "What's new" dialog after each update. */
 object Changelog {
     private val NOTES = mapOf(
+        29L to listOf(
+            "✏ Edit sent messages — long-press your message → Edit",
+            "Edited messages show a small “edited” label",
+        ),
         28L to listOf(
             "📷 Camera flip in video calls now toggles front ↔ back correctly",
             "🪞 Selfie preview only mirrors on the front camera",

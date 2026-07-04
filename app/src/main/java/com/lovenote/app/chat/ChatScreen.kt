@@ -126,6 +126,7 @@ fun ChatScreen(
     var viewingPhoto by remember { mutableStateOf<Message?>(null) }
     var input by remember { mutableStateOf("") }
     var reactingTo by remember { mutableStateOf<String?>(null) }
+    var editing by remember { mutableStateOf<Message?>(null) }
     var lastHeartbeat by remember { mutableStateOf(0L) }
 
     // Read receipts: stamp partner messages as seen while the chat is open.
@@ -402,6 +403,11 @@ fun ChatScreen(
                                     reactingTo = null
                                     scope.launch { runCatching { repository.delete(message.id) } }
                                 },
+                                onEdit = {
+                                    reactingTo = null
+                                    editing = message
+                                    input = message.body
+                                },
                                 onReact = { emoji ->
                                     reactingTo = null
                                     scope.launch {
@@ -415,6 +421,36 @@ fun ChatScreen(
                                     }
                                 },
                             )
+                        }
+                    }
+                }
+            }
+
+            // Editing banner
+            editing?.let { target ->
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp),
+                    shape = RoundedCornerShape(14.dp),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(start = 12.dp),
+                    ) {
+                        Text(
+                            text = "✏ Editing: ${target.body.take(40)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            maxLines = 1,
+                            modifier = Modifier.weight(1f),
+                        )
+                        IconButton(onClick = {
+                            editing = null
+                            input = ""
+                        }) {
+                            Icon(Icons.Filled.Close, contentDescription = "Cancel edit")
                         }
                     }
                 }
@@ -578,8 +614,16 @@ fun ChatScreen(
                                 recording -> stopAndSendVoice()
                                 input.isNotBlank() -> {
                                     val text = input
+                                    val target = editing
                                     input = ""
-                                    scope.launch { repository.send(text) }
+                                    editing = null
+                                    scope.launch {
+                                        if (target != null) {
+                                            runCatching { repository.edit(target.id, text) }
+                                        } else {
+                                            repository.send(text)
+                                        }
+                                    }
                                 }
                                 else -> micPermission.launch(Manifest.permission.RECORD_AUDIO)
                             }
@@ -634,6 +678,7 @@ private fun MessageRow(
     onLongPress: () -> Unit,
     onDismissPicker: () -> Unit,
     onDelete: () -> Unit,
+    onEdit: () -> Unit,
     onPhotoClick: () -> Unit,
     playingVoice: Boolean,
     onVoiceToggle: () -> Unit,
@@ -745,6 +790,12 @@ private fun MessageRow(
                 }
                 if (mine) {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    if (message.type == "text") {
+                        DropdownMenuItem(
+                            text = { Text("Edit") },
+                            onClick = onEdit,
+                        )
+                    }
                     DropdownMenuItem(
                         text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
                         onClick = onDelete,
@@ -768,6 +819,7 @@ private fun MessageRow(
         }
 
         val caption = listOfNotNull(
+            "edited".takeIf { message.edited },
             timeLabel(message.sentAt).takeIf { showCaption },
             "Seen ✓✓".takeIf { showSeen },
         ).joinToString(" · ")

@@ -12,8 +12,11 @@ data class Message(
     val reactions: Map<String, String> = emptyMap(),
     val durationSec: Long? = null,
     val once: Boolean = false,
+    val editedAt: Timestamp? = null,
 ) {
     val seen: Boolean get() = seenAt != null
+
+    val edited: Boolean get() = editedAt != null
 
     val isPhoto: Boolean get() = type == "photo"
 
@@ -33,6 +36,7 @@ data class Message(
         "reactions" to reactions,
         "durationSec" to durationSec,
         "once" to once,
+        "editedAt" to editedAt,
     )
 
     companion object {
@@ -54,6 +58,7 @@ data class Message(
                 .toMap(),
             durationSec = (map["durationSec"] as? Number)?.toLong(),
             once = map["once"] as? Boolean ?: false,
+            editedAt = map["editedAt"] as? Timestamp,
         )
     }
 }
