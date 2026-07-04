@@ -27,7 +27,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -92,11 +94,31 @@ private fun NoteCard(note: Note, mine: Boolean) {
             )
             .padding(16.dp),
     ) {
-        Text(
-            text = note.text,
-            style = MaterialTheme.typography.bodyLarge,
-            color = Color(0xE6000000),
-        )
+        val doodle = note.doodle?.let { encoded ->
+            androidx.compose.runtime.remember(note.id) {
+                runCatching {
+                    val bytes = android.util.Base64.decode(encoded, android.util.Base64.NO_WRAP)
+                    android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                        ?.asImageBitmap()
+                }.getOrNull()
+            }
+        }
+        if (doodle != null) {
+            androidx.compose.foundation.Image(
+                bitmap = doodle,
+                contentDescription = "Doodle",
+                contentScale = androidx.compose.ui.layout.ContentScale.FillWidth,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp)),
+            )
+        } else {
+            Text(
+                text = note.text,
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color(0xE6000000),
+            )
+        }
         Spacer(Modifier.height(8.dp))
         val time = note.sentAt?.toDate()?.let {
             SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()).format(it)

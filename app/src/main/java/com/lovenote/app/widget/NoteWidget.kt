@@ -34,12 +34,30 @@ class NoteWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val note = NoteCache.load(context)
-        provideContent { WidgetContent(note) }
+        val doodle = note?.doodle?.let {
+            runCatching {
+                val bytes = android.util.Base64.decode(it, android.util.Base64.NO_WRAP)
+                android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            }.getOrNull()
+        }
+        provideContent { WidgetContent(note, doodle) }
     }
 
     @Composable
-    private fun WidgetContent(note: Note?) {
+    private fun WidgetContent(note: Note?, doodle: android.graphics.Bitmap?) {
         val background = noteStyleColors[note?.style] ?: noteStyleColors.getValue(Note.DEFAULT_STYLE)
+        if (doodle != null) {
+            androidx.glance.Image(
+                provider = androidx.glance.ImageProvider(doodle),
+                contentDescription = "Doodle from your partner",
+                contentScale = androidx.glance.layout.ContentScale.Crop,
+                modifier = GlanceModifier
+                    .fillMaxSize()
+                    .cornerRadius(20.dp)
+                    .clickable(actionStartActivity<MainActivity>()),
+            )
+            return
+        }
         Column(
             modifier = GlanceModifier
                 .fillMaxSize()

@@ -16,6 +16,7 @@ object NoteCache {
             .edit()
             .putString("text", note.text)
             .putString("style", note.style)
+            .putString("doodle", note.doodle)
             .putLong("sentAtMillis", note.sentAt?.toDate()?.time ?: 0L)
             .apply()
     }
@@ -27,6 +28,7 @@ object NoteCache {
         return Note(
             text = text,
             style = prefs.getString("style", Note.DEFAULT_STYLE) ?: Note.DEFAULT_STYLE,
+            doodle = prefs.getString("doodle", null),
             sentAt = if (sentAtMillis > 0) Timestamp(Date(sentAtMillis)) else null,
         )
     }

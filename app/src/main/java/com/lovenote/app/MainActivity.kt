@@ -48,6 +48,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.lovenote.app.auth.SignInScreen
 import com.lovenote.app.chat.ChatRepository
 import com.lovenote.app.chat.ChatScreen
+import com.lovenote.app.notes.DrawNoteScreen
 import com.lovenote.app.notes.NoteCache
 import com.lovenote.app.notes.NoteRepository
 import com.lovenote.app.notes.NotesHistoryScreen
@@ -153,7 +154,7 @@ private fun PairedGate(onLoggedOut: () -> Unit) {
     }
 }
 
-private enum class HomeScreen { CHAT, US, MEMORIES, NOTE, HISTORY, SETTINGS }
+private enum class HomeScreen { CHAT, US, MEMORIES, NOTE, DRAW, HISTORY, SETTINGS }
 
 @Composable
 private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
@@ -194,7 +195,10 @@ private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                 NoteWidget().updateAll(context)
                 val millis = note.sentAt?.toDate()?.time ?: 0L
                 if (!firstEmission && millis > NotifyState.lastNoteMillis(context)) {
-                    Notifier.notifyNote(context, note.text)
+                    Notifier.notifyNote(
+                        context,
+                        note.text.ifBlank { "🎨 A doodle for you" },
+                    )
                 }
                 NotifyState.setLastNote(context, millis)
                 firstEmission = false
@@ -250,7 +254,8 @@ private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                     label = { Text("Us") },
                 )
                 NavigationBarItem(
-                    selected = screen == HomeScreen.NOTE || screen == HomeScreen.HISTORY,
+                    selected = screen == HomeScreen.NOTE || screen == HomeScreen.HISTORY ||
+                        screen == HomeScreen.DRAW,
                     onClick = { navigate(HomeScreen.NOTE) },
                     icon = { Icon(Icons.Filled.Edit, contentDescription = null) },
                     label = { Text("Notes") },
@@ -269,6 +274,11 @@ private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                     repository = noteRepository,
                     onBack = { navigate(HomeScreen.CHAT) },
                     onHistoryClick = { navigate(HomeScreen.HISTORY) },
+                    onDrawClick = { navigate(HomeScreen.DRAW) },
+                )
+                HomeScreen.DRAW -> DrawNoteScreen(
+                    repository = noteRepository,
+                    onBack = { navigate(HomeScreen.NOTE) },
                 )
                 HomeScreen.HISTORY -> NotesHistoryScreen(
                     repository = noteRepository,

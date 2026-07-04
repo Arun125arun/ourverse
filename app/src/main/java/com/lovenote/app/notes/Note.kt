@@ -8,12 +8,14 @@ data class Note(
     val text: String = "",
     val style: String = DEFAULT_STYLE,
     val sentAt: Timestamp? = null,
+    val doodle: String? = null,
 ) {
     fun toMap(): Map<String, Any?> = mapOf(
         "senderUid" to senderUid,
         "text" to text,
         "style" to style,
         "sentAt" to sentAt,
+        "doodle" to doodle,
     )
 
     companion object {
@@ -29,6 +31,7 @@ data class Note(
                 text = map["text"] as? String ?: "",
                 style = if (rawStyle in STYLES) rawStyle!! else DEFAULT_STYLE,
                 sentAt = map["sentAt"] as? Timestamp,
+                doodle = map["doodle"] as? String,
             )
         }
     }

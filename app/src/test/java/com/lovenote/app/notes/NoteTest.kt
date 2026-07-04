@@ -23,6 +23,13 @@ class NoteTest {
     }
 
     @Test
+    fun `doodle note round-trips and defaults to null`() {
+        val doodle = Note(id = "d1", senderUid = "bob", text = "", style = "mint", doodle = "aW1n")
+        assertEquals(doodle, Note.fromMap("d1", doodle.toMap()))
+        assertEquals(null, Note.fromMap("d2", emptyMap()).doodle)
+    }
+
+    @Test
     fun `fromMap defaults missing fields`() {
         val note = Note.fromMap("n2", emptyMap())
         assertEquals("n2", note.id)

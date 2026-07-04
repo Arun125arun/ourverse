@@ -20,14 +20,15 @@ class NoteRepository(
     private val notesRef
         get() = db.collection("couples").document(coupleId).collection("notes")
 
-    suspend fun send(text: String, style: String) {
+    suspend fun send(text: String, style: String, doodle: String? = null) {
         val body = text.trim().take(Note.MAX_LENGTH)
-        if (body.isEmpty()) return
+        if (body.isEmpty() && doodle == null) return
         notesRef.add(
             mapOf(
                 "senderUid" to myUid,
                 "text" to body,
                 "style" to if (style in Note.STYLES) style else Note.DEFAULT_STYLE,
+                "doodle" to doodle,
                 "sentAt" to FieldValue.serverTimestamp(),
             ),
         ).await()

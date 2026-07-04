@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.lovenote.app.wallpaper.NoteWallpaperService
 import kotlinx.coroutines.launch
 
@@ -61,6 +62,7 @@ fun SendNoteScreen(
     repository: NoteRepository,
     onBack: () -> Unit,
     onHistoryClick: () -> Unit,
+    onDrawClick: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -79,6 +81,9 @@ fun SendNoteScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onDrawClick) {
+                        Text("🎨", fontSize = 20.sp)
+                    }
                     IconButton(onClick = onHistoryClick) {
                         Icon(
                             Icons.AutoMirrored.Filled.List,

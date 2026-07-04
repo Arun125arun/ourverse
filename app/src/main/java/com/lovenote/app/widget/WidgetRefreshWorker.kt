@@ -46,7 +46,10 @@ class WidgetRefreshWorker(
                             noteMillis > NotifyState.lastNoteMillis(context)
                         ) {
                             NotifyState.setLastNote(context, noteMillis)
-                            Notifier.notifyNote(context, note.text)
+                            Notifier.notifyNote(
+                                context,
+                                note.text.ifBlank { "🎨 A doodle for you" },
+                            )
                         }
                     }
                     val message = ChatRepository(coupleId).fetchLatestFromPartner()

@@ -92,8 +92,20 @@ class NoteWallpaperService : WallpaperService() {
                 .setLineSpacing(0f, 1.2f)
                 .build()
 
+            // A doodle note renders as the card itself
+            val doodleBitmap = note?.doodle?.let {
+                runCatching {
+                    val bytes = android.util.Base64.decode(it, android.util.Base64.NO_WRAP)
+                    android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                }.getOrNull()
+            }
+
             val padding = width * 0.08f
-            val cardHeight = textLayout.height + padding * 2
+            val cardHeight = if (doodleBitmap != null) {
+                cardWidth * doodleBitmap.height / doodleBitmap.width
+            } else {
+                textLayout.height + padding * 2
+            }
             val card = RectF(
                 (width - cardWidth) / 2f,
                 (height - cardHeight) / 2f,
@@ -106,13 +118,23 @@ class NoteWallpaperService : WallpaperService() {
             }
             canvas.drawRoundRect(card, 48f, 48f, cardPaint)
 
-            canvas.save()
-            canvas.translate(
-                card.left + (cardWidth - textLayout.width) / 2f,
-                card.top + padding,
-            )
-            textLayout.draw(canvas)
-            canvas.restore()
+            if (doodleBitmap != null) {
+                val clip = android.graphics.Path().apply {
+                    addRoundRect(card, 48f, 48f, android.graphics.Path.Direction.CW)
+                }
+                canvas.save()
+                canvas.clipPath(clip)
+                canvas.drawBitmap(doodleBitmap, null, card, null)
+                canvas.restore()
+            } else {
+                canvas.save()
+                canvas.translate(
+                    card.left + (cardWidth - textLayout.width) / 2f,
+                    card.top + padding,
+                )
+                textLayout.draw(canvas)
+                canvas.restore()
+            }
 
             // Small heart under the card
             val heartPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {

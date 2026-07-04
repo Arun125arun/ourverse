@@ -3,6 +3,10 @@ package com.lovenote.app.settings
 /** Release notes shown in the "What's new" dialog after each update. */
 object Changelog {
     private val NOTES = mapOf(
+        25L to listOf(
+            "🎨 Draw notes! Sketch with your finger and it appears on their widget",
+            "🖼 Doodles show on the widget, wallpaper, and note history",
+        ),
         24L to listOf(
             "🛡 Crash reporting — problems get found and fixed faster",
             "🔔 New in Settings: one tap to make notifications reliable",
