@@ -31,27 +31,51 @@ class ListenerService : Service() {
     private val registrations = mutableListOf<ListenerRegistration>()
     private val coupleRegistrations = mutableListOf<ListenerRegistration>()
     private var coupleId: String? = null
+    private var attachedUid: String? = null
+    private var authListener: FirebaseAuth.AuthStateListener? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
         startForeground(FOREGROUND_ID, buildQuietNotification())
-        attach()
+        // Auth restores asynchronously (especially after boot) — attach
+        // whenever a user becomes available instead of checking once.
+        val listener = FirebaseAuth.AuthStateListener { auth ->
+            val uid = auth.currentUser?.uid
+            when {
+                uid != null && uid != attachedUid -> {
+                    detachAll()
+                    attachedUid = uid
+                    attach(uid)
+                }
+                uid == null -> {
+                    detachAll()
+                    attachedUid = null
+                }
+            }
+        }
+        authListener = listener
+        FirebaseAuth.getInstance().addAuthStateListener(listener)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
 
     override fun onDestroy() {
+        authListener?.let { FirebaseAuth.getInstance().removeAuthStateListener(it) }
+        detachAll()
+        super.onDestroy()
+    }
+
+    private fun detachAll() {
         registrations.forEach { it.remove() }
         registrations.clear()
         coupleRegistrations.forEach { it.remove() }
         coupleRegistrations.clear()
-        super.onDestroy()
+        coupleId = null
     }
 
-    private fun attach() {
-        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+    private fun attach(uid: String) {
         val db = FirebaseFirestore.getInstance()
         registrations += db.collection("users").document(uid)
             .addSnapshotListener { snap, _ ->
@@ -73,11 +97,13 @@ class ListenerService : Service() {
             .addSnapshotListener { snap, _ ->
                 val status = snap?.getString("status")
                 val caller = snap?.getString("caller")
-                if (status == "ringing" && caller != null && caller != uid &&
+                val startedMillis = snap?.getTimestamp("startedAt")?.toDate()?.time ?: 0L
+                val fresh = System.currentTimeMillis() - startedMillis < 60_000
+                if (status == "ringing" && fresh && caller != null && caller != uid &&
                     !AppVisibility.appVisible
                 ) {
                     Notifier.notifyIncomingCall(this, snap.getBoolean("video") ?: false)
-                } else if (status != "ringing") {
+                } else {
                     Notifier.cancelIncomingCall(this)
                 }
             }

@@ -94,14 +94,21 @@ private fun NoteCard(note: Note, mine: Boolean) {
             )
             .padding(16.dp),
     ) {
+        // Decode off the main thread so scrolling past doodles never janks.
         val doodle = note.doodle?.let { encoded ->
-            androidx.compose.runtime.remember(note.id) {
-                runCatching {
-                    val bytes = android.util.Base64.decode(encoded, android.util.Base64.NO_WRAP)
-                    android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                        ?.asImageBitmap()
-                }.getOrNull()
-            }
+            androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(
+                initialValue = null,
+                key1 = note.id,
+            ) {
+                value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                    runCatching {
+                        val bytes =
+                            android.util.Base64.decode(encoded, android.util.Base64.NO_WRAP)
+                        android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                            ?.asImageBitmap()
+                    }.getOrNull()
+                }
+            }.value
         }
         if (doodle != null) {
             androidx.compose.foundation.Image(

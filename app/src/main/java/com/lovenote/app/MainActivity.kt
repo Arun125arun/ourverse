@@ -29,7 +29,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -157,6 +156,7 @@ private fun PairedGate(onLoggedOut: () -> Unit) {
             PairingScreen(
                 waitingCode = status?.takeIf { it.coupleId != null }?.inviteCode,
                 repository = repository,
+                onLoggedOut = onLoggedOut,
             )
         else -> Home(coupleId = status?.coupleId!!, onLoggedOut = onLoggedOut)
     }

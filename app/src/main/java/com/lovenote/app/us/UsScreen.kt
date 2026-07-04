@@ -397,6 +397,8 @@ private fun QuizCard(
 ) {
     var myPick by remember(question.prompt) { mutableStateOf<Int?>(null) }
     var myGuess by remember(question.prompt) { mutableStateOf<Int?>(null) }
+    // Guard against out-of-range indexes (e.g. decks out of sync across versions).
+    fun opt(index: Int): String = question.options.getOrNull(index) ?: "?"
 
     Surface(
         shape = RoundedCornerShape(20.dp),
@@ -436,8 +438,8 @@ private fun QuizCard(
                 }
                 theirs == null -> {
                     Text(
-                        "You picked “${question.options[mine.answer]}” and guessed " +
-                            "they'd pick “${question.options[mine.guess]}”.",
+                        "You picked “${opt(mine.answer)}” and guessed " +
+                            "they'd pick “${opt(mine.guess)}”.",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Spacer(Modifier.height(6.dp))
@@ -451,14 +453,14 @@ private fun QuizCard(
                     val iWasRight = mine.guess == theirs.answer
                     val theyWereRight = theirs.guess == mine.answer
                     Text(
-                        "They picked: “${question.options[theirs.answer]}”",
+                        "They picked: “${opt(theirs.answer)}”",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Text(
                         if (iWasRight) {
                             "Your guess was right! 🎉"
                         } else {
-                            "You guessed “${question.options[mine.guess]}” — not quite 😅"
+                            "You guessed “${opt(mine.guess)}” — not quite 😅"
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary,
@@ -469,7 +471,7 @@ private fun QuizCard(
                             "$partnerName guessed your pick correctly too ❤"
                         } else {
                             "$partnerName thought you'd pick " +
-                                "“${question.options[theirs.guess]}” 😄"
+                                "“${opt(theirs.guess)}” 😄"
                         },
                         style = MaterialTheme.typography.bodyMedium,
                     )

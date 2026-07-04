@@ -238,7 +238,7 @@ const show = (id) => {
   $(id).classList.add("active");
 };
 
-let me = null, coupleId = null, partnerUid = null;
+let me = null, coupleId = null, partnerUid = null, heartbeatTimer = null;
 let unsubMsgs = null, unsubCouple = null, unsubUser = null, unsubPartner = null;
 
 const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -260,11 +260,17 @@ onAuthStateChanged(auth, async (user) => {
   await setDoc(doc(db, "users", user.uid), {
     displayName: user.displayName || "", photoUrl: user.photoURL || "",
   }, { merge: true });
-  heartbeat(); setInterval(heartbeat, 60000);
+  heartbeat();
+  if (!heartbeatTimer) heartbeatTimer = setInterval(heartbeat, 60000);
   unsubUser = onSnapshot(doc(db, "users", user.uid), (snap) => {
     const cid = snap.get("coupleId");
     if (cid && cid !== coupleId) { coupleId = cid; watchCouple(); }
-    else if (!cid) { coupleId = null; show("screen-pair"); }
+    else if (!cid) {
+      coupleId = null;
+      $("pair-create").style.display = "block";
+      $("pair-wait").style.display = "none";
+      show("screen-pair");
+    }
   });
 });
 
@@ -287,6 +293,14 @@ function watchCouple() {
       $("my-code").textContent = snap.get("inviteCode") || "";
       show("screen-pair");
     }
+  }, (err) => {
+    // Couple gone or unreadable (partner deleted the account):
+    // clear the stale link so pairing can start fresh.
+    coupleId = null;
+    setDoc(doc(db, "users", me.uid), { coupleId: null }, { merge: true }).catch(() => {});
+    $("pair-create").style.display = "block";
+    $("pair-wait").style.display = "none";
+    show("screen-pair");
   });
 }
 
@@ -576,7 +590,7 @@ const dqIndex = epochDay % QUESTIONS.length;
 const qzIndex = (epochDay * 7 + 3) % QUIZ.length;
 let unsubDaily = null, unsubQuiz = null;
 let qzPick = null, qzGuess = null;
-const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const partnerFirst = () => ($("p-name").textContent || "them").split(" ")[0];
 
 const MOODS = ["🥰", "😊", "😐", "😔", "😤", "😴"];
@@ -585,6 +599,7 @@ let unsubMood = null, unsubMem = null;
 function watchUs() {
   $("dq-question").textContent = QUESTIONS[dqIndex];
   $("qz-question").textContent = QUIZ[qzIndex][0];
+  watchDailyAndQuiz();
 
   // Mood check-in (shared with Android via the couple's state doc)
   const stateRef = doc(db, "couples", coupleId, "state", "shared");
@@ -667,6 +682,7 @@ $("mem-save").onclick = async () => {
   $("mem-file").value = "";
 };
 
+function watchDailyAndQuiz() {
   unsubDaily && unsubDaily();
   unsubDaily = onSnapshot(doc(db, "couples", coupleId, "daily", dateKey), (snap) => {
     const answers = snap.get("answers") || {};
@@ -698,6 +714,7 @@ $("mem-save").onclick = async () => {
     const mine = data[me.uid];
     const theirs = Object.entries(data).find(([k]) => k !== me.uid)?.[1];
     const options = QUIZ[qzIndex][1];
+    const opt = (i) => options[i] ?? "?";
     const box = $("qz-body");
     if (!mine) {
       const grid = (group) => options.map((o, i) =>
@@ -720,18 +737,18 @@ $("mem-save").onclick = async () => {
           { [me.uid]: { answer: qzPick, guess: qzGuess } }, { merge: true });
       };
     } else if (!theirs) {
-      box.innerHTML = `<div class="qhint">You picked “${esc(options[mine.answer])}” and guessed
-        they'd pick “${esc(options[mine.guess])}”.</div>
+      box.innerHTML = `<div class="qhint">You picked “${esc(opt(mine.answer))}” and guessed
+        they'd pick “${esc(opt(mine.guess))}”.</div>
         <div class="qhint">Waiting for ${esc(partnerFirst())} to play…</div>`;
     } else {
       const iWasRight = mine.guess === theirs.answer;
       const theyWereRight = theirs.guess === mine.answer;
-      box.innerHTML = `<div class="qhint">They picked: “${esc(options[theirs.answer])}”</div>
+      box.innerHTML = `<div class="qhint">They picked: “${esc(opt(theirs.answer))}”</div>
         <div class="answerbox">${iWasRight ? "Your guess was right! 🎉"
-          : `You guessed “${esc(options[mine.guess])}” — not quite 😅`}</div>
+          : `You guessed “${esc(opt(mine.guess))}” — not quite 😅`}</div>
         <div class="answerbox">${theyWereRight
           ? esc(partnerFirst()) + " guessed your pick correctly too ❤"
-          : esc(partnerFirst()) + ` thought you'd pick “${esc(options[theirs.guess])}” 😄`}</div>`;
+          : esc(partnerFirst()) + ` thought you'd pick “${esc(opt(theirs.guess))}” 😄`}</div>`;
     }
   });
 }

@@ -6,6 +6,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.snapshots
+import com.lovenote.app.common.fallbackTo
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -132,7 +133,7 @@ class ChatRepository(
         combine(stateRef.snapshots(), coupleRef.snapshots()) { state, couple ->
             // legacy fallback: early versions stored this on the couple doc
             state.getLong("anniversaryMillis") ?: couple.getLong("anniversaryMillis")
-        }
+        }.fallbackTo(null)
 
     /** Firestore uid of the partner, or null while unpaired. */
     fun partnerUid(): Flow<String?> =
@@ -142,6 +143,7 @@ class ChatRepository(
                     ?.filterIsInstance<String>()
                     ?.firstOrNull { it != myUid }
             }
+            .fallbackTo(null)
             .distinctUntilChanged()
 
     /** Live name/photo/presence of the partner. */
@@ -159,7 +161,7 @@ class ChatRepository(
                     )
                 }
             }
-        }
+        }.fallbackTo(null)
 
     /** Called periodically while the app is open so the partner sees presence. */
     suspend fun heartbeatPresence() {
@@ -192,6 +194,7 @@ class ChatRepository(
                     .firstOrNull { it.key != myUid }
                     ?.let { (it.value as? com.google.firebase.Timestamp)?.toDate()?.time }
             }
+            .fallbackTo(null)
 
     /** Newest first (matches a reversed LazyColumn). */
     fun messages(): Flow<List<Message>> =
@@ -204,4 +207,5 @@ class ChatRepository(
                     Message.fromMap(doc.id, doc.data ?: emptyMap())
                 }
             }
+            .fallbackTo(emptyList())
 }

@@ -5,6 +5,7 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.snapshots
+import com.lovenote.app.common.fallbackTo
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
@@ -48,6 +49,7 @@ class NoteRepository(
                     .map { Note.fromMap(it.id, it.data ?: emptyMap()) }
                     .firstOrNull { it.senderUid != myUid }
             }
+            .fallbackTo(null)
 
     /** All recent notes from both partners, newest first. */
     fun history(): Flow<List<Note>> =
@@ -58,6 +60,7 @@ class NoteRepository(
             .map { snapshot ->
                 snapshot.documents.map { Note.fromMap(it.id, it.data ?: emptyMap()) }
             }
+            .fallbackTo(emptyList())
 
     /** One-shot variant of [latestFromPartner] for background widget refresh. */
     suspend fun fetchLatestFromPartner(): Note? =

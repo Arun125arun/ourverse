@@ -6,8 +6,10 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.snapshots
+import com.lovenote.app.common.fallbackTo
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -75,7 +77,7 @@ class UsRepository(
                     uid to Mood(emoji, dateKey)
                 }
                 .toMap()
-        }
+        }.fallbackTo(emptyMap())
 
     // --- Profiles for the hero header ---
 
@@ -89,6 +91,7 @@ class UsRepository(
                     ?.filterIsInstance<String>()
                     ?.firstOrNull { it != myUid }
             }
+            .fallbackTo(null)
             .distinctUntilChanged()
             .flatMapLatest { uid -> if (uid == null) flowOf(null) else profileOf(uid) }
 
@@ -98,11 +101,14 @@ class UsRepository(
                 name = doc.getString("displayName").orEmpty(),
                 photoUrl = doc.getString("photoUrl").orEmpty(),
             )
-        }
+        }.fallbackTo(null)
 
     /** "Together since" date, shared with the chat header and settings. */
     fun anniversaryMillis(): Flow<Long?> =
-        stateRef.snapshots().map { it.getLong("anniversaryMillis") }
+        combine(stateRef.snapshots(), coupleRef.snapshots()) { state, couple ->
+            // legacy fallback: early versions stored this on the couple doc
+            state.getLong("anniversaryMillis") ?: couple.getLong("anniversaryMillis")
+        }.fallbackTo(null)
 
     // --- Daily question ---
 
@@ -126,7 +132,7 @@ class UsRepository(
                         uid to text
                     }
                     .toMap()
-            }
+            }.fallbackTo(emptyMap())
 
     // --- Couple quiz ---
 
@@ -153,7 +159,7 @@ class UsRepository(
                         k to QuizEntry(answer, guess)
                     }
                     .toMap()
-            }
+            }.fallbackTo(emptyMap())
 
     // --- Shared to-do list ---
 
@@ -193,7 +199,7 @@ class UsRepository(
                         mine = doc.getString("createdBy") == myUid,
                     )
                 }.sortedBy { it.done }
-            }
+            }.fallbackTo(emptyList())
 
     // --- Memories ("Our story") ---
 
@@ -227,7 +233,7 @@ class UsRepository(
                     val millis = doc.getLong("dateMillis") ?: return@mapNotNull null
                     Memory(doc.id, title, doc.getString("photo"), millis)
                 }
-            }
+            }.fallbackTo(emptyList())
 
     // --- Special dates ---
 
@@ -259,5 +265,5 @@ class UsRepository(
                     val millis = doc.getLong("dateMillis") ?: return@mapNotNull null
                     CoupleEvent(doc.id, title, millis)
                 }
-            }
+            }.fallbackTo(emptyList())
 }

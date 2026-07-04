@@ -2,6 +2,7 @@ package com.lovenote.app.settings
 
 import android.content.Context
 import android.os.Build
+import java.net.HttpURLConnection
 import java.net.URL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -10,6 +11,7 @@ import org.json.JSONObject
 /** Checks the hosted version.json for a newer build of the app. */
 object UpdateChecker {
     private const val VERSION_URL = "https://ourverse-98c44.web.app/version.json"
+    private const val TIMEOUT_MILLIS = 10_000
 
     data class UpdateInfo(
         val versionCode: Long,
@@ -19,7 +21,14 @@ object UpdateChecker {
 
     suspend fun fetchLatest(): UpdateInfo? = withContext(Dispatchers.IO) {
         runCatching {
-            val json = JSONObject(URL(VERSION_URL).readText())
+            val connection = URL(VERSION_URL).openConnection() as HttpURLConnection
+            connection.connectTimeout = TIMEOUT_MILLIS
+            connection.readTimeout = TIMEOUT_MILLIS
+            val json = try {
+                JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+            } finally {
+                connection.disconnect()
+            }
             UpdateInfo(
                 versionCode = json.getLong("versionCode"),
                 versionName = json.getString("versionName"),

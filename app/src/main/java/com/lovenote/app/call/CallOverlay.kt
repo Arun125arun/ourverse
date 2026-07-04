@@ -24,6 +24,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,8 +42,22 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.lovenote.app.R
 import com.lovenote.app.notify.Notifier
 import com.lovenote.app.ui.Avatar
+import kotlinx.coroutines.delay
 import org.webrtc.SurfaceViewRenderer
 import org.webrtc.VideoTrack
+
+/** "3:07" under an hour, "1:03:07" beyond it. */
+private fun durationLabel(elapsedMillis: Long): String {
+    val total = (elapsedMillis / 1000).coerceAtLeast(0)
+    val hours = total / 3600
+    val minutes = (total % 3600) / 60
+    val seconds = total % 60
+    return if (hours > 0) {
+        "%d:%02d:%02d".format(hours, minutes, seconds)
+    } else {
+        "%d:%02d".format(minutes, seconds)
+    }
+}
 
 /** Fullscreen call UI drawn above everything while a call is in progress. */
 @Composable
@@ -92,12 +110,23 @@ fun CallOverlay(partnerName: String, partnerPhoto: String) {
                     Spacer(Modifier.height(12.dp))
                     Text(partnerName, color = Color.White, fontSize = 24.sp)
                     Spacer(Modifier.height(6.dp))
+                    // Ticks once a second so the call duration counts up live.
+                    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+                    LaunchedEffect(state is CallManager.State.Active) {
+                        while (true) {
+                            now = System.currentTimeMillis()
+                            delay(1_000)
+                        }
+                    }
                     Text(
                         text = when (state) {
                             is CallManager.State.Outgoing -> "Calling…"
                             is CallManager.State.Incoming ->
                                 if (isVideo) "Incoming video call ❤" else "Incoming voice call ❤"
-                            is CallManager.State.Active -> "Connected ❤"
+                            is CallManager.State.Active ->
+                                CallManager.connectedAtMillis
+                                    ?.let { "❤ ${durationLabel(now - it)}" }
+                                    ?: "Connected ❤"
                             else -> ""
                         },
                         color = Color(0xFFB09AA8),

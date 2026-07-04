@@ -8,6 +8,7 @@ import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.snapshots
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -103,6 +104,15 @@ class PairingRepository(
                             partnerJoined = members.size >= 2,
                             inviteCode = couple.getString("inviteCode"),
                         )
+                    }.catch {
+                        // The couple is gone or unreadable (the partner deleted
+                        // their account). Clear the stale link so pairing can
+                        // start fresh instead of crashing on every launch.
+                        runCatching {
+                            db.collection("users").document(uid)
+                                .update("coupleId", FieldValue.delete()).await()
+                        }
+                        emit(CoupleStatus(null, partnerJoined = false, inviteCode = null))
                     }
                 }
             }

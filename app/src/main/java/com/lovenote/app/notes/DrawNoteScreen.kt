@@ -82,6 +82,7 @@ fun DrawNoteScreen(
     val strokes = remember { mutableStateListOf<DrawStroke>() }
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     var sending by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
@@ -203,17 +204,30 @@ fun DrawNoteScreen(
             Button(
                 onClick = {
                     sending = true
+                    error = null
                     scope.launch {
                         val doodle = renderDoodle(strokes.toList(), style, canvasSize)
-                        runCatching { repository.send("", style, doodle) }
+                        val result = runCatching { repository.send("", style, doodle) }
                         sending = false
-                        onBack()
+                        if (result.isSuccess) {
+                            onBack()
+                        } else {
+                            error = "Couldn't send — check your connection and try again"
+                        }
                     }
                 },
                 enabled = strokes.isNotEmpty() && !sending && canvasSize.width > 0,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(if (sending) "Sending…" else "Send to their home screen 🎨")
+            }
+            error?.let {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
             }
         }
     }

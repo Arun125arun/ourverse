@@ -1,5 +1,7 @@
 package com.lovenote.app.pairing
 
+import android.content.Intent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,10 +27,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.credentials.ClearCredentialStateRequest
+import androidx.credentials.CredentialManager
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 
 /**
@@ -38,9 +47,24 @@ import kotlinx.coroutines.launch
 fun PairingScreen(
     waitingCode: String?,
     repository: PairingRepository,
+    onLoggedOut: () -> Unit = {},
 ) {
+    val context = LocalContext.current
+    val logoutScope = rememberCoroutineScope()
+
+    fun logOut() {
+        logoutScope.launch {
+            runCatching {
+                CredentialManager.create(context)
+                    .clearCredentialState(ClearCredentialStateRequest())
+            }
+            FirebaseAuth.getInstance().signOut()
+            onLoggedOut()
+        }
+    }
+
     if (waitingCode != null) {
-        WaitingForPartner(waitingCode)
+        WaitingForPartner(waitingCode, onLogOut = ::logOut)
         return
     }
 
@@ -135,11 +159,20 @@ fun PairingScreen(
                 textAlign = TextAlign.Center,
             )
         }
+
+        Spacer(Modifier.height(24.dp))
+        TextButton(onClick = { logOut() }) {
+            Text("Log out", color = MaterialTheme.colorScheme.secondary)
+        }
     }
 }
 
 @Composable
-private fun WaitingForPartner(code: String) {
+private fun WaitingForPartner(code: String, onLogOut: () -> Unit) {
+    val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
+    var copied by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -158,7 +191,32 @@ private fun WaitingForPartner(code: String) {
             style = MaterialTheme.typography.displayMedium,
             color = MaterialTheme.colorScheme.primary,
             letterSpacing = 8.sp,
+            modifier = Modifier.clickable {
+                clipboard.setText(AnnotatedString(code))
+                copied = true
+            },
         )
+        Text(
+            text = if (copied) "Copied ✓" else "Tap to copy",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.secondary,
+        )
+        Spacer(Modifier.height(16.dp))
+        OutlinedButton(onClick = {
+            val share = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(
+                    Intent.EXTRA_TEXT,
+                    "Join me on OurVerse ❤ My invite code is $code — " +
+                        "get the app at https://ourverse-98c44.web.app",
+                )
+            }
+            runCatching {
+                context.startActivity(Intent.createChooser(share, "Invite your partner"))
+            }
+        }) {
+            Text("Send it to them 💌")
+        }
         Spacer(Modifier.height(24.dp))
         CircularProgressIndicator()
         Spacer(Modifier.height(16.dp))
@@ -167,5 +225,9 @@ private fun WaitingForPartner(code: String) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.secondary,
         )
+        Spacer(Modifier.height(24.dp))
+        TextButton(onClick = onLogOut) {
+            Text("Log out", color = MaterialTheme.colorScheme.secondary)
+        }
     }
 }

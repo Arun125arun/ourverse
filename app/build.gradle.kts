@@ -19,8 +19,8 @@ android {
         applicationId = "com.lovenote.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 33
-        versionName = "0.33"
+        versionCode = 34
+        versionName = "0.34"
     }
 
     buildTypes {
@@ -60,6 +60,7 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui-tooling-preview")
 
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
     implementation("io.coil-kt:coil-compose:2.6.0")
     implementation("io.getstream:stream-webrtc-android:1.1.3")
     implementation("androidx.glance:glance-appwidget:1.1.0")

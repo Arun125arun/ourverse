@@ -52,6 +52,8 @@ object CallManager {
         private set
     var frontCamera by mutableStateOf(true)
         private set
+    var connectedAtMillis by mutableStateOf<Long?>(null)
+        private set
 
     val eglBase: EglBase by lazy { EglBase.create() }
 
@@ -110,8 +112,12 @@ object CallManager {
             val status = snap?.getString("status")
             val caller = snap?.getString("caller")
             val video = snap?.getBoolean("video") ?: false
+            // A "ringing" doc left behind by a crashed caller shouldn't ring
+            // forever; only fresh rings count (same rule as ListenerService).
+            val startedMillis = snap?.getTimestamp("startedAt")?.toDate()?.time ?: 0L
+            val fresh = System.currentTimeMillis() - startedMillis < 60_000
             when {
-                status == "ringing" && caller != uid && state is State.Idle ->
+                status == "ringing" && fresh && caller != uid && state is State.Idle ->
                     state = State.Incoming(video)
                 status == "accepted" && caller == uid && state is State.Outgoing -> {
                     snap.getString("answerSdp")?.let { sdp ->
@@ -119,6 +125,7 @@ object CallManager {
                             NoopSdpObserver,
                             SessionDescription(SessionDescription.Type.ANSWER, sdp),
                         )
+                        connectedAtMillis = System.currentTimeMillis()
                         state = State.Active(video)
                     }
                 }
@@ -132,8 +139,17 @@ object CallManager {
         val uid = myUid ?: return
         isCaller = true
         state = State.Outgoing(video)
-        setupMedia(context, video)
-        createPeer(context, video, candidateField = "callerCandidates")
+        // Candidates left over from a previous call would be replayed into
+        // the new peer connection; clear both sides before signaling starts.
+        clearCandidates {
+            if (state !is State.Outgoing) return@clearCandidates // cancelled meanwhile
+            setupMedia(context, video)
+            createPeer(context, video, candidateField = "callerCandidates")
+            createOfferAndRing(uid, video)
+        }
+    }
+
+    private fun createOfferAndRing(uid: String, video: Boolean) {
         peer?.createOffer(object : NoopSdpObserverBase() {
             override fun onCreateSuccess(desc: SessionDescription) {
                 peer?.setLocalDescription(NoopSdpObserver, desc)
@@ -168,6 +184,7 @@ object CallManager {
                                 mapOf("status" to "accepted", "answerSdp" to desc.description),
                             )
                             listenForRemoteCandidates("callerCandidates")
+                            connectedAtMillis = System.currentTimeMillis()
                             state = State.Active(video)
                         }
                     }, MediaConstraints())
@@ -287,6 +304,27 @@ object CallManager {
     private fun videoSender() =
         peer?.senders?.firstOrNull { it.track()?.kind() == "video" }
 
+    /**
+     * Deletes signaling candidates (they contain device IPs and would be
+     * replayed into the next call's peer connection). Always calls [onDone].
+     */
+    private fun clearCandidates(onDone: () -> Unit = {}) {
+        val doc = if (coupleId != null) callDoc() else null
+        if (doc == null) {
+            onDone()
+            return
+        }
+        val cleanups = listOf("callerCandidates", "calleeCandidates").map { name ->
+            doc.collection(name).get().onSuccessTask { snap ->
+                val batch = db.batch()
+                snap.documents.forEach { batch.delete(it.reference) }
+                batch.commit()
+            }
+        }
+        com.google.android.gms.tasks.Tasks.whenAllComplete(cleanups)
+            .addOnCompleteListener { onDone() }
+    }
+
     private fun createPeer(context: Context, video: Boolean, candidateField: String) {
         val f = ensureFactory(context)
         val config = PeerConnection.RTCConfiguration(iceServers()).apply {
@@ -361,9 +399,11 @@ object CallManager {
         }
         muted = false
         speakerOn = false
+        connectedAtMillis = null
         state = State.Idle
         // keep the call-doc watcher (registrations[0]); drop candidate listeners
         while (registrations.size > 1) registrations.removeAt(registrations.lastIndex).remove()
+        clearCandidates()
     }
 }
 

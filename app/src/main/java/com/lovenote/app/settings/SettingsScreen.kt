@@ -59,6 +59,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.glance.appwidget.updateAll
 import com.google.firebase.auth.FirebaseAuth
 import com.lovenote.app.auth.AuthRepository
@@ -233,6 +234,13 @@ fun SettingsScreen(
                         powerManager.isIgnoringBatteryOptimizations(context.packageName),
                     )
                 }
+                // The system dialog is a separate activity — re-check when we
+                // come back so the label reflects the user's actual choice.
+                LifecycleResumeEffect(Unit) {
+                    unrestricted =
+                        powerManager.isIgnoringBatteryOptimizations(context.packageName)
+                    onPauseOrDispose { }
+                }
                 Text(
                     text = if (unrestricted) {
                         "Reliable ✓ — the system won't put OurVerse to sleep"
@@ -255,8 +263,6 @@ fun SettingsScreen(
                                     ),
                                 )
                             }
-                            unrestricted = powerManager
-                                .isIgnoringBatteryOptimizations(context.packageName)
                         },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
