@@ -1,55 +1,57 @@
 # OurVerse ❤
 
-*(formerly LoveNote — internal package id is still `com.lovenote.app`, which
-users never see and which stays fixed because Firebase is registered to it)*
+A private universe for two people. Pair up once with an invite code, then:
 
-An Android app for two people. Pair up once with an invite code, then chat
-and leave notes that appear on your partner's home screen widget.
+- **Chat** — WhatsApp-style: text, photos (incl. 🔥 view-once), voice notes,
+  reactions, read receipts, typing indicator, presence ("Active now")
+- **Calls** — voice & video (WebRTC, peer-to-peer) with screen sharing
+- **Notes & doodles** — typed or finger-drawn, shown on the partner's
+  home-screen widget and live wallpaper
+- **Us tab** — daily question (mutual reveal), couple quiz, mood check-in,
+  special-date countdowns & milestones, memories timeline, shared to-dos
+  with partner reminders
+- **Instant notifications** via a foreground listener service (no paid
+  push infrastructure)
+- Themes (hand-tuned Material 3 palettes + Material You), in-app updates
+  with release notes, Crashlytics, account deletion with full data erasure
 
-## Tech
+**Platforms:** Android app (this repo) + web/PWA companion for iPhone at
+https://ourverse-98c44.web.app/app/ (source in `hosting/app/`).
 
-- Kotlin + Jetpack Compose, Jetpack Glance (widget), WorkManager
-- Firebase: Auth (Google sign-in), Cloud Firestore
-- No custom server
+## Stack
 
-## One-time setup
+Kotlin + Jetpack Compose, Glance (widget), WorkManager, WebRTC
+(stream-webrtc-android), Firebase free tier (Auth, Firestore, Hosting,
+Crashlytics). No custom server; call signaling goes through Firestore.
 
-1. **Firebase** (in a browser, free tier):
-   - Create a project at console.firebase.google.com
-   - Add an Android app: package `com.lovenote.app`, plus your debug SHA-1
-     (`keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android`)
-   - Download `google-services.json` into `app/`
-   - Enable **Authentication → Google** provider
-   - Create a **Firestore** database (production mode) and publish the rules
-     from `firestore.rules`
-2. **Toolchain**: JDK 17 and the Android SDK (this repo was built with
-   command-line tools; Android Studio also works).
-
-## Build & install
+## Build
 
 ```bash
-./gradlew test           # unit tests
-./gradlew assembleDebug  # build APK
-./gradlew installDebug   # install on a phone connected via adb
+export JAVA_HOME=~/.local/jdk ANDROID_HOME=~/Android/Sdk
+./gradlew test            # unit tests
+./gradlew assembleRelease # optimized APK (what users get)
 ```
 
-To install on the second phone (your partner's): enable Developer Options →
-USB debugging, plug it in, and run `./gradlew installDebug` — or just send
-them `app/build/outputs/apk/debug/app-debug.apk` and open it on the phone.
+## Release an update
 
-> Note: the debug APK is signed with *this computer's* debug key. Both
-> partners should use APKs built from the same machine, and that machine's
-> SHA-1 must be registered in Firebase for Google sign-in to work.
+```bash
+# 1) bump versionCode + versionName in app/build.gradle.kts
+# 2) add notes to app/src/.../settings/Changelog.kt
+bash deploy-update.sh
+```
 
-## Using the app
+That builds the release APK, uploads it to GitHub Releases
+(`Arun125arun/ourverse-releases`), and updates the hosted `version.json`.
+Phones update via Settings → Check for updates.
 
-1. Both partners sign in with Google.
-2. One partner taps **Get an invite code** and shares the 6-character code.
-3. The other partner enters it and taps **Join**.
-4. Chat away. Tap the pencil icon to send a note — it shows up on your
-   partner's **LoveNote widget** (long-press the home screen → Widgets →
-   LoveNote to add it).
+## Admin
 
-The widget updates instantly while the app is open, and on a ~15-minute
-schedule in the background. Instant background push is planned (requires
-Firebase Blaze plan).
+- `bash stats.sh` — usage counts (users, couples, messages/day; never content)
+- Firebase console: https://console.firebase.google.com/project/ourverse-98c44
+
+## One-time setup on a new machine
+
+JDK 17 + Android SDK (cmdline tools), `firebase-tools` login as the project
+owner, GitHub CLI (`~/.local/bin/ghub`) logged in for releases. The debug
+keystore signs all builds — keep `~/.android/debug.keystore` backed up, its
+SHA-1 is registered in Firebase and updates must match the installed signature.
