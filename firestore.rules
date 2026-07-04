@@ -45,9 +45,9 @@ service cloud.firestore {
         )
       );
 
-      // All couple data (messages, notes, daily answers, events, …) is
-      // private to the two members.
-      match /{subcollection}/{docId} {
+      // All couple data (messages, notes, answers, todos, call signaling, …)
+      // at any depth is private to the two members.
+      match /{document=**} {
         allow read, write: if isMember(coupleId);
       }
     }

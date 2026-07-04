@@ -41,9 +41,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
@@ -90,6 +90,7 @@ import androidx.core.content.FileProvider
 import java.io.File
 import com.google.firebase.Timestamp
 import com.lovenote.app.R
+import com.lovenote.app.call.CallManager
 import com.lovenote.app.notify.AppVisibility
 import com.lovenote.app.notify.Notifier
 import com.lovenote.app.ui.Avatar
@@ -251,6 +252,42 @@ fun ChatScreen(
                     }
                 },
                 actions = {
+                    var pendingCallVideo by remember { mutableStateOf<Boolean?>(null) }
+                    val callPermissions = rememberLauncherForActivityResult(
+                        ActivityResultContracts.RequestMultiplePermissions(),
+                    ) { grants ->
+                        val video = pendingCallVideo
+                        pendingCallVideo = null
+                        if (video != null && grants.values.all { it }) {
+                            CallManager.startCall(context, video)
+                        }
+                    }
+
+                    fun requestCall(video: Boolean) {
+                        pendingCallVideo = video
+                        callPermissions.launch(
+                            if (video) {
+                                arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA)
+                            } else {
+                                arrayOf(Manifest.permission.RECORD_AUDIO)
+                            },
+                        )
+                    }
+
+                    IconButton(onClick = { requestCall(false) }) {
+                        Icon(
+                            Icons.Filled.Call,
+                            contentDescription = "Voice call",
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    IconButton(onClick = { requestCall(true) }) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_videocam),
+                            contentDescription = "Video call",
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
                     val heartPulse by rememberInfiniteTransition(label = "nudge")
                         .animateFloat(
                             initialValue = 1f,
@@ -273,9 +310,6 @@ fun ChatScreen(
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.scale(heartPulse),
                         )
-                    }
-                    IconButton(onClick = onSendNoteClick) {
-                        Icon(Icons.Filled.Edit, contentDescription = "Send a note")
                     }
                     IconButton(onClick = onSettingsClick) {
                         Icon(Icons.Filled.Settings, contentDescription = "Settings")

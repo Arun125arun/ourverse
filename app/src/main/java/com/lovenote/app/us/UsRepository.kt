@@ -20,6 +20,13 @@ data class Profile(val name: String, val photoUrl: String)
 
 data class QuizEntry(val answer: Int, val guess: Int)
 
+data class Todo(
+    val id: String,
+    val title: String,
+    val done: Boolean,
+    val mine: Boolean,
+)
+
 data class Memory(
     val id: String,
     val title: String,
@@ -146,6 +153,46 @@ class UsRepository(
                         k to QuizEntry(answer, guess)
                     }
                     .toMap()
+            }
+
+    // --- Shared to-do list ---
+
+    suspend fun addTodo(title: String) {
+        val name = title.trim()
+        if (name.isEmpty()) return
+        coupleRef.collection("todos").add(
+            mapOf(
+                "title" to name,
+                "done" to false,
+                "createdBy" to myUid,
+                "createdAt" to FieldValue.serverTimestamp(),
+            ),
+        ).await()
+    }
+
+    suspend fun setTodoDone(id: String, done: Boolean) {
+        coupleRef.collection("todos").document(id).update("done", done).await()
+    }
+
+    suspend fun deleteTodo(id: String) {
+        coupleRef.collection("todos").document(id).delete().await()
+    }
+
+    fun todos(): Flow<List<Todo>> =
+        coupleRef.collection("todos")
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .limit(100)
+            .snapshots()
+            .map { snapshot ->
+                snapshot.documents.mapNotNull { doc ->
+                    val title = doc.getString("title") ?: return@mapNotNull null
+                    Todo(
+                        id = doc.id,
+                        title = title,
+                        done = doc.getBoolean("done") ?: false,
+                        mine = doc.getString("createdBy") == myUid,
+                    )
+                }.sortedBy { it.done }
             }
 
     // --- Memories ("Our story") ---

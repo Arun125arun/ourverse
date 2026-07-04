@@ -38,6 +38,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -46,6 +47,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.glance.appwidget.updateAll
 import com.google.firebase.auth.FirebaseAuth
 import com.lovenote.app.auth.SignInScreen
+import com.lovenote.app.call.CallManager
+import com.lovenote.app.call.CallOverlay
 import com.lovenote.app.chat.ChatRepository
 import com.lovenote.app.chat.ChatScreen
 import com.lovenote.app.notes.DrawNoteScreen
@@ -54,6 +57,7 @@ import com.lovenote.app.notes.NoteRepository
 import com.lovenote.app.notes.NotesHistoryScreen
 import com.lovenote.app.notes.SendNoteScreen
 import com.lovenote.app.notify.AppVisibility
+import com.lovenote.app.notify.ListenerService
 import com.lovenote.app.notify.Notifier
 import com.lovenote.app.notify.NotifyState
 import com.lovenote.app.pairing.PairingRepository
@@ -62,8 +66,10 @@ import com.lovenote.app.settings.Changelog
 import com.lovenote.app.settings.SettingsScreen
 import com.lovenote.app.settings.UpdateChecker
 import com.lovenote.app.us.MemoriesScreen
+import com.lovenote.app.us.TodosScreen
 import com.lovenote.app.us.UsRepository
 import com.lovenote.app.us.UsScreen
+import kotlinx.coroutines.launch
 import com.lovenote.app.widget.NoteWidget
 import com.lovenote.app.pairing.PairingScreen
 import com.lovenote.app.ui.theme.LoveNoteTheme
@@ -90,6 +96,8 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= 33) {
             notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
+        // Live listener for instant notifications while the app is closed.
+        ListenerService.start(this)
 
         // Show "What's new" once after an update (not on first install).
         val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
@@ -154,7 +162,7 @@ private fun PairedGate(onLoggedOut: () -> Unit) {
     }
 }
 
-private enum class HomeScreen { CHAT, US, MEMORIES, NOTE, DRAW, HISTORY, SETTINGS }
+private enum class HomeScreen { CHAT, US, MEMORIES, TODOS, NOTE, DRAW, HISTORY, SETTINGS }
 
 @Composable
 private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
@@ -162,7 +170,14 @@ private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
     val chatRepository = remember(coupleId) { ChatRepository(coupleId) }
     val noteRepository = remember(coupleId) { NoteRepository(coupleId) }
     val usRepository = remember(coupleId) { UsRepository(coupleId) }
+    val homeScope = rememberCoroutineScope()
+    val partner by chatRepository.partnerProfile().collectAsState(initial = null)
     var screen by remember { mutableStateOf(HomeScreen.CHAT) }
+
+    // Ring for incoming calls while the app is open.
+    LaunchedEffect(coupleId) {
+        CallManager.watch(context, coupleId, chatRepository.myUid)
+    }
     val backStack = remember { mutableStateListOf<HomeScreen>() }
 
     fun navigate(to: HomeScreen) {
@@ -232,6 +247,7 @@ private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
         }
     }
 
+    Box {
     Scaffold(
         bottomBar = {
             // Slim bar that stays behind the keyboard when typing.
@@ -292,10 +308,20 @@ private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                 HomeScreen.US -> UsScreen(
                     repository = usRepository,
                     onMemoriesClick = { navigate(HomeScreen.MEMORIES) },
+                    onTodosClick = { navigate(HomeScreen.TODOS) },
                 )
                 HomeScreen.MEMORIES -> MemoriesScreen(
                     repository = usRepository,
                     onBack = { navigate(HomeScreen.US) },
+                )
+                HomeScreen.TODOS -> TodosScreen(
+                    repository = usRepository,
+                    onBack = { navigate(HomeScreen.US) },
+                    onRemind = { title ->
+                        homeScope.launch {
+                            runCatching { chatRepository.send("⏰ Reminder: $title") }
+                        }
+                    },
                 )
                 HomeScreen.CHAT -> ChatScreen(
                     repository = chatRepository,
@@ -305,6 +331,11 @@ private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                 }
             }
         }
+    }
+    CallOverlay(
+        partnerName = partner?.name ?: "Your partner",
+        partnerPhoto = partner?.photoUrl ?: "",
+    )
     }
 }
 

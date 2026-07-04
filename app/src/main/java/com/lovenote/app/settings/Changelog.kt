@@ -3,6 +3,11 @@ package com.lovenote.app.settings
 /** Release notes shown in the "What's new" dialog after each update. */
 object Changelog {
     private val NOTES = mapOf(
+        26L to listOf(
+            "📞 Voice & video calls — talk live, free, just you two",
+            "⚡ Instant notifications — no more 15-minute delays",
+            "📋 Shared to-do list with partner reminders (Us tab)",
+        ),
         25L to listOf(
             "🎨 Draw notes! Sketch with your finger and it appears on their widget",
             "🖼 Doodles show on the widget, wallpaper, and note history",

@@ -60,6 +60,7 @@ private val MOOD_EMOJIS = listOf("🥰", "😊", "😐", "😔", "😤", "😴")
 fun UsScreen(
     repository: UsRepository,
     onMemoriesClick: () -> Unit,
+    onTodosClick: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val today = Questions.dateKey()
@@ -90,11 +91,19 @@ fun UsScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            OutlinedButton(
-                onClick = onMemoriesClick,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("📖 Our story — memories")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = onMemoriesClick,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("📖 Our story")
+                }
+                OutlinedButton(
+                    onClick = onTodosClick,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("📋 To-dos")
+                }
             }
 
             Spacer(Modifier.height(24.dp))
