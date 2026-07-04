@@ -54,6 +54,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -66,6 +67,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
@@ -105,6 +107,7 @@ import com.lovenote.app.R
 import com.lovenote.app.call.CallManager
 import com.lovenote.app.notify.AppVisibility
 import com.lovenote.app.notify.Notifier
+import com.lovenote.app.settings.AppSettings
 import com.lovenote.app.ui.Avatar
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -319,17 +322,59 @@ fun ChatScreen(
                             ),
                             label = "nudgeScale",
                         )
-                    IconButton(onClick = {
-                        scope.launch {
-                            runCatching { repository.send("❤ Thinking of you") }
-                            Notifier.vibrate(context)
-                        }
-                    }) {
+                    var editNudge by remember { mutableStateOf(false) }
+                    // tap = send the nudge, hold = customize its message
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .combinedClickable(
+                                onClick = {
+                                    scope.launch {
+                                        runCatching { repository.send(AppSettings.nudgeText) }
+                                        Notifier.vibrate(context)
+                                    }
+                                },
+                                onLongClick = { editNudge = true },
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
                         Icon(
                             Icons.Filled.Favorite,
-                            contentDescription = "Send a nudge",
+                            contentDescription = "Send a nudge (hold to customize)",
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.scale(heartPulse),
+                        )
+                    }
+                    if (editNudge) {
+                        var draft by remember { mutableStateOf(AppSettings.nudgeText) }
+                        AlertDialog(
+                            onDismissRequest = { editNudge = false },
+                            title = { Text("Your heart button ❤") },
+                            text = {
+                                Column {
+                                    Text(
+                                        "This is what a tap on the heart sends:",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                    Spacer(Modifier.height(10.dp))
+                                    TextField(
+                                        value = draft,
+                                        onValueChange = { draft = it.take(80) },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                }
+                            },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    AppSettings.setNudge(context, draft)
+                                    editNudge = false
+                                }) { Text("Save") }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { editNudge = false }) { Text("Cancel") }
+                            },
                         )
                     }
                     IconButton(onClick = onSettingsClick) {

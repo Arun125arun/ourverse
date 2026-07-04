@@ -3,6 +3,9 @@ package com.lovenote.app.settings
 /** Release notes shown in the "What's new" dialog after each update. */
 object Changelog {
     private val NOTES = mapOf(
+        33L to listOf(
+            "❤ Hold the heart in the chat header to customize what it sends",
+        ),
         32L to listOf(
             "🔒 Security hardening — invite codes can no longer be discovered by others",
             "📞 Incoming calls now ring even when the app is closed",

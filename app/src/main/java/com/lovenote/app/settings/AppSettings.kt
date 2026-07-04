@@ -24,9 +24,13 @@ object AppSettings {
 
     fun supportsDynamic(): Boolean = android.os.Build.VERSION.SDK_INT >= 31
 
+    const val DEFAULT_NUDGE = "❤ Thinking of you"
+
     var themeMode by mutableStateOf(ThemeMode.SYSTEM)
         private set
     var accentName by mutableStateOf(DEFAULT_ACCENT)
+        private set
+    var nudgeText by mutableStateOf(DEFAULT_NUDGE)
         private set
 
     val accentColor: Color
@@ -43,6 +47,14 @@ object AppSettings {
         accentName = p.getString("accent", DEFAULT_ACCENT)
             .takeIf { it in ACCENTS || (it == DYNAMIC && supportsDynamic()) }
             ?: DEFAULT_ACCENT
+        nudgeText = p.getString("nudgeText", DEFAULT_NUDGE)
+            ?.takeIf { it.isNotBlank() } ?: DEFAULT_NUDGE
+    }
+
+    fun setNudge(context: Context, text: String) {
+        val cleaned = text.trim().take(80).ifBlank { DEFAULT_NUDGE }
+        nudgeText = cleaned
+        prefs(context).edit().putString("nudgeText", cleaned).apply()
     }
 
     fun setThemeMode(context: Context, mode: ThemeMode) {
