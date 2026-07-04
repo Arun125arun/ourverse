@@ -3,6 +3,11 @@ package com.lovenote.app.settings
 /** Release notes shown in the "What's new" dialog after each update. */
 object Changelog {
     private val NOTES = mapOf(
+        32L to listOf(
+            "🔒 Security hardening — invite codes can no longer be discovered by others",
+            "📞 Incoming calls now ring even when the app is closed",
+            "🧹 Under-the-hood cleanups: voice playback, listeners, dead code",
+        ),
         31L to listOf(
             "↩ Reply to messages — swipe any message right, just like WhatsApp",
             "💬 Replies show a quoted preview of the original",

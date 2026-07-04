@@ -56,7 +56,13 @@ class AuthRepository(
             .get().await().getString("coupleId")
         if (coupleId != null) {
             val coupleRef = db.collection("couples").document(coupleId)
-            for (sub in listOf("messages", "notes", "daily", "events", "state")) {
+            // Remove the invite lookup if the couple was still waiting.
+            coupleRef.get().await().getString("inviteCode")?.let { code ->
+                runCatching { db.collection("invites").document(code).delete().await() }
+            }
+            for (sub in listOf(
+                "messages", "notes", "daily", "quiz", "events", "todos", "memories", "state", "call",
+            )) {
                 while (true) {
                     val page = coupleRef.collection(sub).limit(200).get().await()
                     if (page.isEmpty) break

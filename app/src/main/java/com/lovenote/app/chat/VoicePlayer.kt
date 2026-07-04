@@ -9,6 +9,7 @@ import java.io.File
 object VoicePlayer {
     private var player: MediaPlayer? = null
     private var playingId: String? = null
+    private var tempFile: File? = null
 
     /**
      * Toggles playback of [messageId]. Returns true if now playing.
@@ -32,13 +33,13 @@ object VoicePlayer {
             p.setDataSource(temp.absolutePath)
             p.setOnCompletionListener {
                 stop()
-                temp.delete()
                 onFinished()
             }
             p.prepare()
             p.start()
             player = p
             playingId = messageId
+            tempFile = temp
             true
         }.getOrDefault(false)
     }
@@ -48,5 +49,7 @@ object VoicePlayer {
         runCatching { player?.release() }
         player = null
         playingId = null
+        tempFile?.delete()
+        tempFile = null
     }
 }

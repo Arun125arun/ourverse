@@ -29,6 +29,7 @@ import com.lovenote.app.widget.WidgetRefreshWorker
 class ListenerService : Service() {
 
     private val registrations = mutableListOf<ListenerRegistration>()
+    private val coupleRegistrations = mutableListOf<ListenerRegistration>()
     private var coupleId: String? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -44,6 +45,8 @@ class ListenerService : Service() {
     override fun onDestroy() {
         registrations.forEach { it.remove() }
         registrations.clear()
+        coupleRegistrations.forEach { it.remove() }
+        coupleRegistrations.clear()
         super.onDestroy()
     }
 
@@ -61,7 +64,25 @@ class ListenerService : Service() {
     }
 
     private fun listenToCouple(db: FirebaseFirestore, cid: String, uid: String) {
-        registrations += db.collection("couples").document(cid).collection("messages")
+        coupleRegistrations.forEach { it.remove() }
+        coupleRegistrations.clear()
+
+        // Ring for incoming calls even when the app is closed.
+        coupleRegistrations += db.collection("couples").document(cid)
+            .collection("call").document("current")
+            .addSnapshotListener { snap, _ ->
+                val status = snap?.getString("status")
+                val caller = snap?.getString("caller")
+                if (status == "ringing" && caller != null && caller != uid &&
+                    !AppVisibility.appVisible
+                ) {
+                    Notifier.notifyIncomingCall(this, snap.getBoolean("video") ?: false)
+                } else if (status != "ringing") {
+                    Notifier.cancelIncomingCall(this)
+                }
+            }
+
+        coupleRegistrations += db.collection("couples").document(cid).collection("messages")
             .orderBy("sentAt", Query.Direction.DESCENDING).limit(1)
             .addSnapshotListener { snap, _ ->
                 val doc = snap?.documents?.firstOrNull() ?: return@addSnapshotListener
@@ -82,7 +103,7 @@ class ListenerService : Service() {
                 }
             }
 
-        registrations += db.collection("couples").document(cid).collection("notes")
+        coupleRegistrations += db.collection("couples").document(cid).collection("notes")
             .orderBy("sentAt", Query.Direction.DESCENDING).limit(1)
             .addSnapshotListener { snap, _ ->
                 val doc = snap?.documents?.firstOrNull() ?: return@addSnapshotListener

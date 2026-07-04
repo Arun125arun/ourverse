@@ -32,12 +32,8 @@ class PairingRepository(
     suspend fun createCouple(): String {
         repeat(5) {
             val code = InviteCode.generate()
-            val taken = db.collection("couples")
-                .whereEqualTo("inviteCode", code)
-                .limit(1)
-                .get()
-                .await()
-            if (taken.isEmpty) {
+            val inviteRef = db.collection("invites").document(code)
+            if (!inviteRef.get().await().exists()) {
                 val doc = db.collection("couples").document()
                 doc.set(
                     mapOf(
@@ -46,6 +42,7 @@ class PairingRepository(
                         "createdAt" to FieldValue.serverTimestamp(),
                     ),
                 ).await()
+                inviteRef.set(mapOf("coupleId" to doc.id, "createdBy" to uid)).await()
                 db.collection("users").document(uid)
                     .set(mapOf("coupleId" to doc.id), SetOptions.merge())
                     .await()
@@ -61,14 +58,12 @@ class PairingRepository(
         require(InviteCode.isValid(code)) {
             "That code doesn't look right — it should be 6 letters or numbers."
         }
-        val snap = db.collection("couples")
-            .whereEqualTo("inviteCode", code)
-            .limit(1)
-            .get()
-            .await()
-        val doc = snap.documents.firstOrNull()
+        val invite = db.collection("invites").document(code).get().await()
+        val coupleId = invite.getString("coupleId")
             ?: throw IllegalStateException("No couple found with that code. Double-check it with your partner.")
-        val members = doc.get("members") as? List<*> ?: emptyList<Any>()
+        val coupleRef = db.collection("couples").document(coupleId)
+        val couple = coupleRef.get().await()
+        val members = couple.get("members") as? List<*> ?: emptyList<Any>()
         if (uid in members) {
             throw IllegalStateException("That's your own code — share it with your partner instead.")
         }
@@ -77,16 +72,17 @@ class PairingRepository(
         }
         try {
             db.runTransaction { tx ->
-                val fresh = tx.get(doc.reference)
+                val fresh = tx.get(coupleRef)
                 val current = fresh.get("members") as? List<*> ?: emptyList<Any>()
                 check(current.size == 1) { "That code has already been used." }
-                tx.update(doc.reference, "members", current + uid)
+                tx.update(coupleRef, "members", current + uid)
             }.await()
         } catch (e: FirebaseFirestoreException) {
             throw IllegalStateException("Couldn't join right now — check your connection and try again.", e)
         }
+        runCatching { db.collection("invites").document(code).delete().await() }
         db.collection("users").document(uid)
-            .set(mapOf("coupleId" to doc.id), SetOptions.merge())
+            .set(mapOf("coupleId" to coupleId), SetOptions.merge())
             .await()
     }
 

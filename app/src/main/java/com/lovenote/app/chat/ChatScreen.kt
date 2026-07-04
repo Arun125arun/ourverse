@@ -120,7 +120,6 @@ private const val TYPING_HEARTBEAT_MILLIS = 2_000L
 @Composable
 fun ChatScreen(
     repository: ChatRepository,
-    onSendNoteClick: () -> Unit,
     onSettingsClick: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -154,7 +153,10 @@ fun ChatScreen(
 
     DisposableEffect(Unit) {
         AppVisibility.chatVisible = true
-        onDispose { AppVisibility.chatVisible = false }
+        onDispose {
+            AppVisibility.chatVisible = false
+            VoicePlayer.stop()
+        }
     }
 
     // Typing indicator visibility with expiry.

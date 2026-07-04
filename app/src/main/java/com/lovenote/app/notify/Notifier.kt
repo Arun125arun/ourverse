@@ -19,6 +19,8 @@ import com.lovenote.app.R
 object Notifier {
     private const val CHANNEL_MESSAGES = "messages"
     private const val CHANNEL_NOTES = "notes"
+    private const val CHANNEL_CALLS = "calls"
+    private const val CALL_NOTIFICATION_ID = 5
     private val VIBRATION = longArrayOf(0, 250, 150, 250)
 
     fun ensureChannels(context: Context) {
@@ -55,6 +57,46 @@ object Notifier {
 
     fun notifyMessage(context: Context, preview: String) =
         notify(context, CHANNEL_MESSAGES, 1, "New message ❤", preview)
+
+    /** Full-screen incoming-call alert for when the app is closed. */
+    fun notifyIncomingCall(context: Context, video: Boolean) {
+        if (!canNotify(context)) return
+        val manager = context.getSystemService(NotificationManager::class.java)
+        manager.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_CALLS,
+                "Calls",
+                NotificationManager.IMPORTANCE_HIGH,
+            ).apply {
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 600, 400, 600, 400, 600)
+            },
+        )
+        val fullScreen = PendingIntent.getActivity(
+            context,
+            2,
+            Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val notification = NotificationCompat.Builder(context, CHANNEL_CALLS)
+            .setSmallIcon(R.drawable.ic_heart)
+            .setContentTitle(if (video) "Incoming video call ❤" else "Incoming voice call ❤")
+            .setContentText("Tap to answer")
+            .setCategory(NotificationCompat.CATEGORY_CALL)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setFullScreenIntent(fullScreen, true)
+            .setContentIntent(fullScreen)
+            .setAutoCancel(true)
+            .build()
+        manager.notify(CALL_NOTIFICATION_ID, notification)
+    }
+
+    fun cancelIncomingCall(context: Context) {
+        context.getSystemService(NotificationManager::class.java)
+            .cancel(CALL_NOTIFICATION_ID)
+    }
 
     fun notifyNote(context: Context, preview: String) =
         notify(context, CHANNEL_NOTES, 2, "A note for you ❤", preview)

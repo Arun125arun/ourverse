@@ -216,8 +216,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, onAuthStateChanged, signOut }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { initializeFirestore, persistentLocalCache, doc, collection, onSnapshot, query,
-         orderBy, limit, addDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, getDocs,
-         where, runTransaction }
+         orderBy, limit, addDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, getDoc,
+         getDocs, where, runTransaction }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
@@ -296,6 +296,7 @@ $("btn-create").onclick = async () => {
     const ref = await addDoc(collection(db, "couples"), {
       members: [me.uid], inviteCode: code, createdAt: serverTimestamp(),
     });
+    await setDoc(doc(db, "invites", code), { coupleId: ref.id, createdBy: me.uid });
     await setDoc(doc(db, "users", me.uid), { coupleId: ref.id }, { merge: true });
   } catch (e) { $("pair-error").textContent = e.message; }
 };
@@ -304,17 +305,19 @@ $("btn-join").onclick = async () => {
   try {
     const code = $("join-code").value.trim().toUpperCase();
     if (code.length !== 6) throw new Error("Code should be 6 characters.");
-    const snap = await getDocs(query(collection(db, "couples"), where("inviteCode", "==", code), limit(1)));
-    if (snap.empty) throw new Error("No couple found with that code.");
-    const target = snap.docs[0];
+    const invite = await getDoc(doc(db, "invites", code));
+    const targetId = invite.get("coupleId");
+    if (!targetId) throw new Error("No couple found with that code.");
+    const targetRef = doc(db, "couples", targetId);
     await runTransaction(db, async (tx) => {
-      const fresh = await tx.get(target.ref);
+      const fresh = await tx.get(targetRef);
       const members = fresh.get("members") || [];
       if (members.includes(me.uid)) throw new Error("That's your own code.");
       if (members.length >= 2) throw new Error("That code has already been used.");
-      tx.update(target.ref, { members: [...members, me.uid] });
+      tx.update(targetRef, { members: [...members, me.uid] });
     });
-    await setDoc(doc(db, "users", me.uid), { coupleId: target.id }, { merge: true });
+    await deleteDoc(doc(db, "invites", code)).catch(() => {});
+    await setDoc(doc(db, "users", me.uid), { coupleId: targetId }, { merge: true });
   } catch (e) { $("pair-error").textContent = e.message; }
 };
 

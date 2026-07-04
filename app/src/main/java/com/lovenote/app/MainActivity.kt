@@ -325,7 +325,6 @@ private fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                 )
                 HomeScreen.CHAT -> ChatScreen(
                     repository = chatRepository,
-                    onSendNoteClick = { navigate(HomeScreen.NOTE) },
                     onSettingsClick = { navigate(HomeScreen.SETTINGS) },
                 )
                 }
