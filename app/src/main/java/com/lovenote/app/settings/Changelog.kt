@@ -3,6 +3,12 @@ package com.lovenote.app.settings
 /** Release notes shown in the "What's new" dialog after each update. */
 object Changelog {
     private val NOTES = mapOf(
+        30L to listOf(
+            "💬 Beautiful new message menu — bouncy reactions, clean actions",
+            "🗑 Delete partner's messages for yourself",
+            "📋 Copy messages to clipboard",
+            "🎨 Draw-a-note button moved below the note",
+        ),
         29L to listOf(
             "✏ Edit sent messages — long-press your message → Edit",
             "Edited messages show a small “edited” label",

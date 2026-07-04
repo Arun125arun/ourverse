@@ -26,6 +26,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -81,9 +82,6 @@ fun SendNoteScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onDrawClick) {
-                        Text("🎨", fontSize = 20.sp)
-                    }
                     IconButton(onClick = onHistoryClick) {
                         Icon(
                             Icons.AutoMirrored.Filled.List,
@@ -176,6 +174,15 @@ fun SendNoteScreen(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(if (busy) "Sending…" else "Send to their home screen ❤")
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedButton(
+                onClick = onDrawClick,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("🎨 Or draw a note instead")
             }
 
             error?.let {

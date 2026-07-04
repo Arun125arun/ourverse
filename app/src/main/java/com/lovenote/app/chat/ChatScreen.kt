@@ -6,7 +6,10 @@ import android.net.Uri
 import android.util.Base64
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -44,6 +47,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
@@ -79,8 +83,11 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -127,6 +134,11 @@ fun ChatScreen(
     var input by remember { mutableStateOf("") }
     var reactingTo by remember { mutableStateOf<String?>(null) }
     var editing by remember { mutableStateOf<Message?>(null) }
+    var hiddenIds by remember { mutableStateOf(HiddenMessages.load(context)) }
+    val visibleMessages = remember(messages, hiddenIds) {
+        messages.filter { it.id !in hiddenIds }
+    }
+    val clipboard = LocalClipboardManager.current
     var lastHeartbeat by remember { mutableStateOf(0L) }
 
     // Read receipts: stamp partner messages as seen while the chat is open.
@@ -326,7 +338,7 @@ fun ChatScreen(
                 .consumeWindowInsets(padding)
                 .imePadding(),
         ) {
-            if (messages.isEmpty()) {
+            if (visibleMessages.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -354,7 +366,7 @@ fun ChatScreen(
                     }
                 }
             } else {
-                val newestSeenMineId = messages
+                val newestSeenMineId = visibleMessages
                     .firstOrNull { it.isMine(repository.myUid) && it.seen }
                     ?.id
                 LazyColumn(
@@ -366,13 +378,13 @@ fun ChatScreen(
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    itemsIndexed(messages, key = { _, m -> m.id }) { index, message ->
+                    itemsIndexed(visibleMessages, key = { _, m -> m.id }) { index, message ->
                         // reverseLayout: chip rendered above the bubble marks a new day
-                        val startsNewDay = index == messages.lastIndex ||
-                            !sameDay(message.sentAt, messages[index + 1].sentAt)
+                        val startsNewDay = index == visibleMessages.lastIndex ||
+                            !sameDay(message.sentAt, visibleMessages[index + 1].sentAt)
                         // reversed list: index-1 is the *next* (newer) message
                         val lastOfRun = index == 0 ||
-                            messages[index - 1].senderUid != message.senderUid
+                            visibleMessages[index - 1].senderUid != message.senderUid
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -399,14 +411,23 @@ fun ChatScreen(
                                 reactionPickerOpen = reactingTo == message.id,
                                 onLongPress = { reactingTo = message.id },
                                 onDismissPicker = { reactingTo = null },
+                                myReaction = message.reactions[repository.myUid],
                                 onDelete = {
                                     reactingTo = null
-                                    scope.launch { runCatching { repository.delete(message.id) } }
+                                    if (message.isMine(repository.myUid)) {
+                                        scope.launch { runCatching { repository.delete(message.id) } }
+                                    } else {
+                                        hiddenIds = HiddenMessages.hide(context, message.id)
+                                    }
                                 },
                                 onEdit = {
                                     reactingTo = null
                                     editing = message
                                     input = message.body
+                                },
+                                onCopy = {
+                                    reactingTo = null
+                                    clipboard.setText(AnnotatedString(message.body))
                                 },
                                 onReact = { emoji ->
                                     reactingTo = null
@@ -677,8 +698,10 @@ private fun MessageRow(
     reactionPickerOpen: Boolean,
     onLongPress: () -> Unit,
     onDismissPicker: () -> Unit,
+    myReaction: String?,
     onDelete: () -> Unit,
     onEdit: () -> Unit,
+    onCopy: () -> Unit,
     onPhotoClick: () -> Unit,
     playingVoice: Boolean,
     onVoiceToggle: () -> Unit,
@@ -776,31 +799,71 @@ private fun MessageRow(
             DropdownMenu(
                 expanded = reactionPickerOpen,
                 onDismissRequest = onDismissPicker,
+                shape = RoundedCornerShape(24.dp),
+                containerColor = MaterialTheme.colorScheme.surface,
+                shadowElevation = 8.dp,
             ) {
-                Row(modifier = Modifier.padding(horizontal = 8.dp)) {
-                    REACTION_EMOJIS.forEach { emoji ->
-                        Text(
-                            text = emoji,
-                            style = MaterialTheme.typography.headlineSmall,
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    REACTION_EMOJIS.forEachIndexed { index, emoji ->
+                        val pop = remember { Animatable(0f) }
+                        LaunchedEffect(Unit) {
+                            delay(index * 45L)
+                            pop.animateTo(
+                                1f,
+                                spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessMediumLow,
+                                ),
+                            )
+                        }
+                        val selected = message.reactions.values.isNotEmpty() &&
+                            myReaction == emoji
+                        Box(
                             modifier = Modifier
-                                .padding(horizontal = 6.dp)
-                                .combinedClickable(onClick = { onReact(emoji) }),
-                        )
+                                .size(42.dp)
+                                .scale(pop.value)
+                                .background(
+                                    if (selected) {
+                                        MaterialTheme.colorScheme.primaryContainer
+                                    } else {
+                                        Color.Transparent
+                                    },
+                                    CircleShape,
+                                )
+                                .clickable { onReact(emoji) },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(emoji, fontSize = 24.sp)
+                        }
                     }
                 }
-                if (mine) {
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                    if (message.type == "text") {
-                        DropdownMenuItem(
-                            text = { Text("Edit") },
-                            onClick = onEdit,
-                        )
-                    }
-                    DropdownMenuItem(
-                        text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
-                        onClick = onDelete,
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                )
+                if (message.type == "text") {
+                    MenuAction(
+                        painter = painterResource(R.drawable.ic_copy),
+                        label = "Copy",
+                        onClick = onCopy,
                     )
                 }
+                if (mine && message.type == "text") {
+                    MenuAction(
+                        painter = rememberVectorPainter(Icons.Filled.Edit),
+                        label = "Edit",
+                        onClick = onEdit,
+                    )
+                }
+                MenuAction(
+                    painter = rememberVectorPainter(Icons.Filled.Delete),
+                    label = if (mine) "Delete for everyone" else "Delete for me",
+                    tint = MaterialTheme.colorScheme.error,
+                    onClick = onDelete,
+                )
             }
         }
 
@@ -897,6 +960,32 @@ private fun TypingDots() {
                 color = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
             )
         }
+    }
+}
+
+@Composable
+private fun MenuAction(
+    painter: Painter,
+    label: String,
+    tint: Color = MaterialTheme.colorScheme.onSurface,
+    onClick: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 11.dp),
+    ) {
+        Icon(
+            painter = painter,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(Modifier.width(14.dp))
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = tint)
+        Spacer(Modifier.width(24.dp))
     }
 }
 
