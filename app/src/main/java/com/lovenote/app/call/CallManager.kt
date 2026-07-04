@@ -50,6 +50,8 @@ object CallManager {
         private set
     var screenSharing by mutableStateOf(false)
         private set
+    var frontCamera by mutableStateOf(true)
+        private set
 
     val eglBase: EglBase by lazy { EglBase.create() }
 
@@ -195,7 +197,24 @@ object CallManager {
     }
 
     fun switchCamera() {
-        (capturer as? org.webrtc.CameraVideoCapturer)?.switchCamera(null)
+        val context = appContext ?: return
+        val camera = capturer as? org.webrtc.CameraVideoCapturer ?: return
+        // Multi-lens phones have several back cameras; jump straight to the
+        // first camera of the *opposite* facing instead of cycling them all.
+        val enumerator = Camera2Enumerator(context)
+        val target = enumerator.deviceNames.firstOrNull { name ->
+            if (frontCamera) enumerator.isBackFacing(name) else enumerator.isFrontFacing(name)
+        } ?: return
+        camera.switchCamera(
+            object : org.webrtc.CameraVideoCapturer.CameraSwitchHandler {
+                override fun onCameraSwitchDone(isFront: Boolean) {
+                    frontCamera = isFront
+                }
+
+                override fun onCameraSwitchError(error: String?) {}
+            },
+            target,
+        )
     }
 
     private fun setupMedia(context: Context, video: Boolean) {
@@ -216,6 +235,7 @@ object CallManager {
             videoSource = f.createVideoSource(cap.isScreencast)
             cap.initialize(surfaceHelper, context, videoSource!!.capturerObserver)
             cap.startCapture(960, 540, 24)
+            frontCamera = true
             cameraVideoTrack = f.createVideoTrack("video0", videoSource)
             localVideoTrack = cameraVideoTrack
         }

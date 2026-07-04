@@ -3,6 +3,10 @@ package com.lovenote.app.settings
 /** Release notes shown in the "What's new" dialog after each update. */
 object Changelog {
     private val NOTES = mapOf(
+        28L to listOf(
+            "📷 Camera flip in video calls now toggles front ↔ back correctly",
+            "🪞 Selfie preview only mirrors on the front camera",
+        ),
         27L to listOf(
             "📞 Proper call buttons — real icons for mute, speaker, flip & end",
             "📺 Screen sharing during video calls",

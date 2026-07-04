@@ -69,7 +69,7 @@ fun CallOverlay(partnerName: String, partnerPhoto: String) {
         if (isVideo && CallManager.localVideoTrack != null) {
             VideoView(
                 track = CallManager.localVideoTrack,
-                mirror = true,
+                mirror = CallManager.frontCamera && !CallManager.screenSharing,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(16.dp)
@@ -231,6 +231,7 @@ private fun VideoView(track: VideoTrack?, mirror: Boolean = false, modifier: Mod
             }
         },
         update = { view ->
+            view.setMirror(mirror)
             val previous = view.tag as? VideoTrack
             if (previous !== track) {
                 previous?.removeSink(view)
