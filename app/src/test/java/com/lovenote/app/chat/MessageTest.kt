@@ -88,6 +88,28 @@ class MessageTest {
     }
 
     @Test
+    fun `reply fields round-trip`() {
+        val reply = Message(
+            id = "r1",
+            senderUid = "alice",
+            body = "yes!",
+            replyToId = "m9",
+            replyText = "movie tonight?",
+            replySender = "bob",
+        )
+        val restored = Message.fromMap("r1", reply.toMap())
+        assertEquals(reply, restored)
+        assertNull(Message.fromMap("r2", emptyMap()).replyToId)
+    }
+
+    @Test
+    fun `preview summarizes message types`() {
+        assertEquals("hello", Message.preview(Message(body = "hello")))
+        assertEquals("📷 Photo", Message.preview(Message(type = "photo", body = "x")))
+        assertEquals("🎤 Voice note", Message.preview(Message(type = "voice", body = "x")))
+    }
+
+    @Test
     fun `isMine matches sender uid`() {
         val message = Message(id = "m3", senderUid = "alice", body = "hey")
         assertTrue(message.isMine("alice"))

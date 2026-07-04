@@ -22,6 +22,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,7 +32,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -85,6 +88,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -134,6 +139,7 @@ fun ChatScreen(
     var input by remember { mutableStateOf("") }
     var reactingTo by remember { mutableStateOf<String?>(null) }
     var editing by remember { mutableStateOf<Message?>(null) }
+    var replying by remember { mutableStateOf<Message?>(null) }
     var hiddenIds by remember { mutableStateOf(HiddenMessages.load(context)) }
     val visibleMessages = remember(messages, hiddenIds) {
         messages.filter { it.id !in hiddenIds }
@@ -412,6 +418,15 @@ fun ChatScreen(
                                 onLongPress = { reactingTo = message.id },
                                 onDismissPicker = { reactingTo = null },
                                 myReaction = message.reactions[repository.myUid],
+                                quoteLabel = message.replySender?.let { sender ->
+                                    if (sender == repository.myUid) "You"
+                                    else partner?.name?.substringBefore(' ') ?: "Them"
+                                },
+                                onReply = {
+                                    reactingTo = null
+                                    editing = null
+                                    replying = message
+                                },
                                 onDelete = {
                                     reactingTo = null
                                     if (message.isMine(repository.myUid)) {
@@ -442,6 +457,49 @@ fun ChatScreen(
                                     }
                                 },
                             )
+                        }
+                    }
+                }
+            }
+
+            // Reply banner
+            replying?.let { target ->
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp),
+                    shape = RoundedCornerShape(14.dp),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(start = 12.dp),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_reply),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                        ) {
+                            Text(
+                                text = if (target.isMine(repository.myUid)) "You"
+                                else partner?.name?.substringBefore(' ') ?: "Them",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Text(
+                                text = Message.preview(target),
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 1,
+                            )
+                        }
+                        IconButton(onClick = { replying = null }) {
+                            Icon(Icons.Filled.Close, contentDescription = "Cancel reply")
                         }
                     }
                 }
@@ -635,14 +693,16 @@ fun ChatScreen(
                                 recording -> stopAndSendVoice()
                                 input.isNotBlank() -> {
                                     val text = input
-                                    val target = editing
+                                    val editTarget = editing
+                                    val replyTarget = replying
                                     input = ""
                                     editing = null
+                                    replying = null
                                     scope.launch {
-                                        if (target != null) {
-                                            runCatching { repository.edit(target.id, text) }
+                                        if (editTarget != null) {
+                                            runCatching { repository.edit(editTarget.id, text) }
                                         } else {
-                                            repository.send(text)
+                                            repository.send(text, replyTo = replyTarget)
                                         }
                                     }
                                 }
@@ -699,6 +759,8 @@ private fun MessageRow(
     onLongPress: () -> Unit,
     onDismissPicker: () -> Unit,
     myReaction: String?,
+    quoteLabel: String?,
+    onReply: () -> Unit,
     onDelete: () -> Unit,
     onEdit: () -> Unit,
     onCopy: () -> Unit,
@@ -707,11 +769,49 @@ private fun MessageRow(
     onVoiceToggle: () -> Unit,
     onReact: (String) -> Unit,
 ) {
+    val dragScope = rememberCoroutineScope()
+    val swipeOffset = remember { Animatable(0f) }
+
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .pointerInput(message.id) {
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        if (swipeOffset.value > 130f) onReply()
+                        dragScope.launch {
+                            swipeOffset.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
+                        }
+                    },
+                    onDragCancel = {
+                        dragScope.launch { swipeOffset.animateTo(0f) }
+                    },
+                ) { change, dragAmount ->
+                    val next = (swipeOffset.value + dragAmount).coerceIn(0f, 200f)
+                    dragScope.launch { swipeOffset.snapTo(next) }
+                    if (dragAmount != 0f) change.consume()
+                }
+            },
         horizontalAlignment = if (mine) Alignment.End else Alignment.Start,
     ) {
-        Box {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            // Reply hint revealed while swiping
+            Icon(
+                painter = painterResource(R.drawable.ic_reply),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary.copy(
+                    alpha = (swipeOffset.value / 130f).coerceIn(0f, 1f),
+                ),
+                modifier = Modifier
+                    .align(if (mine) Alignment.CenterEnd else Alignment.CenterStart)
+                    .padding(horizontal = 6.dp)
+                    .size(22.dp),
+            )
+        Box(
+            modifier = Modifier
+                .align(if (mine) Alignment.CenterEnd else Alignment.CenterStart)
+                .offset { IntOffset(swipeOffset.value.toInt(), 0) },
+        ) {
             Box(
                 modifier = Modifier
                     .widthIn(max = 260.dp)
@@ -740,6 +840,14 @@ private fun MessageRow(
                     )
                     .padding(if (message.isPhoto && !message.once) 4.dp else 0.dp),
             ) {
+                Column {
+                if (message.replyToId != null) {
+                    QuoteBlock(
+                        label = quoteLabel ?: "",
+                        text = message.replyText ?: "",
+                        mine = mine,
+                    )
+                }
                 if (message.isVoice) {
                     Row(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
@@ -794,6 +902,7 @@ private fun MessageRow(
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                     )
                 }
+                }
             }
 
             DropdownMenu(
@@ -844,6 +953,11 @@ private fun MessageRow(
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
                 )
+                MenuAction(
+                    painter = painterResource(R.drawable.ic_reply),
+                    label = "Reply",
+                    onClick = onReply,
+                )
                 if (message.type == "text") {
                     MenuAction(
                         painter = painterResource(R.drawable.ic_copy),
@@ -865,6 +979,7 @@ private fun MessageRow(
                     onClick = onDelete,
                 )
             }
+        }
         }
 
         if (message.reactions.isNotEmpty()) {
@@ -958,6 +1073,46 @@ private fun TypingDots() {
                 text = ".",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
+            )
+        }
+    }
+}
+
+/** The quoted original shown at the top of a reply bubble. */
+@Composable
+private fun QuoteBlock(label: String, text: String, mine: Boolean) {
+    val barColor = if (mine) {
+        MaterialTheme.colorScheme.onPrimary
+    } else {
+        MaterialTheme.colorScheme.primary
+    }
+    Row(
+        modifier = Modifier
+            .padding(start = 6.dp, end = 6.dp, top = 6.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(Color(0x1F000000)),
+    ) {
+        Box(
+            modifier = Modifier
+                .width(3.dp)
+                .height(38.dp)
+                .background(barColor),
+        )
+        Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = barColor,
+            )
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                color = if (mine) {
+                    MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
+                } else {
+                    MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
+                },
             )
         }
     }

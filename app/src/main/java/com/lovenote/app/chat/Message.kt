@@ -13,6 +13,9 @@ data class Message(
     val durationSec: Long? = null,
     val once: Boolean = false,
     val editedAt: Timestamp? = null,
+    val replyToId: String? = null,
+    val replyText: String? = null,
+    val replySender: String? = null,
 ) {
     val seen: Boolean get() = seenAt != null
 
@@ -37,6 +40,9 @@ data class Message(
         "durationSec" to durationSec,
         "once" to once,
         "editedAt" to editedAt,
+        "replyToId" to replyToId,
+        "replyText" to replyText,
+        "replySender" to replySender,
     )
 
     companion object {
@@ -59,6 +65,16 @@ data class Message(
             durationSec = (map["durationSec"] as? Number)?.toLong(),
             once = map["once"] as? Boolean ?: false,
             editedAt = map["editedAt"] as? Timestamp,
+            replyToId = map["replyToId"] as? String,
+            replyText = map["replyText"] as? String,
+            replySender = map["replySender"] as? String,
         )
+
+        /** Short summary used when quoting a message in a reply. */
+        fun preview(message: Message): String = when {
+            message.isPhoto -> "📷 Photo"
+            message.isVoice -> "🎤 Voice note"
+            else -> message.body.take(60)
+        }
     }
 }

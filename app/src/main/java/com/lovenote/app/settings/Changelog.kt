@@ -3,6 +3,10 @@ package com.lovenote.app.settings
 /** Release notes shown in the "What's new" dialog after each update. */
 object Changelog {
     private val NOTES = mapOf(
+        31L to listOf(
+            "↩ Reply to messages — swipe any message right, just like WhatsApp",
+            "💬 Replies show a quoted preview of the original",
+        ),
         30L to listOf(
             "💬 Beautiful new message menu — bouncy reactions, clean actions",
             "🗑 Delete partner's messages for yourself",

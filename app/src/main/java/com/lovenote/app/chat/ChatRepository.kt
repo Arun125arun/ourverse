@@ -40,7 +40,7 @@ class ChatRepository(
     private val stateRef
         get() = coupleRef.collection("state").document("shared")
 
-    suspend fun send(text: String) {
+    suspend fun send(text: String, replyTo: Message? = null) {
         val body = text.trim()
         if (body.isEmpty()) return
         messagesRef.add(
@@ -48,6 +48,9 @@ class ChatRepository(
                 "senderUid" to myUid,
                 "type" to "text",
                 "body" to body,
+                "replyToId" to replyTo?.id,
+                "replyText" to replyTo?.let { Message.preview(it) },
+                "replySender" to replyTo?.senderUid,
                 "sentAt" to FieldValue.serverTimestamp(),
             ),
         ).await()
