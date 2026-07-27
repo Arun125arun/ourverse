@@ -116,6 +116,26 @@ class ChatRepository(
         ).await()
     }
 
+    suspend fun sendGameInvite(gameId: String, gameType: String) {
+        val label = when (gameType) {
+            "tictactoe" -> "Tic Tac Toe"
+            "ludo" -> "Ludo"
+            "truthdare" -> "Truth or Dare"
+            "wordgame" -> "Word Game"
+            else -> "Game"
+        }
+        messagesRef.add(
+            mapOf(
+                "senderUid" to myUid,
+                "type" to "game_invite",
+                "body" to "🎮 Let's play $label!",
+                "gameId" to gameId,
+                "gameType" to gameType,
+                "sentAt" to FieldValue.serverTimestamp(),
+            ),
+        ).await()
+    }
+
     /** Destroys a view-once photo's content after the partner has seen it. */
     suspend fun consumeOncePhoto(messageId: String) {
         messagesRef.document(messageId).update("body", "").await()

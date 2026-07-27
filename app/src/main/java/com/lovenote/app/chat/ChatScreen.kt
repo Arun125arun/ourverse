@@ -106,6 +106,7 @@ private const val MAX_MESSAGE_LENGTH = 1000
 fun ChatScreen(
     repository: ChatRepository,
     onSettingsClick: () -> Unit,
+    onGameClick: (gameId: String, gameType: String) -> Unit = { _, _ -> },
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -550,6 +551,7 @@ fun ChatScreen(
                                         }
                                     }
                                 },
+                                onGameClick = onGameClick,
                             )
                         }
                     }

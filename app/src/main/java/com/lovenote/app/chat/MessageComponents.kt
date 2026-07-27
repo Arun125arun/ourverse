@@ -37,6 +37,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -90,6 +93,7 @@ internal fun MessageRow(
     playingVoice: Boolean,
     onVoiceToggle: () -> Unit,
     onReact: (String) -> Unit,
+    onGameClick: (gameId: String, gameType: String) -> Unit = { _, _ -> },
 ) {
     val dragScope = rememberCoroutineScope()
     val swipeOffset = remember { Animatable(0f) }
@@ -229,6 +233,12 @@ internal fun MessageRow(
                     }
                 } else if (message.isPhoto) {
                     PhotoBubble(message)
+                } else if (message.isGameInvite) {
+                    GameInviteBubble(
+                        message = message,
+                        mine = mine,
+                        onClick = { onGameClick(message.gameId, message.gameType) },
+                    )
                 } else {
                     Text(
                         text = message.body,
@@ -244,79 +254,96 @@ internal fun MessageRow(
                 }
             }
 
-            DropdownMenu(
-                expanded = reactionPickerOpen,
-                onDismissRequest = onDismissPicker,
-                shape = RoundedCornerShape(24.dp),
-                containerColor = MaterialTheme.colorScheme.surface,
-                shadowElevation = 8.dp,
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+            if (reactionPickerOpen) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        ) { onDismissPicker() }
                 ) {
-                    REACTION_EMOJIS.forEachIndexed { index, emoji ->
-                        val pop = remember { Animatable(0f) }
-                        LaunchedEffect(Unit) {
-                            delay(index * 45L)
-                            pop.animateTo(
-                                1f,
-                                spring(
-                                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                                    stiffness = Spring.StiffnessMediumLow,
-                                ),
+                    Column(
+                        modifier = Modifier
+                            .align(if (mine) Alignment.CenterEnd else Alignment.CenterStart)
+                            .padding(horizontal = 8.dp)
+                            .shadow(12.dp, RoundedCornerShape(28.dp))
+                            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(28.dp))
+                            .clickable(
+                                indication = null,
+                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            ) { }
+                            .padding(horizontal = 6.dp, vertical = 6.dp),
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(0.dp),
+                        ) {
+                            REACTION_EMOJIS.forEachIndexed { index, emoji ->
+                                val pop = remember { Animatable(0f) }
+                                LaunchedEffect(reactionPickerOpen) {
+                                    if (reactionPickerOpen) {
+                                        pop.snapTo(0f)
+                                        delay(index * 50L)
+                                        pop.animateTo(
+                                            1f,
+                                            spring(
+                                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                stiffness = Spring.StiffnessMediumLow,
+                                            ),
+                                        )
+                                    }
+                                }
+                                val selected = myReaction == emoji
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .scale(pop.value)
+                                        .background(
+                                            if (selected) MaterialTheme.colorScheme.primaryContainer
+                                            else Color.Transparent,
+                                            CircleShape,
+                                        )
+                                        .clickable {
+                                            onReact(emoji)
+                                            onDismissPicker()
+                                        },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(emoji, fontSize = 24.sp)
+                                }
+                            }
+                        }
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                        )
+                        MenuAction(
+                            painter = painterResource(R.drawable.ic_reply),
+                            label = "Reply",
+                            onClick = { onReply(); onDismissPicker() },
+                        )
+                        if (message.type == "text") {
+                            MenuAction(
+                                painter = painterResource(R.drawable.ic_copy),
+                                label = "Copy",
+                                onClick = { onCopy(); onDismissPicker() },
                             )
                         }
-                        val selected = message.reactions.values.isNotEmpty() &&
-                            myReaction == emoji
-                        Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .scale(pop.value)
-                                .background(
-                                    if (selected) {
-                                        MaterialTheme.colorScheme.primaryContainer
-                                    } else {
-                                        Color.Transparent
-                                    },
-                                    CircleShape,
-                                )
-                                .clickable { onReact(emoji) },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(emoji, fontSize = 24.sp)
+                        if (mine && message.type == "text") {
+                            MenuAction(
+                                painter = rememberVectorPainter(Icons.Filled.Edit),
+                                label = "Edit",
+                                onClick = { onEdit(); onDismissPicker() },
+                            )
                         }
+                        MenuAction(
+                            painter = rememberVectorPainter(Icons.Filled.Delete),
+                            label = if (mine) "Delete for everyone" else "Delete for me",
+                            tint = MaterialTheme.colorScheme.error,
+                            onClick = { onDelete(); onDismissPicker() },
+                        )
                     }
                 }
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-                )
-                MenuAction(
-                    painter = painterResource(R.drawable.ic_reply),
-                    label = "Reply",
-                    onClick = onReply,
-                )
-                if (message.type == "text") {
-                    MenuAction(
-                        painter = painterResource(R.drawable.ic_copy),
-                        label = "Copy",
-                        onClick = onCopy,
-                    )
-                }
-                if (mine && message.type == "text") {
-                    MenuAction(
-                        painter = rememberVectorPainter(Icons.Filled.Edit),
-                        label = "Edit",
-                        onClick = onEdit,
-                    )
-                }
-                MenuAction(
-                    painter = rememberVectorPainter(Icons.Filled.Delete),
-                    label = if (mine) "Delete for everyone" else "Delete for me",
-                    tint = MaterialTheme.colorScheme.error,
-                    onClick = onDelete,
-                )
             }
         }
         }
@@ -559,4 +586,70 @@ internal fun PhotoBubble(message: Message) {
             .clip(RoundedCornerShape(14.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant),
     )
+}
+
+@Composable
+internal fun GameInviteBubble(
+    message: Message,
+    mine: Boolean,
+    onClick: () -> Unit,
+) {
+    val gameLabel = when (message.gameType) {
+        "tictactoe" -> "Tic Tac Toe"
+        "ludo" -> "Ludo"
+        "truthdare" -> "Truth or Dare"
+        "wordgame" -> "Word Game"
+        else -> "Game"
+    }
+    val gameEmoji = when (message.gameType) {
+        "tictactoe" -> "❌"
+        "ludo" -> "🎲"
+        "truthdare" -> "🔥"
+        "wordgame" -> "🔤"
+        else -> "🎮"
+    }
+
+    Column(
+        modifier = Modifier
+            .padding(horizontal = 10.dp, vertical = 6.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(
+                if (mine) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                else MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f),
+            )
+            .clickable(onClick = onClick)
+            .padding(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(text = gameEmoji, fontSize = 28.sp)
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = gameLabel,
+            style = MaterialTheme.typography.titleSmall,
+            color = if (mine) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onTertiaryContainer,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = message.body,
+            style = MaterialTheme.typography.bodySmall,
+            color = if (mine) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+            else MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f),
+        )
+        Spacer(Modifier.height(6.dp))
+        Button(
+            onClick = onClick,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (mine) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.tertiary,
+            ),
+            shape = RoundedCornerShape(10.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+        ) {
+            Text(
+                text = if (mine) "View Game" else "Join Game",
+                style = MaterialTheme.typography.labelMedium,
+            )
+        }
+    }
 }

@@ -74,7 +74,6 @@ fun GamesHubScreen(
     onNoteHistory: () -> Unit,
     onTicTacToe: () -> Unit,
     onLudo: () -> Unit,
-    onTrivia: () -> Unit,
     onTruthOrDare: () -> Unit,
     onWordGame: () -> Unit,
     myName: String,
@@ -152,17 +151,10 @@ fun GamesHubScreen(
                 ),
                 GameCard(
                     title = "Ludo",
-                    subtitle = "Race to home",
+                    subtitle = "Classic board game",
                     icon = "🎲",
                     gradient = listOf(Color(0xFFFF6B6B), Color(0xFFEE5A24)),
                     onClick = onLudo,
-                ),
-                GameCard(
-                    title = "Couple Trivia",
-                    subtitle = "How well do you know each other?",
-                    icon = "?",
-                    gradient = listOf(Color(0xFF00B894), Color(0xFF00A19A)),
-                    onClick = onTrivia,
                 ),
                 GameCard(
                     title = "Truth or Dare",

@@ -16,6 +16,8 @@ data class Message(
     val replyToId: String? = null,
     val replyText: String? = null,
     val replySender: String? = null,
+    val gameId: String = "",
+    val gameType: String = "",
 ) {
     val seen: Boolean get() = seenAt != null
 
@@ -24,6 +26,8 @@ data class Message(
     val isPhoto: Boolean get() = type == "photo"
 
     val isVoice: Boolean get() = type == "voice"
+
+    val isGameInvite: Boolean get() = type == "game_invite"
 
     /** A view-once photo whose content has already been destroyed. */
     val onceConsumed: Boolean get() = once && body.isEmpty()
@@ -43,6 +47,8 @@ data class Message(
         "replyToId" to replyToId,
         "replyText" to replyText,
         "replySender" to replySender,
+        "gameId" to gameId,
+        "gameType" to gameType,
     )
 
     companion object {
@@ -68,12 +74,15 @@ data class Message(
             replyToId = map["replyToId"] as? String,
             replyText = map["replyText"] as? String,
             replySender = map["replySender"] as? String,
+            gameId = map["gameId"] as? String ?: "",
+            gameType = map["gameType"] as? String ?: "",
         )
 
         /** Short summary used when quoting a message in a reply. */
         fun preview(message: Message): String = when {
             message.isPhoto -> "📷 Photo"
             message.isVoice -> "🎤 Voice note"
+            message.isGameInvite -> "🎮 ${message.gameType} game"
             else -> message.body.take(60)
         }
     }

@@ -2,21 +2,29 @@ package com.lovenote.app
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -37,7 +45,6 @@ import com.lovenote.app.chat.ChatScreen
 import com.lovenote.app.games.GamesHubScreen
 import com.lovenote.app.games.ludo.LudoScreen
 import com.lovenote.app.games.tictactoe.TicTacToeScreen
-import com.lovenote.app.games.trivia.CoupleTriviaScreen
 import com.lovenote.app.games.truthdare.TruthOrDareScreen
 import com.lovenote.app.games.wordgame.WordConnectionScreen
 import com.lovenote.app.notes.DrawNoteScreen
@@ -59,7 +66,7 @@ import kotlinx.coroutines.launch
 
 internal enum class HomeScreen {
     CHAT, US, MEMORIES, TODOS, HUB, NOTE, DRAW, HISTORY, SETTINGS,
-    TIC_TAC_TOE, LUDO, TRIVIA, TRUTH_OR_DARE, WORD_GAME,
+    TIC_TAC_TOE, LUDO, TRUTH_OR_DARE, WORD_GAME,
 }
 
 @Composable
@@ -142,39 +149,50 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
 
     val myName = myProfile?.name?.ifBlank { "You" } ?: "You"
     val partnerName = partner?.name?.ifBlank { "Your partner" } ?: "Your partner"
+    var pendingGameId by remember { mutableStateOf<String?>(null) }
+    var pendingGameType by remember { mutableStateOf("") }
 
     Box {
         Scaffold(
             bottomBar = {
-                NavigationBar(
+                Box(
                     modifier = Modifier
                         .navigationBarsPadding()
-                        .height(64.dp),
-                    windowInsets = WindowInsets(0, 0, 0, 0),
+                        .padding(horizontal = 40.dp, vertical = 10.dp)
+                        .background(
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                            RoundedCornerShape(24.dp),
+                        )
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
                 ) {
-                    NavigationBarItem(
-                        selected = screen == HomeScreen.CHAT || screen == HomeScreen.SETTINGS,
-                        onClick = { navigate(HomeScreen.CHAT) },
-                        icon = { Icon(Icons.Filled.Email, contentDescription = null) },
-                        label = { Text("Chat") },
-                    )
-                    NavigationBarItem(
-                        selected = screen == HomeScreen.US || screen == HomeScreen.MEMORIES ||
-                            screen == HomeScreen.TODOS,
-                        onClick = { navigate(HomeScreen.US) },
-                        icon = { Icon(Icons.Filled.Favorite, contentDescription = null) },
-                        label = { Text("Us") },
-                    )
-                    NavigationBarItem(
-                        selected = screen == HomeScreen.HUB || screen == HomeScreen.NOTE ||
-                            screen == HomeScreen.DRAW || screen == HomeScreen.HISTORY ||
-                            screen == HomeScreen.TIC_TAC_TOE || screen == HomeScreen.LUDO ||
-                            screen == HomeScreen.TRIVIA || screen == HomeScreen.TRUTH_OR_DARE ||
-                            screen == HomeScreen.WORD_GAME,
-                        onClick = { navigate(HomeScreen.HUB) },
-                        icon = { Icon(Icons.Filled.Star, contentDescription = null) },
-                        label = { Text("Hub") },
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        BottomBarItem(
+                            icon = Icons.Filled.Email,
+                            label = "Chat",
+                            selected = screen == HomeScreen.CHAT || screen == HomeScreen.SETTINGS,
+                            onClick = { navigate(HomeScreen.CHAT) },
+                        )
+                        BottomBarItem(
+                            icon = Icons.Filled.Favorite,
+                            label = "Us",
+                            selected = screen == HomeScreen.US || screen == HomeScreen.MEMORIES ||
+                                screen == HomeScreen.TODOS,
+                            onClick = { navigate(HomeScreen.US) },
+                        )
+                        BottomBarItem(
+                            icon = Icons.Filled.Star,
+                            label = "Hub",
+                            selected = screen == HomeScreen.HUB || screen == HomeScreen.NOTE ||
+                                screen == HomeScreen.DRAW || screen == HomeScreen.HISTORY ||
+                                screen == HomeScreen.TIC_TAC_TOE || screen == HomeScreen.LUDO ||
+                                screen == HomeScreen.TRUTH_OR_DARE ||
+                                screen == HomeScreen.WORD_GAME,
+                            onClick = { navigate(HomeScreen.HUB) },
+                        )
+                    }
                 }
             },
         ) { padding ->
@@ -192,7 +210,6 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                             onNoteHistory = { navigate(HomeScreen.HISTORY) },
                             onTicTacToe = { navigate(HomeScreen.TIC_TAC_TOE) },
                             onLudo = { navigate(HomeScreen.LUDO) },
-                            onTrivia = { navigate(HomeScreen.TRIVIA) },
                             onTruthOrDare = { navigate(HomeScreen.TRUTH_OR_DARE) },
                             onWordGame = { navigate(HomeScreen.WORD_GAME) },
                             myName = myName,
@@ -219,11 +236,6 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                             partnerPhotoUrl = partner?.photoUrl.orEmpty(),
                         )
                         HomeScreen.LUDO -> LudoScreen(
-                            onBack = { navigate(HomeScreen.HUB) },
-                            myName = myName,
-                            partnerName = partnerName,
-                        )
-                        HomeScreen.TRIVIA -> CoupleTriviaScreen(
                             onBack = { navigate(HomeScreen.HUB) },
                             myName = myName,
                             partnerName = partnerName,
@@ -264,6 +276,16 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                         HomeScreen.CHAT -> ChatScreen(
                             repository = chatRepository,
                             onSettingsClick = { navigate(HomeScreen.SETTINGS) },
+                            onGameClick = { gameId, gameType ->
+                                pendingGameId = gameId
+                                pendingGameType = gameType
+                                when (gameType) {
+                                    "tictactoe" -> navigate(HomeScreen.TIC_TAC_TOE)
+                                    "ludo" -> navigate(HomeScreen.LUDO)
+                                    "truthdare" -> navigate(HomeScreen.TRUTH_OR_DARE)
+                                    "wordgame" -> navigate(HomeScreen.WORD_GAME)
+                                }
+                            },
                         )
                     }
                 }
@@ -273,5 +295,45 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
             partnerName = partner?.name ?: "Your partner",
             partnerPhoto = partner?.photoUrl ?: "",
         )
+    }
+}
+
+@Composable
+private fun BottomBarItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val tint = if (selected) MaterialTheme.colorScheme.primary
+    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+
+    Box(
+        modifier = Modifier
+            .size(64.dp)
+            .then(
+                if (selected) Modifier.background(
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                    RoundedCornerShape(16.dp),
+                ) else Modifier
+            )
+            .clickable(onClick = onClick)
+            .padding(vertical = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = tint,
+                modifier = Modifier.size(20.dp),
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = tint,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        }
     }
 }
