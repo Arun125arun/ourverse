@@ -3,6 +3,11 @@ package com.lovenote.app.settings
 /** Release notes shown in the "What's new" dialog after each update. */
 object Changelog {
     private val NOTES = mapOf(
+        41L to listOf(
+            "🎨 Premium UI refresh — sleek black sign-in with red heart",
+            "🧭 Bigger, cleaner bottom navigation bar",
+            "⚙️ Game screens wired for online play with your partner",
+        ),
         40L to listOf(
             "🎮 Online games — play with your partner even when you're apart",
             "💬 Game invites appear in chat — tap to join and play",
