@@ -3,6 +3,11 @@ package com.lovenote.app.settings
 /** Release notes shown in the "What's new" dialog after each update. */
 object Changelog {
     private val NOTES = mapOf(
+        42L to listOf(
+            "🎲 Classic Ludo — animated dice rolling with shake effect",
+            "🏁 Realistic board — colored triangles, star markers, proper home columns",
+            "🧭 Compact bottom nav — smaller, tighter, more screen space",
+        ),
         41L to listOf(
             "🎨 Premium UI refresh — sleek black sign-in with red heart",
             "🧭 Bigger, cleaner bottom navigation bar",
