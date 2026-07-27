@@ -20,11 +20,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -42,6 +44,7 @@ import com.lovenote.app.call.CallManager
 import com.lovenote.app.call.CallOverlay
 import com.lovenote.app.chat.ChatRepository
 import com.lovenote.app.chat.ChatScreen
+import com.lovenote.app.games.GameRepository
 import com.lovenote.app.games.GamesHubScreen
 import com.lovenote.app.games.ludo.LudoScreen
 import com.lovenote.app.games.tictactoe.TicTacToeScreen
@@ -75,6 +78,7 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
     val chatRepository = remember(coupleId) { ChatRepository(coupleId) }
     val noteRepository = remember(coupleId) { NoteRepository(coupleId) }
     val usRepository = remember(coupleId) { UsRepository(coupleId) }
+    val gameRepository = remember(coupleId) { GameRepository(coupleId) }
     val homeScope = rememberCoroutineScope()
     val partner by chatRepository.partnerProfile().collectAsState(initial = null)
     val myProfile by chatRepository.myProfile().collectAsState(initial = null)
@@ -149,8 +153,46 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
 
     val myName = myProfile?.name?.ifBlank { "You" } ?: "You"
     val partnerName = partner?.name?.ifBlank { "Your partner" } ?: "Your partner"
-    var pendingGameId by remember { mutableStateOf<String?>(null) }
-    var pendingGameType by remember { mutableStateOf("") }
+    var activeGameId by remember { mutableStateOf<String?>(null) }
+    var activeGameType by remember { mutableStateOf("") }
+
+    fun startGame(gameType: String) {
+        homeScope.launch {
+            try {
+                val board = when (gameType) {
+                    "tictactoe" -> mapOf(
+                        "cells" to List(9) { "" },
+                        "currentPlayer" to "X",
+                    )
+                    "ludo" -> mapOf(
+                        "p1Tokens" to List(4) { -1 },
+                        "p2Tokens" to List(4) { -1 },
+                        "currentTurn" to "p1",
+                        "diceValue" to 1,
+                    )
+                    "truthdare" -> mapOf(
+                        "currentTurn" to "p1",
+                        "spins" to 0,
+                    )
+                    "wordgame" -> mapOf(
+                        "phase" to "p1",
+                        "currentRound" to 0,
+                    )
+                    else -> emptyMap()
+                }
+                val gameId = gameRepository.createGame(gameType, myName, board)
+                chatRepository.sendGameInvite(gameId, gameType)
+                activeGameId = gameId
+                activeGameType = gameType
+                when (gameType) {
+                    "tictactoe" -> navigate(HomeScreen.TIC_TAC_TOE)
+                    "ludo" -> navigate(HomeScreen.LUDO)
+                    "truthdare" -> navigate(HomeScreen.TRUTH_OR_DARE)
+                    "wordgame" -> navigate(HomeScreen.WORD_GAME)
+                }
+            } catch (_: Exception) {}
+        }
+    }
 
     Box {
         Scaffold(
@@ -158,12 +200,12 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                 Box(
                     modifier = Modifier
                         .navigationBarsPadding()
-                        .padding(horizontal = 40.dp, vertical = 10.dp)
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
                         .background(
-                            MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-                            RoundedCornerShape(24.dp),
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.97f),
+                            RoundedCornerShape(28.dp),
                         )
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                 ) {
                     Row(
                         horizontalArrangement = Arrangement.SpaceEvenly,
@@ -208,10 +250,10 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                             onSendNote = { navigate(HomeScreen.NOTE) },
                             onDrawNote = { navigate(HomeScreen.DRAW) },
                             onNoteHistory = { navigate(HomeScreen.HISTORY) },
-                            onTicTacToe = { navigate(HomeScreen.TIC_TAC_TOE) },
-                            onLudo = { navigate(HomeScreen.LUDO) },
-                            onTruthOrDare = { navigate(HomeScreen.TRUTH_OR_DARE) },
-                            onWordGame = { navigate(HomeScreen.WORD_GAME) },
+                            onTicTacToe = { startGame("tictactoe") },
+                            onLudo = { startGame("ludo") },
+                            onTruthOrDare = { startGame("truthdare") },
+                            onWordGame = { startGame("wordgame") },
                             myName = myName,
                         )
                         HomeScreen.NOTE -> SendNoteScreen(
@@ -234,21 +276,33 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                             partnerName = partnerName,
                             myPhotoUrl = myProfile?.photoUrl.orEmpty(),
                             partnerPhotoUrl = partner?.photoUrl.orEmpty(),
+                            gameId = activeGameId,
+                            gameRepository = gameRepository,
+                            myUid = chatRepository.myUid,
                         )
                         HomeScreen.LUDO -> LudoScreen(
                             onBack = { navigate(HomeScreen.HUB) },
                             myName = myName,
                             partnerName = partnerName,
+                            gameId = activeGameId,
+                            gameRepository = gameRepository,
+                            myUid = chatRepository.myUid,
                         )
                         HomeScreen.TRUTH_OR_DARE -> TruthOrDareScreen(
                             onBack = { navigate(HomeScreen.HUB) },
                             myName = myName,
                             partnerName = partnerName,
+                            gameId = activeGameId,
+                            gameRepository = gameRepository,
+                            myUid = chatRepository.myUid,
                         )
                         HomeScreen.WORD_GAME -> WordConnectionScreen(
                             onBack = { navigate(HomeScreen.HUB) },
                             myName = myName,
                             partnerName = partnerName,
+                            gameId = activeGameId,
+                            gameRepository = gameRepository,
+                            myUid = chatRepository.myUid,
                         )
                         HomeScreen.SETTINGS -> SettingsScreen(
                             onBack = { navigate(HomeScreen.CHAT) },
@@ -277,8 +331,8 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                             repository = chatRepository,
                             onSettingsClick = { navigate(HomeScreen.SETTINGS) },
                             onGameClick = { gameId, gameType ->
-                                pendingGameId = gameId
-                                pendingGameType = gameType
+                                activeGameId = gameId
+                                activeGameType = gameType
                                 when (gameType) {
                                     "tictactoe" -> navigate(HomeScreen.TIC_TAC_TOE)
                                     "ludo" -> navigate(HomeScreen.LUDO)
@@ -308,31 +362,34 @@ private fun BottomBarItem(
     val tint = if (selected) MaterialTheme.colorScheme.primary
     else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
 
+    val bgAlpha = if (selected) 0.12f else 0f
+
     Box(
         modifier = Modifier
-            .size(64.dp)
-            .then(
-                if (selected) Modifier.background(
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                    RoundedCornerShape(16.dp),
-                ) else Modifier
+            .size(72.dp)
+            .background(
+                if (selected) MaterialTheme.colorScheme.primary.copy(alpha = bgAlpha)
+                else Color.Transparent,
+                RoundedCornerShape(20.dp),
             )
-            .clickable(onClick = onClick)
-            .padding(vertical = 6.dp),
+            .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
             Icon(
                 imageVector = icon,
                 contentDescription = label,
                 tint = tint,
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(24.dp),
             )
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.labelMedium,
                 color = tint,
-                modifier = Modifier.padding(top = 2.dp),
+                modifier = Modifier.padding(top = 3.dp),
             )
         }
     }

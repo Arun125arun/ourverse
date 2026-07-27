@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lovenote.app.games.GameRepository
 
 private data class WordRound(
     val prompt: String,
@@ -71,6 +72,9 @@ fun WordConnectionScreen(
     onBack: () -> Unit,
     myName: String,
     partnerName: String,
+    gameId: String? = null,
+    gameRepository: GameRepository? = null,
+    myUid: String = "",
 ) {
     val selectedPrompts = remember { PROMPTS.shuffled().take(8) }
     var phase by remember { mutableStateOf("intro") }

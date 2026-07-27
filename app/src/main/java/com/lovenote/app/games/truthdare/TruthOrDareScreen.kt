@@ -44,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lovenote.app.games.GameRepository
 import kotlin.random.Random
 
 private data class TruthDareItem(val type: String, val text: String, val difficulty: String)
@@ -96,6 +97,9 @@ fun TruthOrDareScreen(
     onBack: () -> Unit,
     myName: String,
     partnerName: String,
+    gameId: String? = null,
+    gameRepository: GameRepository? = null,
+    myUid: String = "",
 ) {
     var currentTurn by remember { mutableIntStateOf(1) }
     var currentItem by remember { mutableStateOf<TruthDareItem?>(null) }

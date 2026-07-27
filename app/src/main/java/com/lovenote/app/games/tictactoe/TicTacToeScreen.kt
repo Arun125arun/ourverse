@@ -64,6 +64,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lovenote.app.games.GameRepository
 import com.lovenote.app.ui.Avatar
 
 // ─── Data ────────────────────────────────────────────────────────────────────
@@ -95,6 +96,9 @@ fun TicTacToeScreen(
     partnerName: String,
     myPhotoUrl: String,
     partnerPhotoUrl: String,
+    gameId: String? = null,
+    gameRepository: GameRepository? = null,
+    myUid: String = "",
 ) {
     val player1 = remember(myName, myPhotoUrl) {
         PlayerInfo(myName, myPhotoUrl, CellValue.X, "You")

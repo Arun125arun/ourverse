@@ -65,6 +65,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lovenote.app.games.GameRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.floor
@@ -181,6 +182,9 @@ fun LudoScreen(
     onBack: () -> Unit,
     myName: String,
     partnerName: String,
+    gameId: String? = null,
+    gameRepository: GameRepository? = null,
+    myUid: String = "",
 ) {
     val p1 = remember { PlayerData(myName, RedColor, RedLight, RedDark, baseSlots = RED_BASE, entry = RED_ENTRY, homeCol = RED_HOME) }
     val p2 = remember { PlayerData(partnerName, GreenColor, GreenLight, GreenDark, baseSlots = GREEN_BASE, entry = GREEN_ENTRY, homeCol = GREEN_HOME) }
