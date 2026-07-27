@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 
-data class Mood(val emoji: String, val dateKey: String)
+data class Mood(val emoji: String, val dateKey: String, val statusWord: String? = null)
 
 data class Profile(val name: String, val photoUrl: String)
 
@@ -42,6 +42,21 @@ data class CoupleEvent(
     val dateMillis: Long,
 )
 
+data class VoiceLetter(
+    val id: String,
+    val senderUid: String,
+    val audioBase64: String,
+    val durationSec: Long,
+    val caption: String,
+    val createdAtMillis: Long,
+)
+
+data class QuestionCard(
+    val id: String,
+    val text: String,
+    val category: String,
+)
+
 class UsRepository(
     private val coupleId: String,
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
@@ -57,9 +72,13 @@ class UsRepository(
 
     // --- Mood check-in ---
 
-    suspend fun setMood(emoji: String) {
+    suspend fun setMood(emoji: String, statusWord: String? = null) {
         stateRef.set(
-            mapOf("moods" to mapOf(myUid to mapOf("emoji" to emoji, "dateKey" to Questions.dateKey()))),
+            mapOf("moods" to mapOf(myUid to mapOf(
+                "emoji" to emoji,
+                "dateKey" to Questions.dateKey(),
+                "statusWord" to statusWord,
+            ))),
             SetOptions.merge(),
         ).await()
     }
@@ -74,10 +93,38 @@ class UsRepository(
                     val m = v as? Map<*, *> ?: return@mapNotNull null
                     val emoji = m["emoji"] as? String ?: return@mapNotNull null
                     val dateKey = m["dateKey"] as? String ?: return@mapNotNull null
-                    uid to Mood(emoji, dateKey)
+                    val statusWord = m["statusWord"] as? String
+                    uid to Mood(emoji, dateKey, statusWord)
                 }
                 .toMap()
         }.fallbackTo(emptyMap())
+
+    // --- Connection Streak ---
+
+    /** Returns the current consecutive-day streak of at least one partner interacting. */
+    fun connectionStreak(): Flow<Int> =
+        combine(
+            stateRef.snapshots(),
+            coupleRef.collection("daily").snapshots(),
+        ) { state, _ ->
+            val moods = (state.get("moods") as? Map<*, *>).orEmpty()
+            var streak = 0
+            val cal = java.util.Calendar.getInstance()
+            for (i in 0..365) {
+                val key = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(cal.time)
+                val hasActivity = moods.values.any { mood ->
+                    val m = mood as? Map<*, *>
+                    m?.get("dateKey") == key
+                }
+                if (hasActivity) {
+                    streak++
+                } else {
+                    break
+                }
+                cal.add(java.util.Calendar.DAY_OF_YEAR, -1)
+            }
+            streak
+        }.fallbackTo(0)
 
     // --- Profiles for the hero header ---
 
@@ -235,6 +282,28 @@ class UsRepository(
                 }
             }.fallbackTo(emptyList())
 
+    // --- Memory Lane (random daily memory) ---
+
+    /** Returns a random memory for today's "Memory Lane" feature. */
+    suspend fun randomMemoryForToday(): Memory? {
+        val snapshot = coupleRef.collection("memories")
+            .orderBy("dateMillis", Query.Direction.DESCENDING)
+            .limit(50)
+            .get()
+            .await()
+        val memories = snapshot.documents.mapNotNull { doc ->
+            val title = doc.getString("title") ?: return@mapNotNull null
+            val millis = doc.getLong("dateMillis") ?: return@mapNotNull null
+            Memory(doc.id, title, doc.getString("photo"), millis)
+        }
+        if (memories.isEmpty()) return null
+        // Use today's date as seed so the same memory shows all day
+        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            .format(java.util.Date())
+        val seed = today.hashCode().toLong()
+        return memories[(seed % memories.size).toInt().coerceAtLeast(0)]
+    }
+
     // --- Special dates ---
 
     suspend fun addEvent(title: String, dateMillis: Long) {
@@ -266,4 +335,137 @@ class UsRepository(
                     CoupleEvent(doc.id, title, millis)
                 }
             }.fallbackTo(emptyList())
+
+    // --- Voice Letters ---
+
+    suspend fun sendVoiceLetter(audioBase64: String, durationSec: Long, caption: String) {
+        if (audioBase64.isEmpty()) return
+        coupleRef.collection("voiceLetters").add(
+            mapOf(
+                "senderUid" to myUid,
+                "audioBase64" to audioBase64,
+                "durationSec" to durationSec,
+                "caption" to caption.trim(),
+                "createdAt" to FieldValue.serverTimestamp(),
+            ),
+        ).await()
+    }
+
+    fun voiceLetters(): Flow<List<VoiceLetter>> =
+        coupleRef.collection("voiceLetters")
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .limit(50)
+            .snapshots()
+            .map { snapshot ->
+                snapshot.documents.mapNotNull { doc ->
+                    val sender = doc.getString("senderUid") ?: return@mapNotNull null
+                    val audio = doc.getString("audioBase64") ?: return@mapNotNull null
+                    val dur = (doc.getLong("durationSec")) ?: return@mapNotNull null
+                    val caption = doc.getString("caption").orEmpty()
+                    val created = doc.getTimestamp("createdAt")?.toDate()?.time ?: 0L
+                    VoiceLetter(doc.id, sender, audio, dur, caption, created)
+                }
+            }.fallbackTo(emptyList())
+
+    suspend fun deleteVoiceLetter(id: String) {
+        coupleRef.collection("voiceLetters").document(id).delete().await()
+    }
+
+    // --- Question Roulette ---
+
+    val rouletteQuestions: List<String> = listOf(
+        "What's your favorite memory of us?",
+        "If we could travel anywhere right now, where would we go?",
+        "What's something I do that makes you smile?",
+        "What song reminds you of our relationship?",
+        "What's one thing you want us to try together?",
+        "When did you first know you loved me?",
+        "What's your favorite thing about our relationship?",
+        "What's a goal you have for us this year?",
+        "What's the most adventurous thing we've done?",
+        "How do you feel when we're together?",
+        "What's your favorite way to spend a lazy Sunday with me?",
+        "What's something you admire about me?",
+        "What's a small thing that means a lot to you?",
+        "If we had 24 hours together with no plans, what would we do?",
+        "What's your favorite thing I've cooked for you?",
+        "What made you fall for me?",
+        "What's a tradition you want us to keep?",
+        "What's something that always makes us laugh together?",
+        "What's your dream date night?",
+        "What's one thing you'd change about our routine?",
+        "What's the best surprise I've given you?",
+        "How has our relationship changed your life?",
+        "What's your favorite photo of us and why?",
+        "What's a skill you'd love to learn together?",
+        "What makes our relationship unique?",
+    )
+
+    private val _rouletteIndex = mutableMapOf<String, Int>()
+
+    suspend fun nextRouletteQuestion(): String? {
+        val snapshot = coupleRef.collection("roulette").document("state").get().await()
+        val used = (snapshot.get("usedIndices") as? List<*>)
+            ?.filterIsInstance<Number>()?.map { it.toInt() }?.toMutableSet() ?: mutableSetOf()
+        val total = rouletteQuestions.size
+        val available = (0 until total) - used
+        if (available.isEmpty()) {
+            coupleRef.collection("roulette").document("state")
+                .set(mapOf("usedIndices" to emptyList<Any>()), SetOptions.merge()).await()
+            return rouletteQuestions.random()
+        }
+        val idx = available.random()
+        used.add(idx)
+        coupleRef.collection("roulette").document("state")
+            .set(mapOf("usedIndices" to used.toList()), SetOptions.merge()).await()
+        return rouletteQuestions[idx]
+    }
+
+    suspend fun submitRouletteAnswer(questionIndex: Int, answer: String) {
+        val text = answer.trim()
+        if (text.isEmpty()) return
+        coupleRef.collection("roulette").document("state")
+            .set(
+                mapOf("answers" to mapOf(myUid to mapOf("questionIndex" to questionIndex, "answer" to text))),
+                SetOptions.merge(),
+            ).await()
+    }
+
+    fun rouletteState(): Flow<Map<String, Any?>> =
+        coupleRef.collection("roulette").document("state").snapshots()
+            .map { doc -> doc.data ?: emptyMap<String, Any?>() }
+            .fallbackTo(emptyMap())
+
+    // --- Shared Countdown ---
+
+    data class CountdownEvent(
+        val id: String,
+        val title: String,
+        val targetMillis: Long,
+        val createdBy: String,
+    )
+
+    suspend fun setCountdown(title: String, targetMillis: Long) {
+        stateRef.set(
+            mapOf("countdown" to mapOf(
+                "title" to title.trim(),
+                "targetMillis" to targetMillis,
+                "createdBy" to myUid,
+            )),
+            SetOptions.merge(),
+        ).await()
+    }
+
+    fun countdownEvent(): Flow<CountdownEvent?> =
+        stateRef.snapshots().map { doc ->
+            val cd = doc.get("countdown") as? Map<*, *> ?: return@map null
+            val title = cd["title"] as? String ?: return@map null
+            val target = (cd["targetMillis"] as? Number)?.toLong() ?: return@map null
+            val creator = cd["createdBy"] as? String ?: ""
+            CountdownEvent("countdown", title, target, creator)
+        }.fallbackTo(null)
+
+    suspend fun clearCountdown() {
+        stateRef.set(mapOf("countdown" to FieldValue.delete()), SetOptions.merge()).await()
+    }
 }

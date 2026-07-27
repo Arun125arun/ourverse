@@ -3,6 +3,14 @@ package com.lovenote.app.settings
 /** Release notes shown in the "What's new" dialog after each update. */
 object Changelog {
     private val NOTES = mapOf(
+        43L to listOf(
+            "💌 Voice Letters — record and send voice notes with captions in the Us tab",
+            "🎲 Question Roulette — spin the wheel and answer fun relationship questions",
+            "⏰ Shared Countdown — set a countdown to your next special moment",
+            "😊 Daily Pulse — add an emoji and one-word mood to your check-in",
+            "🔥 Connection Streak — track how many days you've connected in a row",
+            "📷 Memory Lane — a random memory from your story, shown daily",
+        ),
         42L to listOf(
             "🎲 Classic Ludo — animated dice rolling with shake effect",
             "🏁 Realistic board — colored triangles, star markers, proper home columns",
