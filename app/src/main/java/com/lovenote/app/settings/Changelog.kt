@@ -3,6 +3,9 @@ package com.lovenote.app.settings
 /** Release notes shown in the "What's new" dialog after each update. */
 object Changelog {
     private val NOTES = mapOf(
+        38L to listOf(
+            "💬 Fixed messages not showing after sending",
+        ),
         37L to listOf(
             "📜 Scroll back to read older messages — chat now loads history on demand",
             "🗂 Cleaner code under the hood: extracted WebRTC helpers, removed dead code",
