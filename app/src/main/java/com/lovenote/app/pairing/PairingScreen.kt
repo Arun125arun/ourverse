@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import com.google.firebase.auth.FirebaseAuth
+import com.lovenote.app.notify.Notifier
 import kotlinx.coroutines.launch
 
 /**
@@ -194,6 +195,7 @@ private fun WaitingForPartner(code: String, onLogOut: () -> Unit) {
             modifier = Modifier.clickable {
                 clipboard.setText(AnnotatedString(code))
                 copied = true
+                Notifier.vibrate(context)
             },
         )
         Text(

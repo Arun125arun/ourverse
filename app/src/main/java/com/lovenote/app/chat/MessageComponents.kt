@@ -1,4 +1,5 @@
 package com.lovenote.app.chat
+// Test edit to see if editing works
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -22,6 +23,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -303,16 +306,64 @@ internal fun MessageRow(
         }
 
         if (message.reactions.isNotEmpty()) {
-            Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = MaterialTheme.colorScheme.surface,
-                shadowElevation = 1.dp,
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                    .align(Alignment.CenterHorizontally),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = message.reactions.values.joinToString(" "),
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                )
+                val reactionCounts = remember(message.reactions) {
+                    mutableMapOf<String, Int>()
+                }
+                reactionCounts.clear()
+                for ((userId, emoji) in message.reactions) {
+                    reactionCounts[emoji] = (reactionCounts[emoji] ?: 0) + 1
+                }
+
+                REACTION_EMOJIS.forEach { emoji ->
+                    val count = reactionCounts[emoji] ?: 0
+                    if (count > 0) {
+                        val userHasReacted = myReaction == emoji
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .padding(vertical = 2.dp)
+                                .clickable { onReact(emoji) }
+                                .semantics {
+                                    if (userHasReacted) {
+                                        contentDescription = "Remove $emoji reaction"
+                                    } else {
+                                        contentDescription = "Add $emoji reaction"
+                                    }
+                                }
+                        ) {
+                            Text(
+                                text = emoji,
+                                fontSize = 18.sp
+                            )
+                            if (count > 1) {
+                                Text(
+                                    text = "$count",
+                                    fontSize = 10.sp,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier
+                                        .background(
+                                            shape = CircleShape,
+                                            color = if (userHasReacted) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                MaterialTheme.colorScheme.secondary
+                                            }
+                                        )
+                                        .padding(horizontal = 2.dp, vertical = 0.dp)
+                                        .align(Alignment.CenterVertically)
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -470,6 +521,15 @@ internal fun dayLabel(sentAt: Timestamp?): String {
         fmt.format(Date(now - 86_400_000L)) -> "Yesterday"
         else -> SimpleDateFormat("MMM d", Locale.getDefault()).format(date)
     }
+}
+
+/** Returns a map of reaction emoji to count of users who reacted with that emoji */
+private fun reactionCounts(reactions: Map<String, String>): Map<String, Int> {
+    val counts = mutableMapOf<String, Int>()
+    for ((userId, emoji) in reactions) {
+        counts[emoji] = (counts[emoji] ?: 0) + 1
+    }
+    return counts
 }
 
 @Composable

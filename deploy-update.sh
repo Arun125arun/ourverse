@@ -7,7 +7,7 @@ cd "$(dirname "$0")"
 export JAVA_HOME="${JAVA_HOME:-$HOME/.local/jdk}"
 export ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"
 
-./gradlew assembleRelease
+./gradlew assembleRelease -x uploadCrashlyticsMappingFileRelease
 
 VC=$(grep -oP 'versionCode = \K[0-9]+' app/build.gradle.kts)
 VN=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)

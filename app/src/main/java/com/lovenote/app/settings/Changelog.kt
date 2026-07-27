@@ -3,13 +3,21 @@ package com.lovenote.app.settings
 /** Release notes shown in the "What's new" dialog after each update. */
 object Changelog {
     private val NOTES = mapOf(
-        34L to listOf(
+        36L to listOf(
+            "🔧 Fixed build issues for Compose/Material3 compatibility",
+            "📦 Updated dependencies and resolved import issues",
+            "⚙️ Internal improvements to app stability"
+        ),
+        35L to listOf(
             "📷 Camera photos are no longer sideways — rotation is now handled correctly",
             "⏱ Live call timer while you're connected",
             "📨 Waiting screen: tap the invite code to copy it, or share it in one tap",
             "🛡 The app no longer breaks if your partner deletes their account",
             "📞 Calls connect more reliably (old call leftovers are cleaned up)",
             "💖 Lots of little fixes: loading states, presence updates, smoother notes",
+        ),
+        34L to listOf(
+            "❤ Hold the heart in the chat header to customize what it sends",
         ),
         33L to listOf(
             "❤ Hold the heart in the chat header to customize what it sends",

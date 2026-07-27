@@ -329,9 +329,11 @@ $("btn-join").onclick = async () => {
       if (members.includes(me.uid)) throw new Error("That's your own code.");
       if (members.length >= 2) throw new Error("That code has already been used.");
       tx.update(targetRef, { members: [...members, me.uid] });
+      // Atomic with membership so the partner's profile watcher never sees
+      // a joined member whose user doc lacks coupleId (permission race).
+      tx.set(doc(db, "users", me.uid), { coupleId: targetId }, { merge: true });
     });
     await deleteDoc(doc(db, "invites", code)).catch(() => {});
-    await setDoc(doc(db, "users", me.uid), { coupleId: targetId }, { merge: true });
   } catch (e) { $("pair-error").textContent = e.message; }
 };
 

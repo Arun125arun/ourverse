@@ -31,8 +31,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import java.text.SimpleDateFormat
 import java.util.Locale
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.ui.draw.scale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,11 +68,25 @@ fun NotesHistoryScreen(
                     .padding(padding),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = "No notes yet — send the first one ❤",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
+                val beat by rememberInfiniteTransition(label = "empty")
+                    .animateFloat(
+                        initialValue = 1f,
+                        targetValue = 1.25f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(800),
+                            repeatMode = RepeatMode.Reverse,
+                        ),
+                        label = "beat",
+                    )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("❤", fontSize = 42.sp, modifier = Modifier.scale(beat))
+                    Spacer(Modifier.padding(6.dp))
+                    Text(
+                        text = "No notes yet — send the first one ❤",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
+                }
             }
         } else {
             LazyColumn(

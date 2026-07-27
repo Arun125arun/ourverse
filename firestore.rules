@@ -4,16 +4,20 @@ service cloud.firestore {
 
     function isMember(coupleId) {
       return request.auth != null
-        && request.auth.uid in get(/databases/$(database)/documents/couples/$(coupleId)).data.members;
+        && request.auth.uid in get(/databases/$(database)/documents/couples/$(coupleId))
+            .data.get('members', []);
     }
 
     match /users/{uid} {
-      // Readable only by yourself and your paired partner.
+      // Readable only by yourself and your paired partner. get() with a
+      // default so a doc without coupleId is a clean deny, not an
+      // evaluation error (which kills the client's listener).
       allow read: if request.auth != null && (
         request.auth.uid == uid
         || (
-          resource.data.coupleId != null
-          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.coupleId
+          resource.data.get('coupleId', null) != null
+          && get(/databases/$(database)/documents/users/$(request.auth.uid))
+              .data.get('coupleId', null)
               == resource.data.coupleId
         )
       );
@@ -33,11 +37,11 @@ service cloud.firestore {
       // Members only — except a still-forming couple, which the invited
       // partner (who got the id from the invite doc) must be able to read.
       allow get: if request.auth != null && (
-        request.auth.uid in resource.data.members
-        || resource.data.members.size() < 2
+        request.auth.uid in resource.data.get('members', [])
+        || resource.data.get('members', []).size() < 2
       );
       allow list: if request.auth != null
-        && request.auth.uid in resource.data.members;
+        && request.auth.uid in resource.data.get('members', []);
 
       // Creating a couple: you are its only member.
       allow create: if request.auth != null
@@ -46,14 +50,14 @@ service cloud.firestore {
         && request.resource.data.members[0] == request.auth.uid;
 
       // Account deletion: a member may delete the couple and its data.
-      allow delete: if request.auth != null && request.auth.uid in resource.data.members;
+      allow delete: if request.auth != null && request.auth.uid in resource.data.get('members', []);
 
       // Updating: either you're already a member, or you're joining an
       // incomplete couple by appending yourself as the second member.
       allow update: if request.auth != null && (
-        request.auth.uid in resource.data.members
+        request.auth.uid in resource.data.get('members', [])
         || (
-          resource.data.members.size() == 1
+          resource.data.get('members', []).size() == 1
           && request.resource.data.members.size() == 2
           && request.resource.data.members[0] == resource.data.members[0]
           && request.resource.data.members[1] == request.auth.uid
@@ -62,8 +66,16 @@ service cloud.firestore {
 
       // All couple data (messages, notes, answers, todos, call signaling, …)
       // at any depth is private to the two members.
+      // Additional validation: prevent senderUid spoofing in messages
       match /{document=**} {
-        allow read, write: if isMember(coupleId);
+        allow read, write: if isMember(coupleId)
+            && !(
+                document.split('/').size() == 2
+                && document.split('/')[0] == 'messages'
+                && request.method in ['post', 'patch']
+                && request.resource.data.containsKey('senderUid')
+                && request.resource.data.senderUid != request.auth.uid
+            );
       }
     }
   }

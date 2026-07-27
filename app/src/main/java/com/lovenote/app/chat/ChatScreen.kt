@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -67,6 +68,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -94,6 +96,7 @@ import kotlinx.coroutines.launch
 
 private const val TYPING_VISIBLE_MILLIS = 6_000L
 private const val TYPING_HEARTBEAT_MILLIS = 2_000L
+private const val MAX_MESSAGE_LENGTH = 1000
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -129,9 +132,9 @@ fun ChatScreen(
     var editing by remember { mutableStateOf<Message?>(null) }
     var replying by remember { mutableStateOf<Message?>(null) }
     var hiddenIds by remember { mutableStateOf(HiddenMessages.load(context)) }
-    val visibleMessages = remember(messages, hiddenIds) {
+    val visibleMessages by remember { derivedStateOf {
         messages.filter { it.id !in hiddenIds }
-    }
+    } }
     val clipboard = LocalClipboardManager.current
     var lastHeartbeat by remember { mutableStateOf(0L) }
 
@@ -200,6 +203,8 @@ fun ChatScreen(
     fun stopAndSendVoice() {
         val result = runCatching { recorder.stop() }.getOrNull()
         recording = false
+        // Haptic feedback for recording completion
+        Notifier.vibrate(context)
         result?.let { (audio, duration) ->
             scope.launch { runCatching { repository.sendVoice(audio, duration) } }
         }
@@ -212,6 +217,8 @@ fun ChatScreen(
             runCatching { recorder.start() }.onSuccess {
                 recording = true
                 recordSeconds = 0
+                // Haptic feedback for recording start
+                Notifier.vibrate(context)
             }
         }
     }
@@ -666,6 +673,11 @@ fun ChatScreen(
                             Text(
                                 text = "🔴 Recording… ${recordSeconds}s",
                                 style = MaterialTheme.typography.bodyLarge,
+                                color = if (VoiceRecorder.MAX_SECONDS - recordSeconds <= 5) {
+                                    MaterialTheme.colorScheme.error
+                                } else {
+                                    MaterialTheme.colorScheme.onPrimary
+                                },
                                 modifier = Modifier
                                     .weight(1f)
                                     .padding(start = 10.dp),
@@ -673,56 +685,75 @@ fun ChatScreen(
                             IconButton(onClick = {
                                 recorder.cancel()
                                 recording = false
+                                // Haptic feedback for recording cancellation
+                                Notifier.vibrate(context)
                             }) {
                                 Icon(Icons.Filled.Delete, contentDescription = "Cancel recording")
                             }
                         }
                     } else {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            TextField(
-                                value = input,
-                                onValueChange = {
-                                    input = it
-                                    val now = System.currentTimeMillis()
-                                    if (it.isNotBlank() &&
-                                        now - lastHeartbeat > TYPING_HEARTBEAT_MILLIS
-                                    ) {
-                                        lastHeartbeat = now
-                                        scope.launch { runCatching { repository.setTyping() } }
+                        Column(verticalArrangement = Arrangement.Center) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    TextField(
+                                        value = input,
+                                        onValueChange = {
+                                            // Truncate if exceeds max length
+                                            if (it.length > MAX_MESSAGE_LENGTH) {
+                                                input = it.substring(0, MAX_MESSAGE_LENGTH)
+                                            } else {
+                                                input = it
+                                            }
+                                            val now = System.currentTimeMillis()
+                                            if (it.isNotBlank() &&
+                                                now - lastHeartbeat > TYPING_HEARTBEAT_MILLIS
+                                            ) {
+                                                lastHeartbeat = now
+                                                scope.launch { runCatching { repository.setTyping() } }
+                                            }
+                                        },
+                                        placeholder = { Text("Message") },
+                                        modifier = Modifier.weight(1f),
+                                        maxLines = 4,
+                                        colors = TextFieldDefaults.colors(
+                                            focusedContainerColor = Color.Transparent,
+                                            unfocusedContainerColor = Color.Transparent,
+                                            focusedIndicatorColor = Color.Transparent,
+                                            unfocusedIndicatorColor = Color.Transparent,
+                                            disabledIndicatorColor = Color.Transparent,
+                                        ),
+                                    )
+                                    IconButton(onClick = { launchCamera() }) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_camera),
+                                            contentDescription = "Camera",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
                                     }
-                                },
-                                placeholder = { Text("Message") },
-                                modifier = Modifier.weight(1f),
-                                maxLines = 4,
-                                colors = TextFieldDefaults.colors(
-                                    focusedContainerColor = Color.Transparent,
-                                    unfocusedContainerColor = Color.Transparent,
-                                    focusedIndicatorColor = Color.Transparent,
-                                    unfocusedIndicatorColor = Color.Transparent,
-                                    disabledIndicatorColor = Color.Transparent,
-                                ),
-                            )
-                            IconButton(onClick = { launchCamera() }) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_camera),
-                                    contentDescription = "Camera",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    IconButton(onClick = {
+                                        photoPicker.launch(
+                                            PickVisualMediaRequest(
+                                                ActivityResultContracts.PickVisualMedia.ImageOnly,
+                                            ),
+                                        )
+                                    }) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_gallery),
+                                            contentDescription = "Gallery",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = "${input.length}/$MAX_MESSAGE_LENGTH",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (input.length >= MAX_MESSAGE_LENGTH) {
+                                        MaterialTheme.colorScheme.error
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                    modifier = Modifier.align(Alignment.End)
                                 )
                             }
-                            IconButton(onClick = {
-                                photoPicker.launch(
-                                    PickVisualMediaRequest(
-                                        ActivityResultContracts.PickVisualMedia.ImageOnly,
-                                    ),
-                                )
-                            }) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_gallery),
-                                    contentDescription = "Gallery",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
                     }
                 }
                 Spacer(Modifier.width(8.dp))
@@ -753,17 +784,22 @@ fun ChatScreen(
                         },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Crossfade(
-                        targetState = recording || input.isNotBlank(),
-                        label = "micSend",
-                    ) { showSend ->
-                        if (showSend) {
+                    when {
+                        recording -> {
+                            Icon(
+                                Icons.Filled.Close,
+                                contentDescription = "Stop recording",
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                            )
+                        }
+                        input.isNotBlank() -> {
                             Icon(
                                 Icons.AutoMirrored.Filled.Send,
                                 contentDescription = "Send",
                                 tint = MaterialTheme.colorScheme.onPrimary,
                             )
-                        } else {
+                        }
+                        else -> {
                             Icon(
                                 painter = painterResource(R.drawable.ic_mic),
                                 contentDescription = "Record a voice note",

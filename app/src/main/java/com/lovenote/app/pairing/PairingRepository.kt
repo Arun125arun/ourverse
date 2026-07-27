@@ -77,14 +77,19 @@ class PairingRepository(
                 val current = fresh.get("members") as? List<*> ?: emptyList<Any>()
                 check(current.size == 1) { "That code has already been used." }
                 tx.update(coupleRef, "members", current + uid)
+                // Atomically with the membership: otherwise the partner's
+                // profile watcher can attach before coupleId lands and die
+                // on permission-denied (name stuck until app restart).
+                tx.set(
+                    db.collection("users").document(uid),
+                    mapOf("coupleId" to coupleId),
+                    SetOptions.merge(),
+                )
             }.await()
         } catch (e: FirebaseFirestoreException) {
             throw IllegalStateException("Couldn't join right now — check your connection and try again.", e)
         }
         runCatching { db.collection("invites").document(code).delete().await() }
-        db.collection("users").document(uid)
-            .set(mapOf("coupleId" to coupleId), SetOptions.merge())
-            .await()
     }
 
     /** Live pairing state: no couple yet → waiting for partner → paired. */
