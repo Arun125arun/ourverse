@@ -130,12 +130,8 @@ fun ChatScreen(
     }
 
     // Combined list: newest first (real-time) + older (paginated, appended at tail).
-    // Deduplicate since the paginated first batch may overlap with the real-time stream.
-    val allMessages by remember(messages, olderMessages) {
-        derivedStateOf {
-            val realtimeIds = messages.map { it.id }.toHashSet()
-            messages + olderMessages.filter { it.id !in realtimeIds }
-        }
+    val allMessages = messages + olderMessages.filter {
+        it.id !in messages.map { m -> m.id }.toSet()
     }
 
     // Load older messages when the user scrolls to the oldest end (top in reversed layout).
@@ -177,9 +173,7 @@ fun ChatScreen(
     var editing by remember { mutableStateOf<Message?>(null) }
     var replying by remember { mutableStateOf<Message?>(null) }
     var hiddenIds by remember { mutableStateOf(HiddenMessages.load(context)) }
-    val visibleMessages by remember { derivedStateOf {
-        allMessages.filter { it.id !in hiddenIds }
-    } }
+    val visibleMessages = allMessages.filter { it.id !in hiddenIds }
     val clipboard = LocalClipboardManager.current
     var lastHeartbeat by remember { mutableStateOf(0L) }
 
