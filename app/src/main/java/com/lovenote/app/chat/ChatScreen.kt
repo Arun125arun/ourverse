@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -44,7 +45,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -69,6 +69,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -80,6 +81,8 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
@@ -110,11 +113,53 @@ fun ChatScreen(
     val messagesOrNull by repository.messages().collectAsState(initial = null)
     val messages = messagesOrNull.orEmpty()
     val listState = rememberLazyListState()
+    var olderMessages by remember { mutableStateOf<List<Message>>(emptyList()) }
+    var loadingMore by remember { mutableStateOf(false) }
+    var hasMore by remember { mutableStateOf(true) }
 
     // Snap to the newest message whenever one is sent or received.
     LaunchedEffect(messages.firstOrNull()?.id) {
         if (messages.isNotEmpty()) listState.animateScrollToItem(0)
     }
+
+    // Reset pagination cursor when the chat screen is freshly opened.
+    LaunchedEffect(Unit) {
+        repository.resetPagination()
+        olderMessages = emptyList()
+        hasMore = true
+    }
+
+    // Combined list: newest first (real-time) + older (paginated, appended at tail).
+    // Deduplicate since the paginated first batch may overlap with the real-time stream.
+    val allMessages by remember(messages, olderMessages) {
+        derivedStateOf {
+            val realtimeIds = messages.map { it.id }.toHashSet()
+            messages + olderMessages.filter { it.id !in realtimeIds }
+        }
+    }
+
+    // Load older messages when the user scrolls to the oldest end (top in reversed layout).
+    LaunchedEffect(listState) {
+        snapshotFlow {
+            // In reverseLayout=true: firstOrNull() is the top item (oldest visible).
+            val topIndex = listState.layoutInfo.visibleItemsInfo.firstOrNull()?.index ?: 0
+            val totalItems = listState.layoutInfo.totalItemsCount
+            topIndex >= totalItems - 3 && !loadingMore && hasMore && allMessages.isNotEmpty()
+        }.collect { shouldLoad ->
+            if (shouldLoad) {
+                loadingMore = true
+                val loaded = runCatching { repository.loadOlderMessages() }.getOrDefault(emptyList())
+                if (loaded.isEmpty()) {
+                    hasMore = false
+                } else {
+                    olderMessages = olderMessages + loaded
+                    hasMore = repository.canLoadMore()
+                }
+                loadingMore = false
+            }
+        }
+    }
+
     val partnerTypingAt by repository.partnerTypingAt().collectAsState(initial = null)
     // Re-evaluate "Active …m ago" periodically even when nothing recomposes.
     var presenceNow by remember { mutableStateOf(System.currentTimeMillis()) }
@@ -133,7 +178,7 @@ fun ChatScreen(
     var replying by remember { mutableStateOf<Message?>(null) }
     var hiddenIds by remember { mutableStateOf(HiddenMessages.load(context)) }
     val visibleMessages by remember { derivedStateOf {
-        messages.filter { it.id !in hiddenIds }
+        allMessages.filter { it.id !in hiddenIds }
     } }
     val clipboard = LocalClipboardManager.current
     var lastHeartbeat by remember { mutableStateOf(0L) }
@@ -411,8 +456,14 @@ fun ChatScreen(
                             label = "beat",
                         )
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("❤", fontSize = 42.sp, modifier = Modifier.scale(beat))
-                        Spacer(Modifier.padding(6.dp))
+                        Text(
+                            text = "\u2764",
+                            fontSize = 42.sp,
+                            modifier = Modifier
+                                .scale(beat)
+                                .semantics { contentDescription = "Heart" },
+                        )
+                        Spacer(Modifier.height(6.dp))
                         Text(
                             text = "Say hi to your partner ❤",
                             style = MaterialTheme.typography.bodyLarge,
@@ -506,6 +557,22 @@ fun ChatScreen(
                                     }
                                 },
                             )
+                        }
+                    }
+                    // Loading indicator for older messages (at the oldest end of reversed list).
+                    if (loadingMore) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                            }
                         }
                     }
                 }
@@ -625,7 +692,7 @@ fun ChatScreen(
                                     onCheckedChange = { pendingOnce = it },
                                 )
                                 Text(
-                                    text = "View once 🔥",
+                                    text = "View once",
                                     style = MaterialTheme.typography.bodyMedium,
                                     modifier = Modifier.padding(start = 6.dp),
                                 )
@@ -743,24 +810,25 @@ fun ChatScreen(
                                         )
                                     }
                                 }
-                                Text(
-                                    text = "${input.length}/$MAX_MESSAGE_LENGTH",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (input.length >= MAX_MESSAGE_LENGTH) {
-                                        MaterialTheme.colorScheme.error
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                    },
-                                    modifier = Modifier.align(Alignment.End)
-                                )
+                                if (input.isNotEmpty()) {
+                                    Text(
+                                        text = "${input.length}/$MAX_MESSAGE_LENGTH",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (input.length >= MAX_MESSAGE_LENGTH) {
+                                            MaterialTheme.colorScheme.error
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
+                                        modifier = Modifier.align(Alignment.End)
+                                    )
+                                }
                             }
                     }
                 }
                 Spacer(Modifier.width(8.dp))
-                Box(
+                Surface(
                     modifier = Modifier
                         .size(52.dp)
-                        .background(MaterialTheme.colorScheme.primary, CircleShape)
                         .clickable {
                             when {
                                 recording -> stopAndSendVoice()
@@ -782,8 +850,10 @@ fun ChatScreen(
                                 else -> micPermission.launch(Manifest.permission.RECORD_AUDIO)
                             }
                         },
-                    contentAlignment = Alignment.Center,
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary,
                 ) {
+                    Box(contentAlignment = Alignment.Center) {
                     when {
                         recording -> {
                             Icon(
@@ -806,6 +876,7 @@ fun ChatScreen(
                                 tint = MaterialTheme.colorScheme.onPrimary,
                             )
                         }
+                    }
                     }
                 }
             }

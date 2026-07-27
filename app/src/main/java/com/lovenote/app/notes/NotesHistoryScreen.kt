@@ -28,7 +28,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -79,8 +78,14 @@ fun NotesHistoryScreen(
                         label = "beat",
                     )
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("❤", fontSize = 42.sp, modifier = Modifier.scale(beat))
-                    Spacer(Modifier.padding(6.dp))
+                    Text(
+                        text = "\u2764",
+                        fontSize = 42.sp,
+                        modifier = Modifier
+                            .scale(beat)
+                            .padding(vertical = 0.dp),
+                    )
+                    Spacer(Modifier.height(6.dp))
                     Text(
                         text = "No notes yet — send the first one ❤",
                         style = MaterialTheme.typography.bodyLarge,
@@ -144,7 +149,7 @@ private fun NoteCard(note: Note, mine: Boolean) {
             Text(
                 text = note.text,
                 style = MaterialTheme.typography.bodyLarge,
-                color = Color(0xE6000000),
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
         Spacer(Modifier.height(8.dp))
@@ -154,7 +159,7 @@ private fun NoteCard(note: Note, mine: Boolean) {
         Text(
             text = (if (mine) "You" else "Them ❤") + (if (time.isNotEmpty()) " · $time" else ""),
             style = MaterialTheme.typography.labelSmall,
-            color = Color(0x8A000000),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

@@ -10,6 +10,10 @@ import java.util.TimeZone
  * UTC date, so both partners always see the same one.
  */
 object Questions {
+    private val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+    }
+
     val ALL = listOf(
         "What's a small thing I do that makes you feel loved?",
         "What was your first impression of me, honestly?",
@@ -61,16 +65,12 @@ object Questions {
         "What little thing did you notice about me today?",
     )
 
-    private fun formatter() = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
-        timeZone = TimeZone.getTimeZone("UTC")
-    }
-
     /** UTC calendar date, e.g. "2026-07-03". */
     fun dateKey(millis: Long = System.currentTimeMillis()): String =
-        formatter().format(Date(millis))
+        formatter.format(Date(millis))
 
     fun indexForDate(dateKey: String): Int {
-        val epochDay = formatter().parse(dateKey)!!.time / 86_400_000L
+        val epochDay = formatter.parse(dateKey)!!.time / 86_400_000L
         return (epochDay % ALL.size).toInt()
     }
 

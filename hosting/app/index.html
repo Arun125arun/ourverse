@@ -389,7 +389,7 @@ function render(docs) {
     el.className = "msg " + (mine ? "me" : "them");
     const type = d.get("type"), body = d.get("body");
     if (type === "photo" && d.get("once")) {
-      el.textContent = body ? "🔥 One-time photo — tap to view" : "🔥 Opened";
+      el.textContent = body ? "One-time photo — tap to view" : "Opened";
       if (body) el.onclick = () => viewOnce(d, mine);
     } else if (type === "photo") {
       const img = document.createElement("img");

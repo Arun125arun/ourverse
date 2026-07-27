@@ -161,12 +161,22 @@ fun UsScreen(
                 }
             }
             if (events.isEmpty()) {
-                Text(
-                    text = "Add birthdays, anniversaries, or your next date night — " +
-                        "and count down together.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
+                Row(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "\u2764",
+                        fontSize = 18.sp,
+                        modifier = Modifier.padding(end = 8.dp),
+                    )
+                    Text(
+                        text = "Add birthdays, anniversaries, or your next date night \u2014 " +
+                            "and count down together.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
+                }
             } else {
                 events.forEach { event ->
                     EventRow(
@@ -211,7 +221,7 @@ private fun CoupleHero(
                 )
             }
             Text(
-                text = "❤",
+                text = "\u2764",
                 fontSize = 26.sp,
                 modifier = Modifier.padding(horizontal = 20.dp),
             )
@@ -275,7 +285,7 @@ private fun MoodSection(
                     )
                     .border(
                         width = if (selected) 2.dp else 1.dp,
-                        color = if (selected) MaterialTheme.colorScheme.primary else Color(0x22888888),
+                        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
                         shape = CircleShape,
                     )
                     .clickable { onPick(emoji) },

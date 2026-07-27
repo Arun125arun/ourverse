@@ -1,5 +1,10 @@
 package com.lovenote.app.auth
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,6 +32,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -40,6 +46,17 @@ fun SignInScreen(onSignedIn: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
+    val heartbeat by rememberInfiniteTransition(label = "logo")
+        .animateFloat(
+            initialValue = 1f,
+            targetValue = 1.12f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(800),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "logoScale",
+        )
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -48,7 +65,6 @@ fun SignInScreen(onSignedIn: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        // App logo and tagline
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -57,12 +73,14 @@ fun SignInScreen(onSignedIn: () -> Unit) {
                 contentDescription = "OurVerse logo",
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(56.dp)
+                    .scale(heartbeat),
             )
             Text(
                 text = "OurVerse",
                 style = MaterialTheme.typography.displaySmall,
                 color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 12.dp),
             )
             Text(
                 text = "Love notes for two",
@@ -72,13 +90,11 @@ fun SignInScreen(onSignedIn: () -> Unit) {
             )
         }
 
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(48.dp))
 
-        // Sign in button
         if (busy) {
             CircularProgressIndicator(
-                modifier = Modifier
-                    .size(48.dp)
+                modifier = Modifier.size(48.dp),
             )
         } else {
             Button(
@@ -90,7 +106,6 @@ fun SignInScreen(onSignedIn: () -> Unit) {
                             AuthRepository().signInWithGoogle(context)
                             onSignedIn()
                         } catch (_: GetCredentialCancellationException) {
-                            // user dismissed the account picker
                         } catch (e: Exception) {
                             error = e.message ?: "Sign-in failed, please try again"
                         } finally {
@@ -120,7 +135,6 @@ fun SignInScreen(onSignedIn: () -> Unit) {
 
         Spacer(Modifier.height(24.dp))
 
-        // Error state
         error?.let {
             Text(
                 text = it,
@@ -135,7 +149,6 @@ fun SignInScreen(onSignedIn: () -> Unit) {
 
         Spacer(Modifier.height(16.dp))
 
-        // Footer text
         Text(
             text = "By continuing, you agree to our Terms of Service and Privacy Policy",
             style = MaterialTheme.typography.labelSmall,
@@ -144,7 +157,7 @@ fun SignInScreen(onSignedIn: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp),
-            maxLines = 2
+            maxLines = 2,
         )
     }
 }

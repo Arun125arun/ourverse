@@ -1,6 +1,7 @@
 package com.lovenote.app.chat
 
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -27,6 +28,9 @@ class ChatRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance(),
 ) {
+    companion object {
+        private const val PAGE_SIZE = 50L
+    }
     val myUid: String
         get() = auth.currentUser?.uid ?: error("Not signed in")
 
@@ -35,6 +39,37 @@ class ChatRepository(
 
     private val messagesRef
         get() = coupleRef.collection("messages")
+
+    private var oldestCursor: DocumentSnapshot? = null
+    private var hasMore = true
+
+    /** Reset pagination cursor (call when the chat screen opens fresh). */
+    fun resetPagination() {
+        oldestCursor = null
+        hasMore = true
+    }
+
+    /** Whether more older messages may exist. */
+    fun canLoadMore(): Boolean = hasMore
+
+    /**
+     * Fetches the next batch of older messages (oldest first in Firestore, but
+     * the caller prepends them so the newest-first list grows at the tail).
+     * Returns the loaded messages (empty list when there are no more).
+     */
+    suspend fun loadOlderMessages(): List<Message> {
+        val cursor = oldestCursor
+        val baseQuery = messagesRef
+            .orderBy("sentAt", Query.Direction.DESCENDING)
+            .limit(PAGE_SIZE)
+        val query = if (cursor != null) baseQuery.startAfter(cursor) else baseQuery
+        val snapshot = query.get().await()
+        oldestCursor = snapshot.documents.lastOrNull()
+        hasMore = snapshot.documents.size.toLong() == PAGE_SIZE
+        return snapshot.documents.map { doc ->
+            Message.fromMap(doc.id, doc.data ?: emptyMap())
+        }
+    }
 
     // Members-only doc for typing/mood/anniversary (the couple doc itself is
     // readable during pairing, so private state lives here instead).
@@ -200,7 +235,7 @@ class ChatRepository(
     fun messages(): Flow<List<Message>> =
         messagesRef
             .orderBy("sentAt", Query.Direction.DESCENDING)
-            .limit(100)
+            .limit(PAGE_SIZE)
             .snapshots()
             .map { snapshot ->
                 snapshot.documents.map { doc ->

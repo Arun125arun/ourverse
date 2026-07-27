@@ -7,6 +7,10 @@ data class QuizQuestion(val prompt: String, val options: List<String>)
  * themselves and guesses the other's pick; the reveal shows who was right.
  */
 object QuizDeck {
+    private val formatter = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).apply {
+        timeZone = java.util.TimeZone.getTimeZone("UTC")
+    }
+
     val ALL = listOf(
         QuizQuestion("Perfect vacation?", listOf("Beach 🏖", "Mountains 🏔", "City lights 🌆", "Cozy home 🏠")),
         QuizQuestion("Movie night pick?", listOf("Romance 💕", "Action 💥", "Horror 👻", "Comedy 😂")),
@@ -35,9 +39,6 @@ object QuizDeck {
     )
 
     fun indexForDate(dateKey: String): Int {
-        val formatter = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).apply {
-            timeZone = java.util.TimeZone.getTimeZone("UTC")
-        }
         val epochDay = formatter.parse(dateKey)!!.time / 86_400_000L
         // stride + offset decorrelate this rotation from the daily question
         return ((epochDay * 7 + 3) % ALL.size).toInt()

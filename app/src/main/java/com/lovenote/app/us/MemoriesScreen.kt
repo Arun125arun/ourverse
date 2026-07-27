@@ -6,6 +6,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,21 +48,29 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.lovenote.app.chat.PhotoEncoder
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,12 +107,32 @@ fun MemoriesScreen(
                     .padding(32.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = "Save the moments that matter — your first date, " +
-                        "a trip, an ordinary day that felt special ❤",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
+                val beat by rememberInfiniteTransition(label = "empty")
+                    .animateFloat(
+                        initialValue = 1f,
+                        targetValue = 1.25f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(800),
+                            repeatMode = RepeatMode.Reverse,
+                        ),
+                        label = "beat",
+                    )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "\u2764",
+                        fontSize = 42.sp,
+                        modifier = Modifier
+                            .scale(beat)
+                            .semantics { contentDescription = "Heart" },
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = "Save the moments that matter \u2014 your first date, " +
+                            "a trip, an ordinary day that felt special \u2764",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
+                }
             }
         } else {
             LazyColumn(
@@ -142,11 +175,14 @@ private fun MemoryCard(memory: Memory, onDelete: () -> Unit) {
     ) {
         Column {
             memory.photoBase64?.let { encoded ->
-                val bitmap = remember(memory.id) {
-                    runCatching {
-                        val bytes = Base64.decode(encoded, Base64.NO_WRAP)
-                        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
-                    }.getOrNull()
+                val bitmap by produceState<ImageBitmap?>(null, memory.id) {
+                    value = withContext(Dispatchers.Default) {
+                        runCatching {
+                            val bytes = Base64.decode(encoded, Base64.NO_WRAP)
+                            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                                ?.asImageBitmap()
+                        }.getOrNull()
+                    }
                 }
                 bitmap?.let {
                     Image(

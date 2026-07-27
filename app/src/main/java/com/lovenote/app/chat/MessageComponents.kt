@@ -1,5 +1,4 @@
 package com.lovenote.app.chat
-// Test edit to see if editing works
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -201,16 +200,33 @@ internal fun MessageRow(
                         )
                     }
                 } else if (message.isPhoto && message.once) {
-                    Text(
-                        text = if (message.onceConsumed) "🔥 Opened" else "🔥 One-time photo — tap to view",
-                        color = if (mine) {
-                            MaterialTheme.colorScheme.onPrimary
-                        } else {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
+                    Row(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                    )
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            painter = painterResource(
+                                if (message.onceConsumed) R.drawable.ic_once_opened else R.drawable.ic_once,
+                            ),
+                            contentDescription = null,
+                            tint = if (mine) {
+                                MaterialTheme.colorScheme.onPrimary
+                            } else {
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                            },
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = if (message.onceConsumed) "Opened" else "View once — tap to view",
+                            color = if (mine) {
+                                MaterialTheme.colorScheme.onPrimary
+                            } else {
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
                 } else if (message.isPhoto) {
                     PhotoBubble(message)
                 } else {
@@ -427,7 +443,7 @@ internal fun QuoteBlock(label: String, text: String, mine: Boolean) {
         modifier = Modifier
             .padding(start = 6.dp, end = 6.dp, top = 6.dp)
             .clip(RoundedCornerShape(10.dp))
-            .background(Color(0x1F000000)),
+                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.12f)),
     ) {
         Box(
             modifier = Modifier
@@ -521,15 +537,6 @@ internal fun dayLabel(sentAt: Timestamp?): String {
         fmt.format(Date(now - 86_400_000L)) -> "Yesterday"
         else -> SimpleDateFormat("MMM d", Locale.getDefault()).format(date)
     }
-}
-
-/** Returns a map of reaction emoji to count of users who reacted with that emoji */
-private fun reactionCounts(reactions: Map<String, String>): Map<String, Int> {
-    val counts = mutableMapOf<String, Int>()
-    for ((userId, emoji) in reactions) {
-        counts[emoji] = (counts[emoji] ?: 0) + 1
-    }
-    return counts
 }
 
 @Composable

@@ -3,6 +3,14 @@ package com.lovenote.app.settings
 /** Release notes shown in the "What's new" dialog after each update. */
 object Changelog {
     private val NOTES = mapOf(
+        37L to listOf(
+            "📜 Scroll back to read older messages — chat now loads history on demand",
+            "🗂 Cleaner code under the hood: extracted WebRTC helpers, removed dead code",
+            "🎨 Pulsing heart empty states across chat, notes, and memories",
+            "♿ Better accessibility — heart labels, semantic tags, proper button ripples",
+            "⚡ Faster scrolling — photos decode off the main thread, cached formatters",
+            "🧹 Cleaner chat UI — view-once messages use clean icons, no fire emojis",
+        ),
         36L to listOf(
             "🔧 Fixed build issues for Compose/Material3 compatibility",
             "📦 Updated dependencies and resolved import issues",
