@@ -1,7 +1,15 @@
 package com.lovenote.app.games.ludo
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.EaseOutBounce
+import androidx.compose.animation.core.EaseOutCubic
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -16,6 +24,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -53,69 +62,74 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lovenote.app.games.GameRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.math.floor
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlin.random.Random
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 private const val GRID = 15
 private const val CELLS = 52
-private const val HOME_COL_LEN = 6
 
-// ─── Colors ───────────────────────────────────────────────────────────────────
+// ─── Classic Ludo Colors ─────────────────────────────────────────────────────
 
-private val RedColor = Color(0xFFE53935)
-private val RedLight = Color(0xFFFFCDD2)
-private val RedDark = Color(0xFFC62828)
-private val GreenColor = Color(0xFF43A047)
-private val GreenLight = Color(0xFFC8E6C9)
-private val GreenDark = Color(0xFF2E7D32)
-private val BoardBg = Color(0xFFF5F5F0)
-private val TrackCell = Color(0xFFEEEEEE)
-private val SafeColor = Color(0xFFFFD54F)
-private val HomeCenter = Color(0xFFFFF9C4)
+private val ClassicRed = Color(0xFFD32F2F)
+private val ClassicRedLight = Color(0xFFFFCDD2)
+private val ClassicRedDark = Color(0xFFB71C1C)
+
+private val ClassicGreen = Color(0xFF388E3C)
+private val ClassicGreenLight = Color(0xFFC8E6C9)
+private val ClassicGreenDark = Color(0xFF1B5E20)
+
+private val ClassicBlue = Color(0xFF1565C0)
+private val ClassicBlueLight = Color(0xFFBBDEFB)
+private val ClassicBlueDark = Color(0xFF0D47A1)
+
+private val ClassicYellow = Color(0xFFF9A825)
+private val ClassicYellowLight = Color(0xFFFFF9C4)
+private val ClassicYellowDark = Color(0xFFF57F17)
+
+private val BoardWhite = Color(0xFFF5F0E8)
+private val TrackCell = Color(0xFFFAF8F2)
+private val TrackBorder = Color(0xFFD5D0C8)
+private val SafeGold = Color(0xFFFFCA28)
+private val HomeCenterBg = Color(0xFFEFEBE9)
 
 // ─── Track coordinates (52 cells, clockwise) ──────────────────────────────────
 private val TRACK = listOf(
-    // Left side going up (Red side)
     intArrayOf(6, 1), intArrayOf(6, 2), intArrayOf(6, 3),
     intArrayOf(6, 4), intArrayOf(6, 5),
     intArrayOf(5, 6), intArrayOf(4, 6), intArrayOf(3, 6),
     intArrayOf(2, 6), intArrayOf(1, 6),
-    // Top side going right
     intArrayOf(1, 7), intArrayOf(1, 8),
     intArrayOf(1, 9), intArrayOf(1, 10), intArrayOf(1, 11),
     intArrayOf(1, 12), intArrayOf(1, 13),
     intArrayOf(2, 13), intArrayOf(3, 13),
-    // Right side going down (Green side)
     intArrayOf(4, 13), intArrayOf(5, 13),
     intArrayOf(6, 13), intArrayOf(6, 14),
     intArrayOf(7, 14), intArrayOf(7, 13),
     intArrayOf(7, 12), intArrayOf(7, 11),
     intArrayOf(7, 10), intArrayOf(7, 9),
     intArrayOf(7, 8),
-    // Bottom side going left
     intArrayOf(8, 8), intArrayOf(8, 7),
     intArrayOf(8, 6), intArrayOf(8, 5),
     intArrayOf(8, 4), intArrayOf(8, 3),
     intArrayOf(8, 2), intArrayOf(8, 1),
     intArrayOf(9, 1),
-    // Left side going down (bottom)
     intArrayOf(9, 2), intArrayOf(9, 3),
     intArrayOf(9, 4), intArrayOf(9, 5),
     intArrayOf(9, 6), intArrayOf(10, 6),
@@ -127,7 +141,7 @@ private val TRACK = listOf(
     intArrayOf(9, 8),
 )
 
-// ─── Home columns (6 cells each, leading to center) ──────────────────────────
+// ─── Home columns (Red: col 7 going down from row 1→6, Green: col 7 going up from row 13→8) ──
 private val RED_HOME = listOf(
     intArrayOf(1, 7), intArrayOf(2, 7), intArrayOf(3, 7),
     intArrayOf(4, 7), intArrayOf(5, 7), intArrayOf(6, 7),
@@ -137,11 +151,9 @@ private val GREEN_HOME = listOf(
     intArrayOf(10, 7), intArrayOf(9, 7), intArrayOf(8, 7),
 )
 
-// ─── Entry positions on the main track ────────────────────────────────────────
 private const val RED_ENTRY = 0
 private const val GREEN_ENTRY = 26
 
-// ─── Base positions (where tokens sit before entering) ────────────────────────
 private val RED_BASE = listOf(
     intArrayOf(2, 2), intArrayOf(2, 4), intArrayOf(4, 2), intArrayOf(4, 4),
 )
@@ -149,7 +161,6 @@ private val GREEN_BASE = listOf(
     intArrayOf(10, 10), intArrayOf(10, 12), intArrayOf(12, 10), intArrayOf(12, 12),
 )
 
-// ─── Safe positions (tokens can't be captured here) ───────────────────────────
 private val SAFE_POSITIONS = setOf(0, 8, 13, 21, 26, 34, 39, 47)
 
 // ─── Token states ─────────────────────────────────────────────────────────────
@@ -186,51 +197,36 @@ fun LudoScreen(
     gameRepository: GameRepository? = null,
     myUid: String = "",
 ) {
-    val p1 = remember { PlayerData(myName, RedColor, RedLight, RedDark, baseSlots = RED_BASE, entry = RED_ENTRY, homeCol = RED_HOME) }
-    val p2 = remember { PlayerData(partnerName, GreenColor, GreenLight, GreenDark, baseSlots = GREEN_BASE, entry = GREEN_ENTRY, homeCol = GREEN_HOME) }
+    val p1 = remember { PlayerData(myName, ClassicRed, ClassicRedLight, ClassicRedDark, baseSlots = RED_BASE, entry = RED_ENTRY, homeCol = RED_HOME) }
+    val p2 = remember { PlayerData(partnerName, ClassicGreen, ClassicGreenLight, ClassicGreenDark, baseSlots = GREEN_BASE, entry = GREEN_ENTRY, homeCol = GREEN_HOME) }
 
     var turn by remember { mutableIntStateOf(1) }
     var diceValue by remember { mutableIntStateOf(1) }
-    var phase by remember { mutableStateOf("roll") } // roll | select | animate | bonus | gameover
+    var phase by remember { mutableStateOf("roll") }
     var selectedToken by remember { mutableIntStateOf(-1) }
     var winner by remember { mutableStateOf<PlayerData?>(null) }
     val diceHistory = remember { mutableStateListOf<Int>() }
     val scope = rememberCoroutineScope()
     val animProgress = remember { Animatable(0f) }
+    var isRolling by remember { mutableStateOf(false) }
+    var diceDisplay by remember { mutableIntStateOf(1) }
 
     fun current() = if (turn == 1) p1 else p2
-    fun opponent() = if (turn == 1) p2 else p1
-
-    fun finishedCount(p: PlayerData) = p.tokens.count { it.place == TokenPlace.FINISHED }
-
-    fun allFinished(p: PlayerData) = finishedCount(p) == 4
-
-    fun baseTokens(p: PlayerData) = p.tokens.withIndex().filter { it.value.place == TokenPlace.BASE }.map { it.index }
-
-    fun trackTokens(p: PlayerData) = p.tokens.withIndex().filter { it.value.place == TokenPlace.TRACK }.map { it.index }
-
-    fun homeTokens(p: PlayerData) = p.tokens.withIndex().filter { it.value.place == TokenPlace.HOME_COL }.map { it.index }
+    fun allFinished(p: PlayerData) = p.tokens.count { it.place == TokenPlace.FINISHED } == 4
 
     fun availableMoves(p: PlayerData, dice: Int): List<Int> {
         val moves = mutableListOf<Int>()
         for (i in 0..3) {
             val t = p.tokens[i]
             when (t.place) {
-                TokenPlace.BASE -> {
-                    if (dice == 6) moves.add(i)
-                }
+                TokenPlace.BASE -> { if (dice == 6) moves.add(i) }
                 TokenPlace.TRACK -> {
                     val dest = t.trackPos + dice
-                    if (dest <= 51) {
-                        moves.add(i)
-                    } else if (dest in 52..57) {
-                        moves.add(i)
-                    }
+                    if (dest in 0..57) moves.add(i)
                 }
                 TokenPlace.HOME_COL -> {
                     val dest = t.homeStep + dice
-                    if (dest <= 5) moves.add(i)
-                    else if (dest == 6) moves.add(i)
+                    if (dest <= 6) moves.add(i)
                 }
                 TokenPlace.FINISHED -> {}
             }
@@ -240,8 +236,8 @@ fun LudoScreen(
 
     fun findCaptures(p: PlayerData, pos: Int): List<Int> {
         val captured = mutableListOf<Int>()
+        val opp = if (p == p1) p2 else p1
         for (i in 0..3) {
-            val opp = if (p == p1) p2 else p1
             val t = opp.tokens[i]
             if (t.place == TokenPlace.TRACK && t.trackPos == pos && pos !in SAFE_POSITIONS) {
                 captured.add(i)
@@ -257,105 +253,91 @@ fun LudoScreen(
             TokenPlace.BASE -> {
                 t.place = TokenPlace.TRACK
                 t.trackPos = p.entry
-                val caps = findCaptures(p, p.entry)
-                for (ci in caps) {
-                    val opp = if (p == p1) p2 else p1
-                    opp.tokens[ci] = Token()
+                for (ci in findCaptures(p, p.entry)) {
+                    (if (p == p1) p2 else p1).tokens[ci] = Token()
                 }
             }
             TokenPlace.TRACK -> {
                 val dest = t.trackPos + diceValue
                 if (dest <= 51) {
                     t.trackPos = dest
-                    val caps = findCaptures(p, dest)
-                    for (ci in caps) {
-                        val opp = if (p == p1) p2 else p1
-                        opp.tokens[ci] = Token()
+                    for (ci in findCaptures(p, dest)) {
+                        (if (p == p1) p2 else p1).tokens[ci] = Token()
                     }
                 } else {
-                    val homeSteps = dest - 52
                     t.place = TokenPlace.HOME_COL
                     t.trackPos = -1
-                    t.homeStep = homeSteps
+                    t.homeStep = dest - 52
                 }
             }
             TokenPlace.HOME_COL -> {
                 val dest = t.homeStep + diceValue
-                if (dest == 6) {
-                    t.place = TokenPlace.FINISHED
-                    t.homeStep = -1
-                } else {
-                    t.homeStep = dest
-                }
+                if (dest == 6) { t.place = TokenPlace.FINISHED; t.homeStep = -1 }
+                else t.homeStep = dest
             }
             TokenPlace.FINISHED -> {}
         }
-        if (allFinished(p)) {
-            p.wins++
-            winner = p
-            phase = "gameover"
-        } else if (diceValue == 6) {
-            phase = "roll"
-        } else {
-            turn = if (turn == 1) 2 else 1
-            phase = "roll"
-        }
+        if (allFinished(p)) { p.wins++; winner = p; phase = "gameover" }
+        else if (diceValue == 6) phase = "roll"
+        else { turn = if (turn == 1) 2 else 1; phase = "roll" }
     }
 
-    fun rollDice() {
-        if (phase != "roll") return
-        diceValue = Random.nextInt(1, 7)
-        diceHistory.add(diceValue)
-        val p = current()
-        val moves = availableMoves(p, diceValue)
-        if (moves.isEmpty()) {
-            turn = if (turn == 1) 2 else 1
-            phase = "roll"
-        } else if (moves.size == 1) {
-            selectedToken = moves[0]
-            phase = "animate"
-            scope.launch {
-                val t = p.tokens[moves[0]]
-                val startTrack = t.trackPos
-                val startHome = t.homeStep
-                val startPlace = t.place
-                animProgress.snapTo(0f)
-                animProgress.animateTo(1f, animationSpec = tween(300 * diceValue, easing = LinearEasing))
-                executeMove(moves[0])
-                phase = "roll"
+    fun doRollDice() {
+        if (phase != "roll" || isRolling) return
+        isRolling = true
+        diceHistory.add(0) // placeholder
+        scope.launch {
+            // Dice rolling animation - cycle through random faces
+            val finalValue = Random.nextInt(1, 7)
+            val rollDuration = 800L
+            val startTime = System.currentTimeMillis()
+            while (System.currentTimeMillis() - startTime < rollDuration) {
+                diceDisplay = Random.nextInt(1, 7)
+                delay(60)
             }
-        } else {
-            phase = "select"
+            diceDisplay = finalValue
+            diceValue = finalValue
+            diceHistory[diceHistory.lastIndex] = finalValue
+            isRolling = false
+
+            val p = current()
+            val moves = availableMoves(p, finalValue)
+            if (moves.isEmpty()) {
+                turn = if (turn == 1) 2 else 1
+                phase = "roll"
+            } else if (moves.size == 1) {
+                selectedToken = moves[0]
+                phase = "animate"
+                animProgress.snapTo(0f)
+                animProgress.animateTo(1f, animationSpec = tween(350 * finalValue, easing = EaseOutCubic))
+                executeMove(moves[0])
+            } else {
+                phase = "select"
+            }
         }
     }
 
     fun selectToken(idx: Int) {
-        val p = current()
         selectedToken = idx
         phase = "animate"
         scope.launch {
             animProgress.snapTo(0f)
-            animProgress.animateTo(1f, animationSpec = tween(300 * diceValue, easing = LinearEasing))
+            animProgress.animateTo(1f, animationSpec = tween(350 * diceValue, easing = EaseOutCubic))
             executeMove(idx)
-            phase = "roll"
         }
     }
 
     fun resetGame() {
         p1.tokens.forEachIndexed { i, _ -> p1.tokens[i] = Token() }
         p2.tokens.forEachIndexed { i, _ -> p2.tokens[i] = Token() }
-        turn = 1
-        diceValue = 1
-        phase = "roll"
-        selectedToken = -1
-        winner = null
-        diceHistory.clear()
+        turn = 1; diceValue = 1; phase = "roll"; selectedToken = -1; winner = null
+        diceHistory.clear(); isRolling = false; diceDisplay = 1
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Ludo") },
+                title = { Text("Ludo", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -368,10 +350,10 @@ fun LudoScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 12.dp),
+                .padding(horizontal = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // Player scores
+            // Player info pills
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -380,10 +362,9 @@ fun LudoScreen(
                 PlayerPill(name = p2.name, color = p2.color, wins = p2.wins, isTurn = turn == 2 && phase != "gameover")
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
 
             // Board
-            val density = LocalDensity.current
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -391,47 +372,45 @@ fun LudoScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 LudoBoardCanvas(
-                    p1 = p1,
-                    p2 = p2,
-                    diceValue = diceValue,
+                    p1 = p1, p2 = p2,
                     turn = turn,
                     selectedIdx = if (phase == "select") -1 else selectedToken,
                     animProgress = animProgress.value,
                 )
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
 
             // Bottom area
             when (phase) {
                 "roll" -> {
-                    DiceRollButton(
-                        value = diceValue,
-                        onClick = ::rollDice,
-                        enabled = true,
-                        isSix = diceHistory.lastOrNull() == 6,
+                    DiceButton(
+                        displayValue = diceDisplay,
+                        isRolling = isRolling,
+                        onClick = ::doRollDice,
+                        enabled = !isRolling,
+                        playerColor = current().color,
                     )
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(6.dp))
                     val cur = current()
                     Text(
-                        text = "${cur.name}'s turn — Roll the dice!",
+                        text = if (isRolling) "Rolling..." else "${cur.name}'s turn",
                         style = MaterialTheme.typography.titleSmall,
                         color = cur.color,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                     )
                 }
                 "select" -> {
                     val cur = current()
-                    val moves = availableMoves(cur, diceValue)
                     Text(
-                        text = "${cur.name} rolled $diceValue — Tap a token to move:",
+                        text = "Rolled $diceValue — Tap a token:",
                         style = MaterialTheme.typography.titleSmall,
                         color = cur.color,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                     )
-                    Spacer(Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        for (idx in moves) {
+                    Spacer(Modifier.height(6.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        for (idx in availableMoves(cur, diceValue)) {
                             val t = cur.tokens[idx]
                             val label = when (t.place) {
                                 TokenPlace.BASE -> "Out"
@@ -463,29 +442,27 @@ fun LudoScreen(
                         color = w.color,
                         fontWeight = FontWeight.Bold,
                     )
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(6.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Button(onClick = ::resetGame) { Text("Rematch") }
+                        Button(onClick = ::resetGame, colors = ButtonDefaults.buttonColors(containerColor = w.color)) { Text("Rematch") }
                         OutlinedButton(onClick = onBack) { Text("Back") }
                     }
                 }
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
         }
     }
 
     if (winner != null && phase == "gameover") {
         AlertDialog(
             onDismissRequest = { },
-            icon = { Text("🏆", fontSize = 40.sp) },
+            icon = { Text("\uD83C\uDFC6", fontSize = 40.sp) },
             title = { Text("${winner!!.name} wins!") },
             text = { Text("Amazing game! Ready for another round?") },
             confirmButton = {
-                Button(onClick = { resetGame(); winner = null }) { Text("Rematch!") }
+                Button(onClick = { resetGame(); winner = null }, colors = ButtonDefaults.buttonColors(containerColor = winner!!.color)) { Text("Rematch!") }
             },
-            dismissButton = {
-                TextButton(onClick = onBack) { Text("Back to Hub") }
-            },
+            dismissButton = { TextButton(onClick = onBack) { Text("Back to Hub") } },
         )
     }
 }
@@ -497,65 +474,117 @@ private fun PlayerPill(name: String, color: Color, wins: Int, isTurn: Boolean) {
     Card(
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isTurn) color.copy(alpha = 0.12f)
-            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            containerColor = if (isTurn) color.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
         ),
         border = if (isTurn) androidx.compose.foundation.BorderStroke(2.dp, color) else null,
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isTurn) 2.dp else 0.dp),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(12.dp)
+                    .size(10.dp)
                     .clip(CircleShape)
                     .background(color),
             )
             Spacer(Modifier.width(8.dp))
             Text(name, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Medium)
             Spacer(Modifier.width(8.dp))
-            Text(
-                "$wins",
-                style = MaterialTheme.typography.titleMedium,
-                color = color,
-                fontWeight = FontWeight.Bold,
-            )
+            Text("$wins", style = MaterialTheme.typography.titleMedium, color = color, fontWeight = FontWeight.Bold)
         }
     }
 }
 
-// ─── Dice Button ──────────────────────────────────────────────────────────────
+// ─── Dice Button (with rolling animation) ────────────────────────────────────
 
 @Composable
-private fun DiceRollButton(value: Int, onClick: () -> Unit, enabled: Boolean, isSix: Boolean) {
+private fun DiceButton(
+    displayValue: Int,
+    isRolling: Boolean,
+    onClick: () -> Unit,
+    enabled: Boolean,
+    playerColor: Color,
+) {
+    val shakeX = remember { Animatable(0f) }
+    val shakeY = remember { Animatable(0f) }
+
+    LaunchedEffect(isRolling) {
+        if (isRolling) {
+            while (true) {
+                shakeX.animateTo(
+                    targetValue = 0f,
+                    animationSpec = tween(50, easing = LinearEasing),
+                )
+                shakeX.animateTo(
+                    targetValue = Random.nextFloat() * 6f - 3f,
+                    animationSpec = tween(40, easing = LinearEasing),
+                )
+                shakeY.animateTo(
+                    targetValue = 0f,
+                    animationSpec = tween(50, easing = LinearEasing),
+                )
+                shakeY.animateTo(
+                    targetValue = Random.nextFloat() * 6f - 3f,
+                    animationSpec = tween(40, easing = LinearEasing),
+                )
+            }
+        } else {
+            shakeX.snapTo(0f)
+            shakeY.snapTo(0f)
+        }
+    }
+
+    val scale by animateFloatAsState(
+        targetValue = if (isRolling) 0.9f else 1f,
+        animationSpec = spring(stiffness = 300f),
+        label = "diceScale",
+    )
+
+    val rotation by animateFloatAsState(
+        targetValue = if (isRolling) Random.nextFloat() * 30f - 15f else 0f,
+        animationSpec = tween(80),
+        label = "diceRot",
+    )
+
     Box(
         modifier = Modifier
-            .size(72.dp)
-            .shadow(6.dp, CircleShape)
+            .size(80.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+                translationX = shakeX.value
+                translationY = shakeY.value
+                this.rotationZ = rotation
+            }
+            .shadow(8.dp, RoundedCornerShape(16.dp))
             .clip(RoundedCornerShape(16.dp))
-            .background(if (isSix) SafeColor else MaterialTheme.colorScheme.surface)
-            .border(2.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
-            .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier),
+            .background(Color(0xFFFFFBF5))
+            .border(2.5.dp, playerColor.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
+            .then(if (enabled && !isRolling) Modifier.clickable(onClick = onClick) else Modifier),
         contentAlignment = Alignment.Center,
     ) {
-        Canvas(modifier = Modifier.size(48.dp)) {
-            val dotRadius = size.minDimension / 10
-            val cx = size.width / 2
-            val cy = size.height / 2
-            val off = size.minDimension / 4
+        Canvas(modifier = Modifier.size(56.dp)) {
+            val dotR = size.minDimension / 10f
+            val cx = size.width / 2f
+            val cy = size.height / 2f
+            val off = size.minDimension / 4f
+
+            val dotColor = android.graphics.Color.parseColor("#2D2D2D")
 
             fun dot(x: Float, y: Float) {
                 drawContext.canvas.nativeCanvas.drawCircle(
-                    x, y, dotRadius,
+                    x, y, dotR,
                     android.graphics.Paint().apply {
-                        color = android.graphics.Color.DKGRAY
+                        color = dotColor
                         isAntiAlias = true
+                        setShadowLayer(3f, 1f, 1f, android.graphics.Color.argb(40, 0, 0, 0))
                     },
                 )
             }
 
-            when (value) {
+            when (displayValue) {
                 1 -> dot(cx, cy)
                 2 -> { dot(cx - off, cy - off); dot(cx + off, cy + off) }
                 3 -> { dot(cx - off, cy - off); dot(cx, cy); dot(cx + off, cy + off) }
@@ -584,156 +613,194 @@ private fun DiceRollButton(value: Int, onClick: () -> Unit, enabled: Boolean, is
 private fun LudoBoardCanvas(
     p1: PlayerData,
     p2: PlayerData,
-    diceValue: Int,
     turn: Int,
     selectedIdx: Int,
     animProgress: Float,
 ) {
-    val p1TokenColor = p1.color
-    val p2TokenColor = p2.color
-    val p1BaseColor = p1.colorLight
-    val p2BaseColor = p2.colorLight
-
     Canvas(modifier = Modifier.fillMaxSize()) {
-        val cellW = size.width / GRID
-        val cellH = size.height / GRID
+        val cw = size.width / GRID
+        val ch = size.height / GRID
 
-        fun cellCenter(r: Int, c: Int) = Offset(c * cellW + cellW / 2, r * cellH + cellH / 2)
-        fun cellRect(r: Int, c: Int) = Rect(c * cellW, r * cellH, (c + 1) * cellW, (r + 1) * cellH)
+        fun cellCenter(r: Int, c: Int) = Offset(c * cw + cw / 2, r * ch + ch / 2)
+        fun cellRect(r: Int, c: Int) = Rect(c * cw, r * ch, (c + 1) * cw, (r + 1) * ch)
 
-        // ── Background ──
-        drawRect(BoardBg)
+        // ── Board background ──
+        drawRoundRect(BoardWhite, Offset.Zero, Size(size.width, size.height), CornerRadius(12f))
 
-        // ── Base areas (6x6 corners) ──
-        // Red base (top-left)
-        drawRoundRect(RedLight, Offset(0f, 0f), Size(6 * cellW, 6 * cellH), CornerRadius(8f))
-        drawRoundRect(RedDark.copy(alpha = 0.15f), Offset(cellW, cellH), Size(4 * cellW, 4 * cellH), CornerRadius(6f))
+        // ── Outer border ──
+        drawRoundRect(Color(0xFFBDB6AB), Offset.Zero, Size(size.width, size.height), CornerRadius(12f), style = Stroke(3f))
 
-        // Green base (bottom-right)
-        drawRoundRect(GreenLight, Offset(9 * cellW, 9 * cellH), Size(6 * cellW, 6 * cellH), CornerRadius(8f))
-        drawRoundRect(GreenDark.copy(alpha = 0.15f), Offset(10 * cellW, 10 * cellH), Size(4 * cellW, 4 * cellH), CornerRadius(6f))
-
-        // Empty corners (top-right, bottom-left)
-        drawRoundRect(Color(0xFFE0E0E0).copy(alpha = 0.3f), Offset(9 * cellW, 0f), Size(6 * cellW, 6 * cellH), CornerRadius(8f))
-        drawRoundRect(Color(0xFFE0E0E0).copy(alpha = 0.3f), Offset(0f, 9 * cellW), Size(6 * cellW, 6 * cellH), CornerRadius(8f))
-
-        // ── Home columns ──
-        RED_HOME.forEach { (r, c) ->
-            drawRoundRect(RedColor.copy(alpha = 0.25f), cellRect(r, c).topLeft.toOffset(), Size(cellW, cellH), CornerRadius(2f))
-        }
-        GREEN_HOME.forEach { (r, c) ->
-            drawRoundRect(GreenColor.copy(alpha = 0.25f), cellRect(r, c).topLeft.toOffset(), Size(cellW, cellH), CornerRadius(2f))
+        // ── Red home base (top-left) ──
+        drawRoundRect(ClassicRedLight, Offset(0f, 0f), Size(6 * cw, 6 * ch), CornerRadius(8f))
+        // Inner white yard
+        drawRoundRect(Color.White, Offset(cw, ch), Size(4 * cw, 4 * ch), CornerRadius(8f))
+        // Red base circles
+        RED_BASE.forEach { (r, c) ->
+            drawCircle(ClassicRedLight.copy(alpha = 0.5f), cw * 0.4f, cellCenter(r, c))
         }
 
-        // ── Home center ──
-        drawRoundRect(
-            HomeCenter,
-            Offset(7 * cellW, 7 * cellH),
-            Size(cellW, cellH),
-            CornerRadius(4f),
-        )
-        // Center triangle indicators
-        val centerCx = 7 * cellW + cellW / 2
-        val centerCy = 7 * cellH + cellH / 2
-        drawContext.canvas.nativeCanvas.drawText(
-            "HOME",
-            centerCx,
-            centerCy + 4,
-            android.graphics.Paint().apply {
-                color = android.graphics.Color.argb(180, 100, 100, 100)
-                textSize = cellW * 0.3f
-                textAlign = android.graphics.Paint.Align.CENTER
-                isAntiAlias = true
-            },
-        )
+        // ── Green home base (bottom-right) ──
+        drawRoundRect(ClassicGreenLight, Offset(9 * cw, 9 * ch), Size(6 * cw, 6 * ch), CornerRadius(8f))
+        drawRoundRect(Color.White, Offset(10 * cw, 10 * ch), Size(4 * cw, 4 * ch), CornerRadius(8f))
+        GREEN_BASE.forEach { (r, c) ->
+            drawCircle(ClassicGreenLight.copy(alpha = 0.5f), cw * 0.4f, cellCenter(r, c))
+        }
+
+        // ── Empty corners (top-right & bottom-left) ──
+        val emptyColor = Color(0xFFE8E4DC)
+        drawRoundRect(emptyColor, Offset(9 * cw, 0f), Size(6 * cw, 6 * ch), CornerRadius(8f))
+        drawRoundRect(emptyColor, Offset(0f, 9 * ch), Size(6 * cw, 6 * ch), CornerRadius(8f))
 
         // ── Track cells ──
         TRACK.forEachIndexed { idx, cell ->
             val (r, c) = cell
-            val bg = if (idx in SAFE_POSITIONS) SafeColor.copy(alpha = 0.4f) else TrackCell
-            drawRoundRect(bg, cellRect(r, c).topLeft.toOffset(), Size(cellW, cellH), CornerRadius(1f))
-            drawRoundRect(
-                Color.LightGray.copy(alpha = 0.5f),
-                cellRect(r, c).topLeft.toOffset(),
-                Size(cellW, cellH),
-                CornerRadius(1f),
-                style = Stroke(width = 0.5f),
-            )
+            val isSafe = idx in SAFE_POSITIONS
+            val bg = if (isSafe) SafeGold.copy(alpha = 0.3f) else TrackCell
+            drawRoundRect(bg, cellRect(r, c).topLeft.toOffset(), Size(cw, ch), CornerRadius(1f))
+            drawRoundRect(TrackBorder.copy(alpha = 0.4f), cellRect(r, c).topLeft.toOffset(), Size(cw, ch), CornerRadius(1f), style = Stroke(0.8f))
         }
 
-        // ── Grid lines ──
-        for (i in 0..GRID) {
-            drawLine(Color.LightGray.copy(alpha = 0.3f), Offset(i * cellW, 0f), Offset(i * cellW, size.height), 0.5f)
-            drawLine(Color.LightGray.copy(alpha = 0.3f), Offset(0f, i * cellH), Offset(size.width, i * cellH), 0.5f)
+        // ── Home columns ──
+        RED_HOME.forEach { (r, c) ->
+            drawRoundRect(ClassicRed.copy(alpha = 0.35f), cellRect(r, c).topLeft.toOffset(), Size(cw, ch), CornerRadius(2f))
+            drawRoundRect(ClassicRed.copy(alpha = 0.15f), cellRect(r, c).topLeft.toOffset(), Size(cw, ch), CornerRadius(2f), style = Stroke(1f))
+        }
+        GREEN_HOME.forEach { (r, c) ->
+            drawRoundRect(ClassicGreen.copy(alpha = 0.35f), cellRect(r, c).topLeft.toOffset(), Size(cw, ch), CornerRadius(2f))
+            drawRoundRect(ClassicGreen.copy(alpha = 0.15f), cellRect(r, c).topLeft.toOffset(), Size(cw, ch), CornerRadius(2f), style = Stroke(1f))
         }
 
-        // ── Safe stars ──
+        // ── Home center triangle area ──
+        val centerLeft = 7 * cw
+        val centerTop = 7 * ch
+        // Draw the four triangles pointing to center
+        // Red triangle (top)
+        val redTri = android.graphics.Path().apply {
+            moveTo(centerLeft, centerTop)
+            lineTo(centerLeft + cw, centerTop)
+            lineTo(centerLeft + cw / 2, centerTop + ch / 2)
+            close()
+        }
+        drawContext.canvas.nativeCanvas.drawPath(redTri, android.graphics.Paint().apply {
+            color = android.graphics.Color.parseColor("#D32F2F")
+            alpha = 60
+            isAntiAlias = true
+        })
+
+        // Green triangle (bottom)
+        val greenTri = android.graphics.Path().apply {
+            moveTo(centerLeft, centerTop + ch)
+            lineTo(centerLeft + cw, centerTop + ch)
+            lineTo(centerLeft + cw / 2, centerTop + ch / 2)
+            close()
+        }
+        drawContext.canvas.nativeCanvas.drawPath(greenTri, android.graphics.Paint().apply {
+            color = android.graphics.Color.parseColor("#388E3C")
+            alpha = 60
+            isAntiAlias = true
+        })
+
+        // Center star
+        val centerCx = centerLeft + cw / 2
+        val centerCy = centerTop + ch / 2
+        drawCircle(Color(0xFFFFF3E0), cw * 0.35f, Offset(centerCx, centerCy))
+        drawCircle(SafeGold.copy(alpha = 0.6f), cw * 0.25f, Offset(centerCx, centerCy))
+        drawContext.canvas.nativeCanvas.drawText(
+            "\u2605",
+            centerCx,
+            centerCy + cw * 0.15f,
+            android.graphics.Paint().apply {
+                color = android.graphics.Color.parseColor("#F57F17")
+                textSize = cw * 0.5f
+                textAlign = android.graphics.Paint.Align.CENTER
+                isAntiAlias = true
+                isFakeBoldText = true
+            },
+        )
+
+        // ── Safe star markers ──
         SAFE_POSITIONS.forEach { pos ->
             val (r, c) = TRACK[pos]
             val center = cellCenter(r, c)
             drawContext.canvas.nativeCanvas.drawText(
-                "★",
+                "\u2605",
                 center.x,
-                center.y + cellW * 0.15f,
+                center.y + cw * 0.15f,
                 android.graphics.Paint().apply {
-                    color = android.graphics.Color.argb(160, 200, 150, 0)
-                    textSize = cellW * 0.5f
+                    color = android.graphics.Color.parseColor("#F9A825")
+                    textSize = cw * 0.45f
                     textAlign = android.graphics.Paint.Align.CENTER
                     isAntiAlias = true
                 },
             )
         }
 
-        // ── Base tokens (not yet on track) ──
+        // ── Entry arrow markers ──
+        // Red entry at track 0 (6,1)
+        val redEntryCenter = cellCenter(TRACK[RED_ENTRY][0], TRACK[RED_ENTRY][1])
+        drawCircle(ClassicRed.copy(alpha = 0.3f), cw * 0.2f, redEntryCenter)
+        // Green entry at track 26 (7,8)
+        val greenEntryCenter = cellCenter(TRACK[GREEN_ENTRY][0], TRACK[GREEN_ENTRY][1])
+        drawCircle(ClassicGreen.copy(alpha = 0.3f), cw * 0.2f, greenEntryCenter)
+
+        // ── Grid lines (subtle) ──
+        for (i in 0..GRID) {
+            drawLine(TrackBorder.copy(alpha = 0.2f), Offset(i * cw, 0f), Offset(i * cw, size.height), 0.5f)
+            drawLine(TrackBorder.copy(alpha = 0.2f), Offset(0f, i * ch), Offset(size.width, i * ch), 0.5f)
+        }
+
+        // ── Draw tokens ──
+        fun drawToken(r: Int, c: Int, color: Color, tokenNum: Int, isOnBoard: Boolean) {
+            val center = cellCenter(r, c)
+            // Shadow
+            drawCircle(Color.Black.copy(alpha = 0.12f), cw * 0.32f, Offset(center.x + 1.5f, center.y + 1.5f))
+            // Outer ring
+            drawCircle(color.copy(alpha = 0.25f), cw * 0.38f, center)
+            // Main body
+            drawCircle(color, cw * 0.3f, center)
+            // Shine
+            drawCircle(Color.White.copy(alpha = 0.45f), cw * 0.12f, Offset(center.x - cw * 0.07f, center.y - cw * 0.07f))
+            // Inner highlight
+            drawCircle(color.copy(alpha = 0.3f), cw * 0.15f, center)
+            // Token number
+            drawContext.canvas.nativeCanvas.drawText(
+                "$tokenNum",
+                center.x,
+                center.y + cw * 0.1f,
+                android.graphics.Paint().apply {
+                    this.color = android.graphics.Color.WHITE
+                    textSize = cw * 0.24f
+                    textAlign = android.graphics.Paint.Align.CENTER
+                    isAntiAlias = true
+                    isFakeBoldText = true
+                },
+            )
+        }
+
+        // ── Base tokens ──
         fun drawBaseTokens(p: PlayerData, baseSlots: List<IntArray>, color: Color) {
             for (i in 0..3) {
                 if (p.tokens[i].place == TokenPlace.BASE) {
                     val (r, c) = baseSlots[i]
-                    val center = cellCenter(r, c)
-                    drawCircle(color.copy(alpha = 0.3f), cellW * 0.38f, center)
-                    drawCircle(color, cellW * 0.3f, center)
-                    drawCircle(Color.White.copy(alpha = 0.4f), cellW * 0.12f, Offset(center.x - cellW * 0.08f, center.y - cellW * 0.08f))
+                    drawToken(r, c, color, i + 1, false)
                 }
             }
         }
-
-        drawBaseTokens(p1, RED_BASE, p1TokenColor)
-        drawBaseTokens(p2, GREEN_BASE, p2TokenColor)
+        drawBaseTokens(p1, RED_BASE, p1.color)
+        drawBaseTokens(p2, GREEN_BASE, p2.color)
 
         // ── Track tokens ──
-        fun drawTrackToken(p: PlayerData, color: Color, label: String) {
+        fun drawTrackTokens(p: PlayerData, color: Color) {
             for (i in 0..3) {
                 val t = p.tokens[i]
-                if (t.place == TokenPlace.TRACK) {
-                    val pos = t.trackPos
-                    if (pos in 0..51) {
-                        val (r, c) = TRACK[pos]
-                        val center = cellCenter(r, c)
-                        val isCap = p == p1 && p2.tokens.any { it.place == TokenPlace.TRACK && it.trackPos == pos }
-                            || p == p2 && p1.tokens.any { it.place == TokenPlace.TRACK && it.trackPos == pos }
-                        drawCircle(color.copy(alpha = 0.25f), cellW * 0.42f, center)
-                        drawCircle(color, cellW * 0.34f, center)
-                        drawCircle(Color.White.copy(alpha = 0.3f), cellW * 0.1f, Offset(center.x - cellW * 0.08f, center.y - cellW * 0.08f))
-                        // Token label
-                        drawContext.canvas.nativeCanvas.drawText(
-                            "${i + 1}",
-                            center.x,
-                            center.y + cellW * 0.12f,
-                            android.graphics.Paint().apply {
-                                this.color = android.graphics.Color.WHITE
-                                textSize = cellW * 0.28f
-                                textAlign = android.graphics.Paint.Align.CENTER
-                                isAntiAlias = true
-                                isFakeBoldText = true
-                            },
-                        )
-                    }
+                if (t.place == TokenPlace.TRACK && t.trackPos in 0..51) {
+                    val (r, c) = TRACK[t.trackPos]
+                    drawToken(r, c, color, i + 1, true)
                 }
             }
         }
-
-        drawTrackToken(p1, p1TokenColor, "1")
-        drawTrackToken(p2, p2TokenColor, "2")
+        drawTrackTokens(p1, p1.color)
+        drawTrackTokens(p2, p2.color)
 
         // ── Home column tokens ──
         fun drawHomeTokens(p: PlayerData, homeCol: List<IntArray>, color: Color) {
@@ -741,29 +808,24 @@ private fun LudoBoardCanvas(
                 val t = p.tokens[i]
                 if (t.place == TokenPlace.HOME_COL && t.homeStep in 0..5) {
                     val (r, c) = homeCol[t.homeStep]
-                    val center = cellCenter(r, c)
-                    drawCircle(color.copy(alpha = 0.3f), cellW * 0.4f, center)
-                    drawCircle(color, cellW * 0.32f, center)
-                    drawCircle(Color.White.copy(alpha = 0.3f), cellW * 0.1f, Offset(center.x - cellW * 0.08f, center.y - cellW * 0.08f))
+                    drawToken(r, c, color, i + 1, true)
                 }
             }
         }
+        drawHomeTokens(p1, RED_HOME, p1.color)
+        drawHomeTokens(p2, GREEN_HOME, p2.color)
 
-        drawHomeTokens(p1, RED_HOME, p1TokenColor)
-        drawHomeTokens(p2, GREEN_HOME, p2TokenColor)
-
-        // ── Finished tokens (center) ──
+        // ── Finished tokens (in center) ──
         for (i in 0..3) {
             if (p1.tokens[i].place == TokenPlace.FINISHED) {
-                val cx = 7 * cellW + cellW * (0.25f + (i % 2) * 0.5f)
-                val cy = 7 * cellH + cellH * (0.25f + (i / 2) * 0.5f)
-                drawCircle(p1TokenColor, cellW * 0.2f, Offset(cx, cy))
+                val cx = 7 * cw + cw * (0.25f + (i % 2) * 0.5f)
+                val cy = 7 * ch + ch * (0.25f + (i / 2) * 0.5f)
+                drawToken((cy / ch).toInt(), (cx / cw).toInt(), p1.color, i + 1, true)
             }
             if (p2.tokens[i].place == TokenPlace.FINISHED) {
-                val cx = 7 * cellW + cellW * (0.25f + (i % 2) * 0.5f)
-                val cy = 7 * cellH + cellH * (0.25f + (i / 2) * 0.5f)
-                drawCircle(p2TokenColor, cellW * 0.15f, Offset(cx, cy))
-                drawCircle(Color.White.copy(alpha = 0.3f), cellW * 0.06f, Offset(cx - cellW * 0.04f, cy - cellW * 0.04f))
+                val cx = 7 * cw + cw * (0.25f + (i % 2) * 0.5f)
+                val cy = 7 * ch + ch * (0.25f + (i / 2) * 0.5f)
+                drawToken((cy / ch).toInt(), (cx / cw).toInt(), p2.color, i + 1, true)
             }
         }
     }

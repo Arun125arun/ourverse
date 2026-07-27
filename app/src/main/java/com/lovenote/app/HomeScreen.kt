@@ -200,12 +200,12 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                 Box(
                     modifier = Modifier
                         .navigationBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                        .padding(horizontal = 24.dp, vertical = 4.dp)
                         .background(
                             MaterialTheme.colorScheme.surface.copy(alpha = 0.97f),
-                            RoundedCornerShape(28.dp),
+                            RoundedCornerShape(20.dp),
                         )
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
                 ) {
                     Row(
                         horizontalArrangement = Arrangement.SpaceEvenly,
@@ -366,11 +366,11 @@ private fun BottomBarItem(
 
     Box(
         modifier = Modifier
-            .size(72.dp)
+            .size(56.dp)
             .background(
                 if (selected) MaterialTheme.colorScheme.primary.copy(alpha = bgAlpha)
                 else Color.Transparent,
-                RoundedCornerShape(20.dp),
+                RoundedCornerShape(16.dp),
             )
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
@@ -383,13 +383,13 @@ private fun BottomBarItem(
                 imageVector = icon,
                 contentDescription = label,
                 tint = tint,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(20.dp),
             )
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelSmall,
                 color = tint,
-                modifier = Modifier.padding(top = 3.dp),
+                modifier = Modifier.padding(top = 2.dp),
             )
         }
     }
