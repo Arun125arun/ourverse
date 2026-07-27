@@ -3,6 +3,14 @@ package com.lovenote.app.settings
 /** Release notes shown in the "What's new" dialog after each update. */
 object Changelog {
     private val NOTES = mapOf(
+        39L to listOf(
+            "🎮 Couple Hub — brand-new hub for notes and games in one place",
+            "❌ Tic Tac Toe — classic strategy game with score tracking",
+            "🎲 Ludo — race-to-home dice game for two",
+            "🧠 Couple Trivia — how well do you really know each other?",
+            "🔥 Truth or Dare — spice things up with 18 truths and 18 dares",
+            "🔤 Word Game — see how connected your minds are",
+        ),
         38L to listOf(
             "💬 Fixed messages not showing after sending",
         ),

@@ -9,9 +9,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -34,6 +34,12 @@ import com.lovenote.app.call.CallManager
 import com.lovenote.app.call.CallOverlay
 import com.lovenote.app.chat.ChatRepository
 import com.lovenote.app.chat.ChatScreen
+import com.lovenote.app.games.GamesHubScreen
+import com.lovenote.app.games.ludo.LudoScreen
+import com.lovenote.app.games.tictactoe.TicTacToeScreen
+import com.lovenote.app.games.trivia.CoupleTriviaScreen
+import com.lovenote.app.games.truthdare.TruthOrDareScreen
+import com.lovenote.app.games.wordgame.WordConnectionScreen
 import com.lovenote.app.notes.DrawNoteScreen
 import com.lovenote.app.notes.NoteCache
 import com.lovenote.app.notes.NoteRepository
@@ -51,7 +57,10 @@ import com.lovenote.app.widget.NoteWidget
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-internal enum class HomeScreen { CHAT, US, MEMORIES, TODOS, NOTE, DRAW, HISTORY, SETTINGS }
+internal enum class HomeScreen {
+    CHAT, US, MEMORIES, TODOS, HUB, NOTE, DRAW, HISTORY, SETTINGS,
+    TIC_TAC_TOE, LUDO, TRIVIA, TRUTH_OR_DARE, WORD_GAME,
+}
 
 @Composable
 internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
@@ -61,6 +70,7 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
     val usRepository = remember(coupleId) { UsRepository(coupleId) }
     val homeScope = rememberCoroutineScope()
     val partner by chatRepository.partnerProfile().collectAsState(initial = null)
+    val myProfile by chatRepository.myProfile().collectAsState(initial = null)
     var screen by remember { mutableStateOf(HomeScreen.CHAT) }
 
     LaunchedEffect(coupleId) {
@@ -130,6 +140,9 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
         }
     }
 
+    val myName = myProfile?.name?.ifBlank { "You" } ?: "You"
+    val partnerName = partner?.name?.ifBlank { "Your partner" } ?: "Your partner"
+
     Box {
         Scaffold(
             bottomBar = {
@@ -146,17 +159,21 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                         label = { Text("Chat") },
                     )
                     NavigationBarItem(
-                        selected = screen == HomeScreen.US || screen == HomeScreen.MEMORIES,
+                        selected = screen == HomeScreen.US || screen == HomeScreen.MEMORIES ||
+                            screen == HomeScreen.TODOS,
                         onClick = { navigate(HomeScreen.US) },
                         icon = { Icon(Icons.Filled.Favorite, contentDescription = null) },
                         label = { Text("Us") },
                     )
                     NavigationBarItem(
-                        selected = screen == HomeScreen.NOTE || screen == HomeScreen.HISTORY ||
-                            screen == HomeScreen.DRAW,
-                        onClick = { navigate(HomeScreen.NOTE) },
-                        icon = { Icon(Icons.Filled.Edit, contentDescription = null) },
-                        label = { Text("Notes") },
+                        selected = screen == HomeScreen.HUB || screen == HomeScreen.NOTE ||
+                            screen == HomeScreen.DRAW || screen == HomeScreen.HISTORY ||
+                            screen == HomeScreen.TIC_TAC_TOE || screen == HomeScreen.LUDO ||
+                            screen == HomeScreen.TRIVIA || screen == HomeScreen.TRUTH_OR_DARE ||
+                            screen == HomeScreen.WORD_GAME,
+                        onClick = { navigate(HomeScreen.HUB) },
+                        icon = { Icon(Icons.Filled.Star, contentDescription = null) },
+                        label = { Text("Hub") },
                     )
                 }
             },
@@ -168,19 +185,58 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
             ) {
                 Crossfade(targetState = screen, label = "screens") { target ->
                     when (target) {
+                        HomeScreen.HUB -> GamesHubScreen(
+                            onBack = { navigate(HomeScreen.CHAT) },
+                            onSendNote = { navigate(HomeScreen.NOTE) },
+                            onDrawNote = { navigate(HomeScreen.DRAW) },
+                            onNoteHistory = { navigate(HomeScreen.HISTORY) },
+                            onTicTacToe = { navigate(HomeScreen.TIC_TAC_TOE) },
+                            onLudo = { navigate(HomeScreen.LUDO) },
+                            onTrivia = { navigate(HomeScreen.TRIVIA) },
+                            onTruthOrDare = { navigate(HomeScreen.TRUTH_OR_DARE) },
+                            onWordGame = { navigate(HomeScreen.WORD_GAME) },
+                            myName = myName,
+                        )
                         HomeScreen.NOTE -> SendNoteScreen(
                             repository = noteRepository,
-                            onBack = { navigate(HomeScreen.CHAT) },
+                            onBack = { navigate(HomeScreen.HUB) },
                             onHistoryClick = { navigate(HomeScreen.HISTORY) },
                             onDrawClick = { navigate(HomeScreen.DRAW) },
                         )
                         HomeScreen.DRAW -> DrawNoteScreen(
                             repository = noteRepository,
-                            onBack = { navigate(HomeScreen.NOTE) },
+                            onBack = { navigate(HomeScreen.HUB) },
                         )
                         HomeScreen.HISTORY -> NotesHistoryScreen(
                             repository = noteRepository,
-                            onBack = { navigate(HomeScreen.NOTE) },
+                            onBack = { navigate(HomeScreen.HUB) },
+                        )
+                        HomeScreen.TIC_TAC_TOE -> TicTacToeScreen(
+                            onBack = { navigate(HomeScreen.HUB) },
+                            myName = myName,
+                            partnerName = partnerName,
+                            myPhotoUrl = myProfile?.photoUrl.orEmpty(),
+                            partnerPhotoUrl = partner?.photoUrl.orEmpty(),
+                        )
+                        HomeScreen.LUDO -> LudoScreen(
+                            onBack = { navigate(HomeScreen.HUB) },
+                            myName = myName,
+                            partnerName = partnerName,
+                        )
+                        HomeScreen.TRIVIA -> CoupleTriviaScreen(
+                            onBack = { navigate(HomeScreen.HUB) },
+                            myName = myName,
+                            partnerName = partnerName,
+                        )
+                        HomeScreen.TRUTH_OR_DARE -> TruthOrDareScreen(
+                            onBack = { navigate(HomeScreen.HUB) },
+                            myName = myName,
+                            partnerName = partnerName,
+                        )
+                        HomeScreen.WORD_GAME -> WordConnectionScreen(
+                            onBack = { navigate(HomeScreen.HUB) },
+                            myName = myName,
+                            partnerName = partnerName,
                         )
                         HomeScreen.SETTINGS -> SettingsScreen(
                             onBack = { navigate(HomeScreen.CHAT) },

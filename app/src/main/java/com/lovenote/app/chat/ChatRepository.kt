@@ -198,6 +198,15 @@ class ChatRepository(
             }
         }.fallbackTo(null)
 
+    fun myProfile(): Flow<PartnerProfile?> =
+        db.collection("users").document(myUid).snapshots().map { doc ->
+            PartnerProfile(
+                name = doc.getString("displayName").orEmpty(),
+                photoUrl = doc.getString("photoUrl").orEmpty(),
+                lastActiveMillis = doc.getTimestamp("lastActiveAt")?.toDate()?.time,
+            )
+        }.fallbackTo(null)
+
     /** Called periodically while the app is open so the partner sees presence. */
     suspend fun heartbeatPresence() {
         db.collection("users").document(myUid)
