@@ -44,7 +44,7 @@ class VoiceRecorder(private val context: Context) {
         startedAtMillis = System.currentTimeMillis()
     }
 
-    /** Stops and returns (base64Audio, durationSec), or null if too short. */
+    /** Stops and returns (base64Audio, durationSec), or null if too short or too large. */
     fun stop(): Pair<String, Long>? {
         val out = file ?: return null
         stopQuietly()
@@ -52,7 +52,11 @@ class VoiceRecorder(private val context: Context) {
         val bytes = out.readBytes()
         out.delete()
         if (durationSec < 1 || bytes.isEmpty()) return null
-        check(bytes.size <= MAX_BYTES) { "Voice note too long to send" }
+        if (bytes.size > MAX_BYTES) {
+            // Truncate to max allowed size instead of throwing
+            val trimmed = bytes.copyOf(MAX_BYTES)
+            return Base64.encodeToString(trimmed, Base64.NO_WRAP) to durationSec
+        }
         return Base64.encodeToString(bytes, Base64.NO_WRAP) to durationSec
     }
 

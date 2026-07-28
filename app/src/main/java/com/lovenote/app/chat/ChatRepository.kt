@@ -128,9 +128,27 @@ class ChatRepository(
             mapOf(
                 "senderUid" to myUid,
                 "type" to "game_invite",
-                "body" to "🎮 Let's play $label!",
+                "body" to "\uD83C\uDFAE Let's play $label!",
                 "gameId" to gameId,
                 "gameType" to gameType,
+                "sentAt" to FieldValue.serverTimestamp(),
+            ),
+        ).await()
+    }
+
+    suspend fun sendGameEnd(gameId: String, gameType: String, result: String) {
+        val label = when (gameType) {
+            "tictactoe" -> "Tic Tac Toe"
+            "ludo" -> "Ludo"
+            "truthdare" -> "Truth or Dare"
+            "wordgame" -> "Word Game"
+            else -> "Game"
+        }
+        messagesRef.add(
+            mapOf(
+                "senderUid" to myUid,
+                "type" to "text",
+                "body" to "\uD83C\uDFAE $label ended! $result",
                 "sentAt" to FieldValue.serverTimestamp(),
             ),
         ).await()

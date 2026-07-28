@@ -753,6 +753,7 @@ fun UsScreen(
     }
     if (showCaptionDialog && pendingAudio != null) {
         var captionText by remember { mutableStateOf("") }
+        var sendingError by remember { mutableStateOf<String?>(null) }
         AlertDialog(
             onDismissRequest = {
                 showCaptionDialog = false
@@ -760,21 +761,33 @@ fun UsScreen(
             },
             title = { Text("Add a caption (optional)") },
             text = {
-                OutlinedTextField(
-                    value = captionText,
-                    onValueChange = { captionText = it },
-                    label = { Text("What's this letter about?") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                Column {
+                    OutlinedTextField(
+                        value = captionText,
+                        onValueChange = { captionText = it },
+                        label = { Text("What's this letter about?") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    sendingError?.let {
+                        Spacer(Modifier.height(8.dp))
+                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
             },
             confirmButton = {
                 TextButton(onClick = {
                     val audio = pendingAudio!!
                     showCaptionDialog = false
                     pendingAudio = null
+                    sendingError = null
                     scope.launch {
-                        runCatching { repository.sendVoiceLetter(audio.first, audio.second, captionText) }
+                        val result = runCatching { repository.sendVoiceLetter(audio.first, audio.second, captionText) }
+                        if (result.isFailure) {
+                            sendingError = "Failed to send: ${result.exceptionOrNull()?.message ?: "Unknown error"}"
+                            showCaptionDialog = true
+                            pendingAudio = audio
+                        }
                     }
                 }) { Text("Send") }
             },

@@ -3,6 +3,13 @@ package com.lovenote.app.settings
 /** Release notes shown in the "What's new" dialog after each update. */
 object Changelog {
     private val NOTES = mapOf(
+        48L to listOf(
+            "🎮 Game launch flow — choose 'Send Invitation' (online) or 'Play Locally' (same device)",
+            "♟️ Local play for Tic-Tac-Toe, Truth or Dare, Word Connection — no internet needed",
+            "💬 Chat messages now unlimited — no character limit",
+            "📞 Video call overlay redesigned — WhatsApp-style with PiP",
+            "🎤 Voice recording truncates instead of crashing on oversized audio",
+        ),
         47L to listOf(
             "💬 Chat polish — pulsing red dot + waveform bars while recording",
             "🎨 Send button animates between mic/send/stop states",

@@ -103,7 +103,6 @@ import kotlinx.coroutines.launch
 
 private const val TYPING_VISIBLE_MILLIS = 6_000L
 private const val TYPING_HEARTBEAT_MILLIS = 2_000L
-private const val MAX_MESSAGE_LENGTH = 1000
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -820,11 +819,7 @@ fun ChatScreen(
                                     TextField(
                                         value = input,
                                         onValueChange = {
-                                            if (it.length > MAX_MESSAGE_LENGTH) {
-                                                input = it.substring(0, MAX_MESSAGE_LENGTH)
-                                            } else {
-                                                input = it
-                                            }
+                                            input = it
                                             val now = System.currentTimeMillis()
                                             if (it.isNotBlank() &&
                                                 now - lastHeartbeat > TYPING_HEARTBEAT_MILLIS
@@ -879,18 +874,6 @@ fun ChatScreen(
                                             modifier = Modifier.size(20.dp),
                                         )
                                     }
-                                }
-                                if (input.isNotEmpty()) {
-                                    Text(
-                                        text = "${input.length}/$MAX_MESSAGE_LENGTH",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = if (input.length >= MAX_MESSAGE_LENGTH) {
-                                            MaterialTheme.colorScheme.error
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                        },
-                                        modifier = Modifier.align(Alignment.End)
-                                    )
                                 }
                             }
                     }

@@ -162,40 +162,13 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
     var activeGameType by remember { mutableStateOf("") }
 
     fun startGame(gameType: String) {
-        homeScope.launch {
-            try {
-                val board = when (gameType) {
-                    "tictactoe" -> mapOf(
-                        "cells" to List(9) { "" },
-                        "currentPlayer" to "X",
-                    )
-                    "ludo" -> mapOf(
-                        "p1Tokens" to List(4) { -1 },
-                        "p2Tokens" to List(4) { -1 },
-                        "currentTurn" to "p1",
-                        "diceValue" to 1,
-                    )
-                    "truthdare" -> mapOf(
-                        "currentTurn" to "p1",
-                        "spins" to 0,
-                    )
-                    "wordgame" -> mapOf(
-                        "phase" to "p1",
-                        "currentRound" to 0,
-                    )
-                    else -> emptyMap()
-                }
-                val gameId = gameRepository.createGame(gameType, myName, board)
-                chatRepository.sendGameInvite(gameId, gameType)
-                activeGameId = gameId
-                activeGameType = gameType
-                when (gameType) {
-                    "tictactoe" -> navigate(HomeScreen.TIC_TAC_TOE)
-                    "ludo" -> navigate(HomeScreen.LUDO)
-                    "truthdare" -> navigate(HomeScreen.TRUTH_OR_DARE)
-                    "wordgame" -> navigate(HomeScreen.WORD_GAME)
-                }
-            } catch (_: Exception) {}
+        activeGameId = null
+        activeGameType = gameType
+        when (gameType) {
+            "tictactoe" -> navigate(HomeScreen.TIC_TAC_TOE)
+            "ludo" -> navigate(HomeScreen.LUDO)
+            "truthdare" -> navigate(HomeScreen.TRUTH_OR_DARE)
+            "wordgame" -> navigate(HomeScreen.WORD_GAME)
         }
     }
 
@@ -284,6 +257,17 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                             gameId = activeGameId,
                             gameRepository = gameRepository,
                             myUid = chatRepository.myUid,
+                            chatRepository = chatRepository,
+                            onInvitePartner = {
+                                val board = mapOf(
+                                    "cells" to List(9) { "" },
+                                    "currentPlayer" to "X",
+                                )
+                                val gid = gameRepository.createGame("tictactoe", myName, board)
+                                chatRepository.sendGameInvite(gid, "tictactoe")
+                                activeGameId = gid
+                                activeGameType = "tictactoe"
+                            },
                         )
                         HomeScreen.LUDO -> LudoScreen(
                             onBack = { navigate(HomeScreen.HUB) },
@@ -300,6 +284,17 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                             gameId = activeGameId,
                             gameRepository = gameRepository,
                             myUid = chatRepository.myUid,
+                            chatRepository = chatRepository,
+                            onInvitePartner = {
+                                val board = mapOf(
+                                    "currentTurn" to "p1",
+                                    "spins" to 0,
+                                )
+                                val gid = gameRepository.createGame("truthdare", myName, board)
+                                chatRepository.sendGameInvite(gid, "truthdare")
+                                activeGameId = gid
+                                activeGameType = "truthdare"
+                            },
                         )
                         HomeScreen.WORD_GAME -> WordConnectionScreen(
                             onBack = { navigate(HomeScreen.HUB) },
@@ -308,6 +303,17 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                             gameId = activeGameId,
                             gameRepository = gameRepository,
                             myUid = chatRepository.myUid,
+                            onInvitePartner = {
+                                val board = mapOf(
+                                    "phase" to "p1",
+                                    "currentRound" to 0,
+                                )
+                                val gid = gameRepository.createGame("wordgame", myName, board)
+                                chatRepository.sendGameInvite(gid, "wordgame")
+                                activeGameId = gid
+                                activeGameType = "wordgame"
+                            },
+                            chatRepository = chatRepository,
                         )
                         HomeScreen.SETTINGS -> SettingsScreen(
                             onBack = { navigate(HomeScreen.CHAT) },
