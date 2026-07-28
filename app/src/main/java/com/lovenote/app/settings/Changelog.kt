@@ -3,6 +3,10 @@ package com.lovenote.app.settings
 /** Release notes shown in the "What's new" dialog after each update. */
 object Changelog {
     private val NOTES = mapOf(
+        45L to listOf(
+            "🔧 Countdown now ticks in real-time",
+            "🧹 Code cleanups — removed dead code, tighter imports",
+        ),
         44L to listOf(
             "🎨 Shared Color Theme — pick a couple color together (Rose, Lavender, Ocean, Mint, Amber, Coral)",
         ),

@@ -51,12 +51,6 @@ data class VoiceLetter(
     val createdAtMillis: Long,
 )
 
-data class QuestionCard(
-    val id: String,
-    val text: String,
-    val category: String,
-)
-
 class UsRepository(
     private val coupleId: String,
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
@@ -426,8 +420,6 @@ class UsRepository(
         "What's a skill you'd love to learn together?",
         "What makes our relationship unique?",
     )
-
-    private val _rouletteIndex = mutableMapOf<String, Int>()
 
     suspend fun nextRouletteQuestion(): String? {
         val snapshot = coupleRef.collection("roulette").document("state").get().await()

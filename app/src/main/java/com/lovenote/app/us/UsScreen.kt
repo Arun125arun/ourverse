@@ -39,7 +39,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
@@ -54,14 +53,8 @@ import androidx.compose.runtime.setValue
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -115,13 +108,19 @@ fun UsScreen(
     var playingVoiceId by remember { mutableStateOf<String?>(null) }
     val rouletteState by repository.rouletteState().collectAsState(initial = emptyMap())
     val countdown by repository.countdownEvent().collectAsState(initial = null)
+    var countdownTick by remember { mutableIntStateOf(0) }
+    LaunchedEffect(countdown?.targetMillis) {
+        while (countdown != null && countdown!!.targetMillis > System.currentTimeMillis()) {
+            countdownTick++
+            delay(60_000L)
+        }
+    }
     var showRouletteAnswer by remember { mutableStateOf(false) }
     var rouletteQuestion by remember { mutableStateOf<String?>(null) }
     var rouletteAnswer by remember { mutableStateOf("") }
     var showCountdownPicker by remember { mutableStateOf(false) }
     var countdownTitle by remember { mutableStateOf("") }
     val coupleColorName by repository.coupleColorName().collectAsState(initial = null)
-    var showColorPicker by remember { mutableStateOf(false) }
     val micPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -366,12 +365,6 @@ fun UsScreen(
                     }
                 }) {
                     if (recording) {
-                        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-                        val pulseScale by infiniteTransition.animateFloat(
-                            initialValue = 1f, targetValue = 1.3f,
-                            animationSpec = infiniteRepeatable(tween(500), RepeatMode.Reverse),
-                            label = "pulse",
-                        )
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 Icons.Filled.Delete,
@@ -554,6 +547,7 @@ fun UsScreen(
                 }
             }
             countdown?.let { cd ->
+                countdownTick // read to trigger recomposition every minute
                 val remainingMs = cd.targetMillis - System.currentTimeMillis()
                 if (remainingMs > 0) {
                     val days = remainingMs / (1000L * 60 * 60 * 24)
