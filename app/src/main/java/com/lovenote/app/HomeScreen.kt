@@ -276,6 +276,22 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                             gameId = activeGameId,
                             gameRepository = gameRepository,
                             myUid = chatRepository.myUid,
+                            chatRepository = chatRepository,
+                            onInvitePartner = {
+                                val board = mapOf(
+                                    "p1Tokens" to List(4) { mapOf("place" to 0, "tp" to -1, "hs" to -1) },
+                                    "p2Tokens" to List(4) { mapOf("place" to 0, "tp" to -1, "hs" to -1) },
+                                    "turn" to 1,
+                                    "diceValue" to 1,
+                                    "phase" to "roll",
+                                    "p1Wins" to 0,
+                                    "p2Wins" to 0,
+                                )
+                                val gid = gameRepository.createGame("ludo", myName, board)
+                                chatRepository.sendGameInvite(gid, "ludo")
+                                activeGameId = gid
+                                activeGameType = "ludo"
+                            },
                         )
                         HomeScreen.TRUTH_OR_DARE -> TruthOrDareScreen(
                             onBack = { navigate(HomeScreen.HUB) },

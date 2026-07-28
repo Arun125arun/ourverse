@@ -99,16 +99,6 @@ private fun cellValueFromRaw(raw: Any?): CellValue = when (raw) {
     else -> CellValue.Empty
 }
 
-private fun checkWinner(board: List<CellValue>): Pair<PlayerInfo?, List<Int>?> {
-    for (line in WIN_LINES) {
-        val (a, b, c) = line
-        if (board[a] != CellValue.Empty && board[a] == board[b] && board[b] == board[c]) {
-            return null to line
-        }
-    }
-    return null to null
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TicTacToeScreen(
@@ -449,9 +439,11 @@ fun TicTacToeScreen(
                 if (isLocal) {
                     val localPlayer = if (currentPiece == CellValue.X) player1 else player2
                     TurnIndicator(player = localPlayer, isGameOver = gameOver)
-                } else {
-                    val currentPlayer = if (board.count { it != CellValue.Empty } % 2 == 0) player1 else player2
+                } else if (isOnline && session != null) {
+                    val currentPlayer = if (session.currentTurn == session.p1Uid) player1 else player2
                     TurnIndicator(player = currentPlayer, isGameOver = gameOver)
+                } else {
+                    TurnIndicator(player = player1, isGameOver = gameOver)
                 }
                 Spacer(Modifier.height(24.dp))
 
@@ -465,16 +457,14 @@ fun TicTacToeScreen(
                 Spacer(Modifier.weight(1f))
 
                 if (isLocal && !gameOver) {
+                    val nextPlayer = if (currentPiece == CellValue.X) player1 else player2
                     Surface(
-                        onClick = {
-                            currentPiece = if (currentPiece == CellValue.X) CellValue.O else CellValue.X
-                        },
                         shape = RoundedCornerShape(12.dp),
                         color = MaterialTheme.colorScheme.secondaryContainer,
                         modifier = Modifier.padding(bottom = 8.dp),
                     ) {
                         Text(
-                            text = "Pass device to ${if (currentPiece == CellValue.X) "Player 2" else "Player 1"} \u2192",
+                            text = "Pass device to ${nextPlayer.name} \u2192",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSecondaryContainer,

@@ -42,12 +42,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -71,10 +74,13 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lovenote.app.chat.ChatRepository
 import com.lovenote.app.games.GameRepository
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlin.math.cos
 import kotlin.math.sin
@@ -185,6 +191,10 @@ private data class PlayerData(
     var wins: Int = 0,
 )
 
+// ─── Game mode ───────────────────────────────────────────────────────────────
+
+private enum class GameMode { None, Local, Online }
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -196,7 +206,53 @@ fun LudoScreen(
     gameId: String? = null,
     gameRepository: GameRepository? = null,
     myUid: String = "",
+    chatRepository: ChatRepository? = null,
+    onInvitePartner: (suspend () -> Unit)? = null,
 ) {
+    val scope = rememberCoroutineScope()
+    val repo = gameRepository
+    val gid = gameId
+
+    var gameMode by remember { mutableStateOf(GameMode.None) }
+    var isSendingInvite by remember { mutableStateOf(false) }
+
+    val isOnline = gameMode == GameMode.Online && repo != null && gid != null
+    val isLocal = gameMode == GameMode.Local
+
+    if (gameId == null && gameMode == GameMode.None) {
+        LudoModeChoiceDialog(
+            isSending = isSendingInvite,
+            onSendInvitation = {
+                isSendingInvite = true
+                scope.launch {
+                    runCatching { onInvitePartner?.invoke() }
+                    isSendingInvite = false
+                }
+            },
+            onPlayLocally = { gameMode = GameMode.Local },
+            onDismiss = onBack,
+        )
+    }
+
+    if (gameId != null && gameMode == GameMode.None) {
+        gameMode = GameMode.Online
+    }
+
+    val firestoreSession by remember(gid, repo) {
+        if (repo != null && gid != null) repo.observeGame(gid)
+        else flowOf(null)
+    }.collectAsState(initial = null)
+    val session = firestoreSession
+
+    val myPlayerName = if (isOnline && session != null) {
+        if (session.p1Uid == myUid) session.p1Name else session.p2Name
+    } else myName
+    val partnerPlayerName = if (isOnline && session != null) {
+        if (session.p1Uid == myUid) session.p2Name else session.p1Name
+    } else partnerName
+
+    var waitingForPartner by remember { mutableStateOf(isOnline && session?.p2Uid.isNullOrEmpty()) }
+
     val p1 = remember { PlayerData(myName, ClassicRed, ClassicRedLight, ClassicRedDark, baseSlots = RED_BASE, entry = RED_ENTRY, homeCol = RED_HOME) }
     val p2 = remember { PlayerData(partnerName, ClassicGreen, ClassicGreenLight, ClassicGreenDark, baseSlots = GREEN_BASE, entry = GREEN_ENTRY, homeCol = GREEN_HOME) }
 
@@ -206,13 +262,114 @@ fun LudoScreen(
     var selectedToken by remember { mutableIntStateOf(-1) }
     var winner by remember { mutableStateOf<PlayerData?>(null) }
     val diceHistory = remember { mutableStateListOf<Int>() }
-    val scope = rememberCoroutineScope()
     val animProgress = remember { Animatable(0f) }
     var isRolling by remember { mutableStateOf(false) }
     var diceDisplay by remember { mutableIntStateOf(1) }
+    var gameEndSent by remember { mutableStateOf(false) }
 
     fun current() = if (turn == 1) p1 else p2
     fun allFinished(p: PlayerData) = p.tokens.count { it.place == TokenPlace.FINISHED } == 4
+
+    fun syncToFirestore() {
+        if (!isOnline || repo == null || gid == null) return
+        val nextTurn = when {
+            phase == "gameover" -> ""
+            else -> if (turn == 1) session?.p1Uid.orEmpty() else session?.p2Uid.orEmpty()
+        }
+        val winnerStr = when {
+            winner != null && winner == p1 -> session?.p1Uid.orEmpty()
+            winner != null && winner == p2 -> session?.p2Uid.orEmpty()
+            else -> ""
+        }
+        scope.launch {
+            runCatching {
+                val serializeTokens = { tokens: MutableList<Token> ->
+                    tokens.map { t -> mapOf("place" to t.place.ordinal, "tp" to t.trackPos, "hs" to t.homeStep) }
+                }
+                repo.makeMove(
+                    gid,
+                    mapOf(
+                        "p1Tokens" to serializeTokens(p1.tokens),
+                        "p2Tokens" to serializeTokens(p2.tokens),
+                        "turn" to turn,
+                        "diceValue" to diceValue,
+                        "phase" to phase,
+                        "p1Wins" to p1.wins,
+                        "p2Wins" to p2.wins,
+                    ),
+                    nextTurn,
+                    mapOf("action" to "move", "by" to myUid),
+                    winner = winnerStr,
+                )
+            }
+        }
+    }
+
+    LaunchedEffect(session, isOnline) {
+        if (!isOnline || session == null) return@LaunchedEffect
+        if (session.p2Uid.isEmpty() && session.p1Uid != myUid && repo != null) {
+            repo.joinGame(gid!!, myName)
+        }
+        waitingForPartner = session.p2Uid.isNullOrEmpty()
+    }
+
+    LaunchedEffect(session) {
+        if (session == null || !isOnline) return@LaunchedEffect
+        val b = session.board
+        val rp1 = b["p1Tokens"] as? List<*>
+        val rp2 = b["p2Tokens"] as? List<*>
+        if (rp1 != null && rp1.size == 4) {
+            for (i in 0..3) {
+                val m = rp1[i] as? Map<*, *> ?: continue
+                val placeOrd = (m["place"] as? Number)?.toInt() ?: 0
+                p1.tokens[i] = Token(
+                    place = TokenPlace.entries[placeOrd.coerceIn(0, 3)],
+                    trackPos = (m["tp"] as? Number)?.toInt() ?: -1,
+                    homeStep = (m["hs"] as? Number)?.toInt() ?: -1,
+                )
+            }
+        }
+        if (rp2 != null && rp2.size == 4) {
+            for (i in 0..3) {
+                val m = rp2[i] as? Map<*, *> ?: continue
+                val placeOrd = (m["place"] as? Number)?.toInt() ?: 0
+                p2.tokens[i] = Token(
+                    place = TokenPlace.entries[placeOrd.coerceIn(0, 3)],
+                    trackPos = (m["tp"] as? Number)?.toInt() ?: -1,
+                    homeStep = (m["hs"] as? Number)?.toInt() ?: -1,
+                )
+            }
+        }
+        val remoteTurn = (b["turn"] as? Number)?.toInt() ?: 1
+        val remotePhase = b["phase"] as? String ?: "roll"
+        if (remoteTurn != turn || remotePhase != phase) {
+            turn = remoteTurn
+            phase = remotePhase
+            diceValue = (b["diceValue"] as? Number)?.toInt() ?: 1
+            diceDisplay = diceValue
+        }
+        p1.wins = (b["p1Wins"] as? Number)?.toInt() ?: 0
+        p2.wins = (b["p2Wins"] as? Number)?.toInt() ?: 0
+
+        val remoteWinner = session.winner
+        if (remoteWinner.isNotEmpty() && winner == null) {
+            val wp = if (remoteWinner == session.p1Uid) p1 else p2
+            winner = wp
+            phase = "gameover"
+        }
+        if (allFinished(p1) && winner == null) { winner = p1; phase = "gameover" }
+        if (allFinished(p2) && winner == null) { winner = p2; phase = "gameover" }
+    }
+
+    LaunchedEffect(phase, isOnline) {
+        if (phase == "gameover" && !gameEndSent && isOnline && chatRepository != null && gid != null) {
+            gameEndSent = true
+            val result = if (winner != null) "${winner!!.name} wins! \uD83C\uDFC6" else "Game over"
+            scope.launch {
+                runCatching { chatRepository.sendGameEnd(gid, "ludo", result) }
+            }
+        }
+    }
 
     fun availableMoves(p: PlayerData, dice: Int): List<Int> {
         val moves = mutableListOf<Int>()
@@ -280,10 +437,12 @@ fun LudoScreen(
         if (allFinished(p)) { p.wins++; winner = p; phase = "gameover" }
         else if (diceValue == 6) phase = "roll"
         else { turn = if (turn == 1) 2 else 1; phase = "roll" }
+        if (isOnline) syncToFirestore()
     }
 
     fun doRollDice() {
         if (phase != "roll" || isRolling) return
+        if (isOnline && session != null && !session.isMyTurn(myUid)) return
         isRolling = true
         diceHistory.add(0) // placeholder
         scope.launch {
@@ -305,6 +464,7 @@ fun LudoScreen(
             if (moves.isEmpty()) {
                 turn = if (turn == 1) 2 else 1
                 phase = "roll"
+                if (isOnline) syncToFirestore()
             } else if (moves.size == 1) {
                 selectedToken = moves[0]
                 phase = "animate"
@@ -331,13 +491,28 @@ fun LudoScreen(
         p1.tokens.forEachIndexed { i, _ -> p1.tokens[i] = Token() }
         p2.tokens.forEachIndexed { i, _ -> p2.tokens[i] = Token() }
         turn = 1; diceValue = 1; phase = "roll"; selectedToken = -1; winner = null
-        diceHistory.clear(); isRolling = false; diceDisplay = 1
+        diceHistory.clear(); isRolling = false; diceDisplay = 1; gameEndSent = false
+        if (isOnline) syncToFirestore()
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Ludo", fontWeight = FontWeight.Bold) },
+                title = {
+                    Column {
+                        Text("Ludo")
+                        if (gameMode != GameMode.None) {
+                            Text(
+                                text = if (isOnline) {
+                                    if (waitingForPartner) "Waiting for partner..."
+                                    else "Online \u2022 ${if (turn == 1) myPlayerName else partnerPlayerName}'s turn"
+                                } else "Local \u2022 $myName vs $partnerName",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            )
+                        }
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -346,6 +521,16 @@ fun LudoScreen(
             )
         },
     ) { padding ->
+        if (gameMode == GameMode.None) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator()
+            }
+        } else {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -353,13 +538,38 @@ fun LudoScreen(
                 .padding(horizontal = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            // Waiting for partner card (online)
+            if (isOnline && waitingForPartner) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                    ),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            "Share the game link or have your partner tap the invite in chat.",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+
             // Player info pills
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                PlayerPill(name = p1.name, color = p1.color, wins = p1.wins, isTurn = turn == 1 && phase != "gameover")
-                PlayerPill(name = p2.name, color = p2.color, wins = p2.wins, isTurn = turn == 2 && phase != "gameover")
+                PlayerPill(name = if (isOnline) myPlayerName else p1.name, color = p1.color, wins = p1.wins, isTurn = turn == 1 && phase != "gameover")
+                PlayerPill(name = if (isOnline) partnerPlayerName else p2.name, color = p2.color, wins = p2.wins, isTurn = turn == 2 && phase != "gameover")
             }
 
             Spacer(Modifier.height(6.dp))
@@ -450,6 +660,7 @@ fun LudoScreen(
                 }
             }
             Spacer(Modifier.height(12.dp))
+        }
         }
     }
 
@@ -832,3 +1043,87 @@ private fun LudoBoardCanvas(
 }
 
 private fun Offset.toOffset() = this
+
+// ─── Mode Choice Dialog ─────────────────────────────────────────────────────
+
+@Composable
+private fun LudoModeChoiceDialog(
+    isSending: Boolean = false,
+    onSendInvitation: () -> Unit,
+    onPlayLocally: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = if (isSending) {{}} else onDismiss,
+        title = {
+            Text(
+                "How to play?",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                LudoModeOption(
+                    title = "Send Invitation",
+                    subtitle = if (isSending) "Creating game..." else "Play with your partner online",
+                    onClick = if (isSending) {{}} else onSendInvitation,
+                    trailing = if (isSending) {
+                        { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp) }
+                    } else null,
+                )
+                LudoModeOption(
+                    title = "Play Locally",
+                    subtitle = "Two players, same device",
+                    onClick = if (isSending) {{}} else onPlayLocally,
+                )
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            if (!isSending) {
+                TextButton(onClick = onDismiss) { Text("Cancel") }
+            }
+        },
+    )
+}
+
+@Composable
+private fun LudoModeOption(
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+    trailing: @Composable (() -> Unit)? = null,
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (trailing != null) {
+                trailing()
+            }
+        }
+    }
+}
