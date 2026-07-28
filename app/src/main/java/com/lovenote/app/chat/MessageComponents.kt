@@ -58,6 +58,12 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -175,8 +181,10 @@ internal fun MessageRow(
                     )
                 }
                 if (message.isVoice) {
+                    val voiceTextColor = if (mine) MaterialTheme.colorScheme.onPrimary
+                    else MaterialTheme.colorScheme.onPrimaryContainer
                     Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
@@ -186,22 +194,35 @@ internal fun MessageRow(
                                 rememberVectorPainter(Icons.Filled.PlayArrow)
                             },
                             contentDescription = if (playingVoice) "Pause" else "Play",
-                            tint = if (mine) {
-                                MaterialTheme.colorScheme.onPrimary
-                            } else {
-                                MaterialTheme.colorScheme.onPrimaryContainer
-                            },
-                            modifier = Modifier.size(26.dp),
+                            tint = voiceTextColor,
+                            modifier = Modifier.size(28.dp),
                         )
-                        Text(
-                            text = "  Voice note · ${message.durationSec ?: 0}s",
-                            color = if (mine) {
-                                MaterialTheme.colorScheme.onPrimary
-                            } else {
-                                MaterialTheme.colorScheme.onPrimaryContainer
-                            },
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
+                        Spacer(Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(1.5.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                val barSeeds = listOf(6f, 12f, 8f, 16f, 5f, 14f, 9f, 18f, 7f, 11f, 13f, 6f, 15f, 8f, 10f, 17f, 5f, 12f, 9f, 14f, 7f, 11f, 16f, 6f, 13f, 8f, 15f, 10f, 5f, 12f)
+                                barSeeds.forEach { h ->
+                                    Box(
+                                        modifier = Modifier
+                                            .width(2.dp)
+                                            .height(h.dp)
+                                            .background(
+                                                voiceTextColor.copy(alpha = 0.4f),
+                                                RoundedCornerShape(1.dp),
+                                            ),
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(3.dp))
+                            Text(
+                                text = "${message.durationSec ?: 0}s",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = voiceTextColor.copy(alpha = 0.6f),
+                            )
+                        }
                     }
                 } else if (message.isPhoto && message.once) {
                     Row(
@@ -413,13 +434,16 @@ internal fun MessageRow(
         val caption = listOfNotNull(
             "edited".takeIf { message.edited },
             timeLabel(message.sentAt).takeIf { showCaption },
-            "Seen ✓✓".takeIf { showSeen },
-        ).joinToString(" · ")
+            "Seen \u2713\u2713".takeIf { showSeen },
+        ).joinToString(" \u00B7 ")
         if (caption.isNotEmpty()) {
             Text(
                 text = caption,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.secondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier
+                    .padding(horizontal = 4.dp, vertical = 1.dp)
+                    .then(if (mine) Modifier.align(Alignment.End) else Modifier),
             )
         }
     }

@@ -3,6 +3,15 @@ package com.lovenote.app.settings
 /** Release notes shown in the "What's new" dialog after each update. */
 object Changelog {
     private val NOTES = mapOf(
+        47L to listOf(
+            "💬 Chat polish — pulsing red dot + waveform bars while recording",
+            "🎨 Send button animates between mic/send/stop states",
+            "🟢 \"Active now\" indicator shows in green",
+            "🎵 Voice notes display with waveform bar visualization",
+            "📝 Cleaner message input with smaller camera/gallery icons",
+            "🫧 Empty chat state with subtitle and larger heart",
+            "👁 Time captions aligned and dimmed for subtlety",
+        ),
         46L to listOf(
             "✨ Animated color picker dots with spring physics",
             "🎤 Voice recording with pulsing dot + waveform bars",

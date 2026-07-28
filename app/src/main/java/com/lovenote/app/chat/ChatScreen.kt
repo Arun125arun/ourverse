@@ -5,10 +5,14 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Base64
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -298,9 +302,9 @@ fun ChatScreen(
                                         text = it,
                                         style = MaterialTheme.typography.labelMedium,
                                         color = if (it == "Active now") {
-                                            MaterialTheme.colorScheme.primary
+                                            Color(0xFF4CAF50)
                                         } else {
-                                            MaterialTheme.colorScheme.secondary
+                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
                                         },
                                     )
                                 }
@@ -443,26 +447,37 @@ fun ChatScreen(
                     val beat by rememberInfiniteTransition(label = "empty")
                         .animateFloat(
                             initialValue = 1f,
-                            targetValue = 1.25f,
+                            targetValue = 1.2f,
                             animationSpec = infiniteRepeatable(
-                                animation = tween(800),
+                                animation = tween(900),
                                 repeatMode = RepeatMode.Reverse,
                             ),
                             label = "beat",
                         )
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(horizontal = 32.dp),
+                    ) {
                         Text(
-                            text = "\u2764",
-                            fontSize = 42.sp,
+                            text = "\u2764\uFE0F",
+                            fontSize = 48.sp,
                             modifier = Modifier
                                 .scale(beat)
                                 .semantics { contentDescription = "Heart" },
                         )
-                        Spacer(Modifier.height(6.dp))
+                        Spacer(Modifier.height(12.dp))
                         Text(
-                            text = "Say hi to your partner ❤",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.secondary,
+                            text = "Say hi to your partner",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "Send a message, photo, or voice note to start your conversation.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                         )
                     }
                 }
@@ -729,38 +744,82 @@ fun ChatScreen(
                     modifier = Modifier.weight(1f),
                 ) {
                     if (recording) {
+                        val infiniteTransition = rememberInfiniteTransition(label = "chatRec")
+                        val pulse by infiniteTransition.animateFloat(
+                            initialValue = 0.7f, targetValue = 1f,
+                            animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
+                            label = "pulse",
+                        )
                         Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .scale(pulse)
+                                    .background(MaterialTheme.colorScheme.error, CircleShape),
+                            )
+                            Spacer(Modifier.width(8.dp))
                             Text(
-                                text = "🔴 Recording… ${recordSeconds}s",
-                                style = MaterialTheme.typography.bodyLarge,
+                                text = "Recording\u2026 ${recordSeconds}s",
+                                style = MaterialTheme.typography.bodyMedium,
                                 color = if (VoiceRecorder.MAX_SECONDS - recordSeconds <= 5) {
                                     MaterialTheme.colorScheme.error
                                 } else {
-                                    MaterialTheme.colorScheme.onPrimary
+                                    MaterialTheme.colorScheme.onSurface
                                 },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .padding(start = 10.dp),
+                                modifier = Modifier.weight(1f),
                             )
+                            // Waveform bars
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(end = 4.dp),
+                            ) {
+                                repeat(4) { i ->
+                                    val barHeight by infiniteTransition.animateFloat(
+                                        initialValue = 4f,
+                                        targetValue = 14f + (i * 2),
+                                        animationSpec = infiniteRepeatable(
+                                            tween(250 + i * 80),
+                                            RepeatMode.Reverse,
+                                        ),
+                                        label = "bar$i",
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .width(2.5.dp)
+                                            .height(barHeight.dp)
+                                            .background(
+                                                MaterialTheme.colorScheme.error.copy(alpha = 0.5f),
+                                                RoundedCornerShape(2.dp),
+                                            ),
+                                    )
+                                }
+                            }
                             IconButton(onClick = {
                                 recorder.cancel()
                                 recording = false
-                                // Haptic feedback for recording cancellation
                                 Notifier.vibrate(context)
                             }) {
-                                Icon(Icons.Filled.Delete, contentDescription = "Cancel recording")
+                                Icon(
+                                    Icons.Filled.Close,
+                                    contentDescription = "Cancel recording",
+                                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(20.dp),
+                                )
                             }
                         }
                     } else {
                         Column(verticalArrangement = Arrangement.Center) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(start = 4.dp),
+                                ) {
                                     TextField(
                                         value = input,
                                         onValueChange = {
-                                            // Truncate if exceeds max length
                                             if (it.length > MAX_MESSAGE_LENGTH) {
                                                 input = it.substring(0, MAX_MESSAGE_LENGTH)
                                             } else {
@@ -774,35 +833,50 @@ fun ChatScreen(
                                                 scope.launch { runCatching { repository.setTyping() } }
                                             }
                                         },
-                                        placeholder = { Text("Message") },
+                                        placeholder = {
+                                            Text(
+                                                "Message",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                            )
+                                        },
                                         modifier = Modifier.weight(1f),
                                         maxLines = 4,
+                                        textStyle = MaterialTheme.typography.bodyMedium,
                                         colors = TextFieldDefaults.colors(
                                             focusedContainerColor = Color.Transparent,
                                             unfocusedContainerColor = Color.Transparent,
                                             focusedIndicatorColor = Color.Transparent,
                                             unfocusedIndicatorColor = Color.Transparent,
                                             disabledIndicatorColor = Color.Transparent,
+                                            cursorColor = MaterialTheme.colorScheme.primary,
                                         ),
                                     )
-                                    IconButton(onClick = { launchCamera() }) {
+                                    IconButton(
+                                        onClick = { launchCamera() },
+                                        modifier = Modifier.size(36.dp),
+                                    ) {
                                         Icon(
                                             painter = painterResource(R.drawable.ic_camera),
                                             contentDescription = "Camera",
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
+                                            modifier = Modifier.size(20.dp),
                                         )
                                     }
-                                    IconButton(onClick = {
-                                        photoPicker.launch(
-                                            PickVisualMediaRequest(
-                                                ActivityResultContracts.PickVisualMedia.ImageOnly,
-                                            ),
-                                        )
-                                    }) {
+                                    IconButton(
+                                        onClick = {
+                                            photoPicker.launch(
+                                                PickVisualMediaRequest(
+                                                    ActivityResultContracts.PickVisualMedia.ImageOnly,
+                                                ),
+                                            )
+                                        },
+                                        modifier = Modifier.size(36.dp),
+                                    ) {
                                         Icon(
                                             painter = painterResource(R.drawable.ic_gallery),
                                             contentDescription = "Gallery",
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
+                                            modifier = Modifier.size(20.dp),
                                         )
                                     }
                                 }
@@ -822,9 +896,24 @@ fun ChatScreen(
                     }
                 }
                 Spacer(Modifier.width(8.dp))
+                val sendButtonColor by animateColorAsState(
+                    targetValue = when {
+                        recording -> MaterialTheme.colorScheme.error
+                        input.isNotBlank() -> MaterialTheme.colorScheme.primary
+                        else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)
+                    },
+                    animationSpec = tween(200),
+                    label = "btnColor",
+                )
+                val sendButtonScale by animateFloatAsState(
+                    targetValue = if (input.isNotBlank()) 1.05f else 1f,
+                    animationSpec = spring(dampingRatio = 0.5f, stiffness = 300f),
+                    label = "btnScale",
+                )
                 Surface(
                     modifier = Modifier
                         .size(52.dp)
+                        .scale(sendButtonScale)
                         .clickable {
                             when {
                                 recording -> stopAndSendVoice()
@@ -847,32 +936,35 @@ fun ChatScreen(
                             }
                         },
                     shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = sendButtonColor,
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                    when {
-                        recording -> {
-                            Icon(
-                                Icons.Filled.Close,
-                                contentDescription = "Stop recording",
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                            )
+                        when {
+                            recording -> {
+                                Icon(
+                                    Icons.Filled.Close,
+                                    contentDescription = "Stop recording",
+                                    tint = MaterialTheme.colorScheme.onError,
+                                    modifier = Modifier.size(22.dp),
+                                )
+                            }
+                            input.isNotBlank() -> {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.Send,
+                                    contentDescription = "Send",
+                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.size(22.dp),
+                                )
+                            }
+                            else -> {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_mic),
+                                    contentDescription = "Record a voice note",
+                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.size(22.dp),
+                                )
+                            }
                         }
-                        input.isNotBlank() -> {
-                            Icon(
-                                Icons.AutoMirrored.Filled.Send,
-                                contentDescription = "Send",
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                            )
-                        }
-                        else -> {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_mic),
-                                contentDescription = "Record a voice note",
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                            )
-                        }
-                    }
                     }
                 }
             }
