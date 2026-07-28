@@ -53,8 +53,17 @@ import androidx.compose.runtime.setValue
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -172,26 +181,30 @@ fun UsScreen(
                 Text(
                     text = "Our color:",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                 )
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(8.dp))
                 repository.colorOptions.forEach { opt ->
                     val selected = coupleColorName == opt.name
+                    val dotScale by animateFloatAsState(
+                        targetValue = if (selected) 1.25f else 1f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow,
+                        ),
+                        label = "dot",
+                    )
                     Box(
                         modifier = Modifier
                             .padding(horizontal = 3.dp)
-                            .size(24.dp)
-                            .background(
-                                Color(opt.primary),
-                                CircleShape,
+                            .scale(dotScale)
+                            .size(22.dp)
+                            .border(
+                                width = if (selected) 2.5.dp else 0.dp,
+                                color = if (selected) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f) else Color.Transparent,
+                                shape = CircleShape,
                             )
-                            .then(
-                                if (selected) Modifier.padding(2.dp).background(
-                                    Color.White,
-                                    CircleShape,
-                                )
-                                else Modifier
-                            )
+                            .background(Color(opt.primary), CircleShape)
                             .clickable {
                                 scope.launch { repository.setCoupleColor(opt.name) }
                             },
@@ -204,28 +217,35 @@ fun UsScreen(
             // Streak celebration
             val streak by repository.connectionStreak().collectAsState(initial = 0)
             if (streak >= 2) {
+                val streakScale by animateFloatAsState(
+                    targetValue = 1f,
+                    animationSpec = spring(dampingRatio = 0.4f, stiffness = 200f),
+                    label = "streakScale",
+                )
                 Card(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f),
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
                     ),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .scale(streakScale),
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier.padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
                             text = when {
-                                streak >= 365 -> "👑"
-                                streak >= 100 -> "🔥"
-                                streak >= 30 -> "✨"
-                                else -> "💫"
+                                streak >= 365 -> "\uD83D\uDC51"
+                                streak >= 100 -> "\uD83D\uDD25"
+                                streak >= 30 -> "\u2728"
+                                else -> "\uD83D\uDCAB"
                             },
-                            fontSize = 24.sp,
+                            fontSize = 32.sp,
                         )
-                        Spacer(Modifier.width(10.dp))
-                        Column {
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "$streak day streak!",
                                 style = MaterialTheme.typography.titleMedium,
@@ -241,26 +261,28 @@ fun UsScreen(
                                     else -> "Keep checking in daily to grow your streak."
                                 },
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f),
+                                color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.65f),
                             )
                         }
                     }
                 }
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(14.dp))
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
                     onClick = onMemoriesClick,
                     modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(14.dp),
                 ) {
-                    Text("📖 Our story")
+                    Text("\uD83D\uDCD6 Our story")
                 }
                 OutlinedButton(
                     onClick = onTodosClick,
                     modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(14.dp),
                 ) {
-                    Text("📋 To-dos")
+                    Text("\uD83D\uDCCB To-dos")
                 }
             }
 
@@ -281,18 +303,19 @@ fun UsScreen(
                 Card(
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
                     ),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("\uD83D\uDCF8", fontSize = 20.sp)
+                            Text("\uD83D\uDCF8", fontSize = 18.sp)
                             Spacer(Modifier.width(8.dp))
                             Text(
                                 text = "Memory Lane",
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.titleSmall,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                fontWeight = FontWeight.SemiBold,
                             )
                         }
                         Spacer(Modifier.height(8.dp))
@@ -300,13 +323,14 @@ fun UsScreen(
                             text = memory.title,
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            fontWeight = FontWeight.Medium,
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
                             text = java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault())
                                 .format(java.util.Date(memory.dateMillis)),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.55f),
                         )
                     }
                 }
@@ -388,37 +412,90 @@ fun UsScreen(
                 }
             }
             if (recording) {
+                val infiniteTransition = rememberInfiniteTransition(label = "rec")
+                val pulse by infiniteTransition.animateFloat(
+                    initialValue = 0.8f, targetValue = 1f,
+                    animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse),
+                    label = "pulse",
+                )
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier.padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(10.dp)
+                                .size(12.dp)
+                                .scale(pulse)
                                 .background(MaterialTheme.colorScheme.error, CircleShape),
                         )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = "Recording... ${recordSeconds}s",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                        )
+                        Spacer(Modifier.width(10.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Recording\u2026",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                            )
+                            Text(
+                                text = "${recordSeconds}s / ${VoiceRecorder.MAX_SECONDS}s",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.6f),
+                            )
+                        }
+                        // Mini waveform bars
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            repeat(5) { i ->
+                                val barHeight by infiniteTransition.animateFloat(
+                                    initialValue = 6f,
+                                    targetValue = 18f + (i * 3),
+                                    animationSpec = infiniteRepeatable(
+                                        tween(300 + i * 100),
+                                        RepeatMode.Reverse,
+                                    ),
+                                    label = "bar$i",
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .width(3.dp)
+                                        .height(barHeight.dp)
+                                        .background(
+                                            MaterialTheme.colorScheme.error.copy(alpha = 0.6f),
+                                            RoundedCornerShape(2.dp),
+                                        ),
+                                )
+                            }
+                        }
                     }
                 }
                 Spacer(Modifier.height(8.dp))
             }
             if (voiceLetters.isEmpty() && !recording) {
-                Text(
-                    text = "Record a voice letter to send love.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                    modifier = Modifier.padding(bottom = 8.dp),
-                )
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("\uD83C\uDF99\uFE0F", fontSize = 22.sp, modifier = Modifier.padding(end = 10.dp))
+                        Text(
+                            text = "Record a voice letter to send love.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
             }
             voiceLetters.forEach { letter ->
                 val isMine = letter.senderUid == repository.myUid
@@ -492,27 +569,51 @@ fun UsScreen(
                         showRouletteAnswer = true
                     }
                 }) {
-                    Text("\uD83C\uDFB2", fontSize = 24.sp)
+                    Text("\uD83C\uDFB2", fontSize = 26.sp)
                 }
             }
             val rouletteAnswers = (rouletteState["answers"] as? Map<*, *>).orEmpty()
             if (rouletteAnswers.isNotEmpty()) {
                 Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.45f),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Last answers:",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.5f),
+                        )
+                        Spacer(Modifier.height(6.dp))
                         rouletteAnswers.entries.forEach { (uid, value) ->
                             val entry = value as? Map<*, *> ?: return@forEach
-                            val qIdx = (entry["questionIndex"] as? Number)?.toInt() ?: 0
                             val ans = entry["answer"] as? String ?: ""
                             val isMine = uid == repository.myUid
                             val name = if (isMine) me?.name?.substringBefore(' ') ?: "Me" else partner?.name?.substringBefore(' ') ?: "Partner"
-                            Text(
-                                text = "$name: ${ans.take(80)}",
-                                style = MaterialTheme.typography.bodySmall,
-                            )
+                            Row(
+                                modifier = Modifier.padding(vertical = 3.dp),
+                                verticalAlignment = Alignment.Top,
+                            ) {
+                                Text(
+                                    text = if (isMine) "\uD83D\uDC64" else "\uD83D\uDC65",
+                                    fontSize = 14.sp,
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Column {
+                                    Text(
+                                        text = name,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                    )
+                                    Text(
+                                        text = ans.take(100),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f),
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -552,13 +653,14 @@ fun UsScreen(
                 if (remainingMs > 0) {
                     val days = remainingMs / (1000L * 60 * 60 * 24)
                     val hours = (remainingMs % (1000L * 60 * 60 * 24)) / (1000L * 60 * 60)
+                    val minutes = (remainingMs % (1000L * 60 * 60)) / (1000L * 60)
                     Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Column(
-                            modifier = Modifier.padding(16.dp),
+                            modifier = Modifier.padding(20.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             Text(
@@ -566,12 +668,13 @@ fun UsScreen(
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                             )
-                            Spacer(Modifier.height(8.dp))
+                            Spacer(Modifier.height(12.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                CountdownUnit(value = days, label = "days")
-                                CountdownUnit(value = hours, label = "hours")
+                                CountdownUnit(value = days, label = "days", highlight = true)
+                                CountdownUnit(value = hours, label = "hrs", highlight = false)
+                                CountdownUnit(value = minutes, label = "min", highlight = false)
                             }
-                            Spacer(Modifier.height(4.dp))
+                            Spacer(Modifier.height(6.dp))
                             Text(
                                 text = "\u2764\uFE0F",
                                 fontSize = 20.sp,
@@ -598,21 +701,33 @@ fun UsScreen(
                 }
             }
             if (events.isEmpty()) {
-                Row(
-                    modifier = Modifier.padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(
-                        text = "\u2764",
-                        fontSize = 18.sp,
-                        modifier = Modifier.padding(end = 8.dp),
-                    )
-                    Text(
-                        text = "Add birthdays, anniversaries, or your next date night \u2014 " +
-                            "and count down together.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.secondary,
-                    )
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "\u2764\uFE0F",
+                            fontSize = 22.sp,
+                            modifier = Modifier.padding(end = 10.dp),
+                        )
+                        Column {
+                            Text(
+                                text = "No dates yet",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                            )
+                            Text(
+                                text = "Add birthdays, anniversaries, or your next date night.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            )
+                        }
+                    }
                 }
             } else {
                 events.forEach { event ->
@@ -949,14 +1064,14 @@ private fun DailyQuestionCard(
 
     Surface(
         shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = "Today's question",
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
             )
             Spacer(Modifier.height(6.dp))
             Text(
@@ -1260,18 +1375,33 @@ private fun AddEventDialog(
 }
 
 @Composable
-private fun CountdownUnit(value: Long, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun CountdownUnit(value: Long, label: String, highlight: Boolean = false) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .then(
+                if (highlight) Modifier
+                    .background(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                        RoundedCornerShape(12.dp),
+                    )
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                else Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
+            ),
+    ) {
         Text(
-            text = "$value",
-            style = MaterialTheme.typography.headlineMedium,
+            text = "%02d".format(value),
+            style = if (highlight) MaterialTheme.typography.headlineLarge
+            else MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            color = if (highlight) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onPrimaryContainer,
         )
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+            color = if (highlight) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+            else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
         )
     }
 }

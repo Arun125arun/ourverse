@@ -3,6 +3,15 @@ package com.lovenote.app.settings
 /** Release notes shown in the "What's new" dialog after each update. */
 object Changelog {
     private val NOTES = mapOf(
+        46L to listOf(
+            "✨ Animated color picker dots with spring physics",
+            "🎤 Voice recording with pulsing dot + waveform bars",
+            "🔥 Streak card with bounce-in animation",
+            "⏰ Countdown shows hours and minutes with formatted digits",
+            "🎲 Roulette answers show sender names with avatars",
+            "❤️ Special dates & voice letter empty states polished",
+            "🧭 Bottom nav with smooth scale + background transitions",
+        ),
         45L to listOf(
             "🔧 Countdown now ticks in real-time",
             "🧹 Code cleanups — removed dead code, tighter imports",

@@ -19,8 +19,8 @@ android {
         applicationId = "com.lovenote.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 45
-        versionName = "0.45"
+    versionCode = 46
+    versionName = "0.46"
     }
 
     buildTypes {
