@@ -3,6 +3,9 @@ package com.lovenote.app.settings
 /** Release notes shown in the "What's new" dialog after each update. */
 object Changelog {
     private val NOTES = mapOf(
+        44L to listOf(
+            "🎨 Shared Color Theme — pick a couple color together (Rose, Lavender, Ocean, Mint, Amber, Coral)",
+        ),
         43L to listOf(
             "💌 Voice Letters — record and send voice notes with captions in the Us tab",
             "🎲 Question Roulette — spin the wheel and answer fun relationship questions",

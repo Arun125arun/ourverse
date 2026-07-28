@@ -120,6 +120,8 @@ fun UsScreen(
     var rouletteAnswer by remember { mutableStateOf("") }
     var showCountdownPicker by remember { mutableStateOf(false) }
     var countdownTitle by remember { mutableStateOf("") }
+    val coupleColorName by repository.coupleColorName().collectAsState(initial = null)
+    var showColorPicker by remember { mutableStateOf(false) }
     val micPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -160,6 +162,43 @@ fun UsScreen(
                 partner = partner,
                 anniversaryMillis = anniversary,
             )
+
+            // Shared Color Theme picker
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    text = "Our color:",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                )
+                Spacer(Modifier.width(6.dp))
+                repository.colorOptions.forEach { opt ->
+                    val selected = coupleColorName == opt.name
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 3.dp)
+                            .size(24.dp)
+                            .background(
+                                Color(opt.primary),
+                                CircleShape,
+                            )
+                            .then(
+                                if (selected) Modifier.padding(2.dp).background(
+                                    Color.White,
+                                    CircleShape,
+                                )
+                                else Modifier
+                            )
+                            .clickable {
+                                scope.launch { repository.setCoupleColor(opt.name) }
+                            },
+                    )
+                }
+            }
 
             Spacer(Modifier.height(16.dp))
 

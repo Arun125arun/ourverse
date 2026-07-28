@@ -83,6 +83,32 @@ class UsRepository(
         ).await()
     }
 
+    // --- Shared Color Theme ---
+
+    data class CoupleColor(
+        val name: String,
+        val primary: Long,
+        val container: Long,
+    )
+
+    val colorOptions = listOf(
+        CoupleColor("Rose", 0xFFE53935, 0xFF1C1214),
+        CoupleColor("Lavender", 0xFF7E57C2, 0xFF1A1425),
+        CoupleColor("Ocean", 0xFF1E88E5, 0xFF0D1B2A),
+        CoupleColor("Mint", 0xFF26A69A, 0xFF0D1F1D),
+        CoupleColor("Amber", 0xFFFFA000, 0xFF1F1A0D),
+        CoupleColor("Coral", 0xFFFF7043, 0xFF1F120D),
+    )
+
+    suspend fun setCoupleColor(colorName: String) {
+        stateRef.set(mapOf("coupleColor" to colorName), SetOptions.merge()).await()
+    }
+
+    fun coupleColorName(): Flow<String?> =
+        stateRef.snapshots().map { doc ->
+            doc.getString("coupleColor")
+        }.fallbackTo(null)
+
     /** uid → mood; callers filter for today's dateKey. */
     fun moods(): Flow<Map<String, Mood>> =
         stateRef.snapshots().map { doc ->
