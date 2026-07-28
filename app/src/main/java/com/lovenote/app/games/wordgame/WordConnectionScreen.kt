@@ -75,7 +75,7 @@ fun WordConnectionScreen(
     gameId: String? = null,
     gameRepository: GameRepository? = null,
     myUid: String = "",
-    onInvitePartner: suspend () -> Unit,
+    onInvitePartner: (suspend () -> Unit)? = null,
     chatRepository: ChatRepository? = null,
 ) {
     val scope = rememberCoroutineScope()
@@ -187,7 +187,7 @@ fun WordConnectionScreen(
                     onClick = {
                         isSendingInvite = true
                         scope.launch {
-                            runCatching { onInvitePartner() }
+                            runCatching { onInvitePartner?.invoke() }
                             isSendingInvite = false
                         }
                     },

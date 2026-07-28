@@ -199,6 +199,17 @@ fun TicTacToeScreen(
         if (rawCells != null && rawCells.size == 9) {
             board = rawCells.map { cellValueFromRaw(it) }
         }
+        if (session.winner.isEmpty() && !gameEndSent) {
+            val allEmpty = rawCells?.all { it == "" || it == null } ?: false
+            if (allEmpty && (winner != null || isDraw)) {
+                winner = null
+                winningLine = null
+                isDraw = false
+                showGameOverDialog = false
+                gameEndSent = false
+                if (isLocal) currentPiece = CellValue.X
+            }
+        }
         if (session.winner.isNotEmpty() && !gameOver) {
             val winnerPiece = if (session.winner == session.p1Uid) CellValue.X else CellValue.O
             val wp = if (winnerPiece == CellValue.X) player1 else player2
@@ -647,7 +658,7 @@ private fun PlayerScoreColumn(player: PlayerInfo, score: Int, alignment: Alignme
 @Composable
 private fun TurnIndicator(player: PlayerInfo, isGameOver: Boolean) {
     val alpha by animateFloatAsState(targetValue = if (isGameOver) 0.4f else 1f, animationSpec = tween(300), label = "turnAlpha")
-    Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primaryContainer, tonalElevation = 2.dp) {
+    Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primaryContainer, tonalElevation = 2.dp, modifier = Modifier.graphicsLayer { this.alpha = alpha }) {
         Row(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,

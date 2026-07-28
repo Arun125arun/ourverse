@@ -3,6 +3,12 @@ package com.lovenote.app.settings
 /** Release notes shown in the "What's new" dialog after each update. */
 object Changelog {
     private val NOTES = mapOf(
+        49L to listOf(
+            "🎮 Ludo now supports online play — invite your partner or play locally",
+            "🐛 Tic-Tac-Toe fixes — pass device label corrected, no more skipped turns",
+            "🎯 Online turn indicators improved across all games",
+            "⏳ Loading spinners on Send Invitation buttons",
+        ),
         48L to listOf(
             "🎮 Game launch flow — choose 'Send Invitation' (online) or 'Play Locally' (same device)",
             "♟️ Local play for Tic-Tac-Toe, Truth or Dare, Word Connection — no internet needed",

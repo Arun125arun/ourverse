@@ -207,9 +207,9 @@ fun TruthOrDareScreen(
 
     // --- Auto-join as player 2 (online, joined from invite) ---
     LaunchedEffect(session, onlineMode) {
-        if (!onlineMode || session == null) return@LaunchedEffect
+        if (!onlineMode || session == null || gid == null) return@LaunchedEffect
         if (session.p2Uid.isEmpty() && session.p1Uid != myUid && repo != null) {
-            repo.joinGame(gid!!, myName)
+            repo.joinGame(gid, myName)
         }
         waitingForPartner = session.p2Uid.isNullOrEmpty()
     }

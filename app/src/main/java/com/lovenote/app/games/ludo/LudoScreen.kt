@@ -82,8 +82,6 @@ import com.lovenote.app.games.GameRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
-import kotlin.math.cos
-import kotlin.math.sin
 import kotlin.random.Random
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -665,13 +663,14 @@ fun LudoScreen(
     }
 
     if (winner != null && phase == "gameover") {
+        val w = winner!!
         AlertDialog(
             onDismissRequest = { },
             icon = { Text("\uD83C\uDFC6", fontSize = 40.sp) },
-            title = { Text("${winner!!.name} wins!") },
+            title = { Text("${w.name} wins!") },
             text = { Text("Amazing game! Ready for another round?") },
             confirmButton = {
-                Button(onClick = { resetGame(); winner = null }, colors = ButtonDefaults.buttonColors(containerColor = winner!!.color)) { Text("Rematch!") }
+                Button(onClick = { resetGame(); winner = null }, colors = ButtonDefaults.buttonColors(containerColor = w.color)) { Text("Rematch!") }
             },
             dismissButton = { TextButton(onClick = onBack) { Text("Back to Hub") } },
         )
@@ -867,18 +866,18 @@ private fun LudoBoardCanvas(
             val (r, c) = cell
             val isSafe = idx in SAFE_POSITIONS
             val bg = if (isSafe) SafeGold.copy(alpha = 0.3f) else TrackCell
-            drawRoundRect(bg, cellRect(r, c).topLeft.toOffset(), Size(cw, ch), CornerRadius(1f))
-            drawRoundRect(TrackBorder.copy(alpha = 0.4f), cellRect(r, c).topLeft.toOffset(), Size(cw, ch), CornerRadius(1f), style = Stroke(0.8f))
+            drawRoundRect(bg, cellRect(r, c).topLeft, Size(cw, ch), CornerRadius(1f))
+            drawRoundRect(TrackBorder.copy(alpha = 0.4f), cellRect(r, c).topLeft, Size(cw, ch), CornerRadius(1f), style = Stroke(0.8f))
         }
 
         // ── Home columns ──
         RED_HOME.forEach { (r, c) ->
-            drawRoundRect(ClassicRed.copy(alpha = 0.35f), cellRect(r, c).topLeft.toOffset(), Size(cw, ch), CornerRadius(2f))
-            drawRoundRect(ClassicRed.copy(alpha = 0.15f), cellRect(r, c).topLeft.toOffset(), Size(cw, ch), CornerRadius(2f), style = Stroke(1f))
+            drawRoundRect(ClassicRed.copy(alpha = 0.35f), cellRect(r, c).topLeft, Size(cw, ch), CornerRadius(2f))
+            drawRoundRect(ClassicRed.copy(alpha = 0.15f), cellRect(r, c).topLeft, Size(cw, ch), CornerRadius(2f), style = Stroke(1f))
         }
         GREEN_HOME.forEach { (r, c) ->
-            drawRoundRect(ClassicGreen.copy(alpha = 0.35f), cellRect(r, c).topLeft.toOffset(), Size(cw, ch), CornerRadius(2f))
-            drawRoundRect(ClassicGreen.copy(alpha = 0.15f), cellRect(r, c).topLeft.toOffset(), Size(cw, ch), CornerRadius(2f), style = Stroke(1f))
+            drawRoundRect(ClassicGreen.copy(alpha = 0.35f), cellRect(r, c).topLeft, Size(cw, ch), CornerRadius(2f))
+            drawRoundRect(ClassicGreen.copy(alpha = 0.15f), cellRect(r, c).topLeft, Size(cw, ch), CornerRadius(2f), style = Stroke(1f))
         }
 
         // ── Home center triangle area ──
@@ -1041,8 +1040,6 @@ private fun LudoBoardCanvas(
         }
     }
 }
-
-private fun Offset.toOffset() = this
 
 // ─── Mode Choice Dialog ─────────────────────────────────────────────────────
 

@@ -159,11 +159,9 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
     val myName = myProfile?.name?.ifBlank { "You" } ?: "You"
     val partnerName = partner?.name?.ifBlank { "Your partner" } ?: "Your partner"
     var activeGameId by remember { mutableStateOf<String?>(null) }
-    var activeGameType by remember { mutableStateOf("") }
 
     fun startGame(gameType: String) {
         activeGameId = null
-        activeGameType = gameType
         when (gameType) {
             "tictactoe" -> navigate(HomeScreen.TIC_TAC_TOE)
             "ludo" -> navigate(HomeScreen.LUDO)
@@ -266,7 +264,6 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                                 val gid = gameRepository.createGame("tictactoe", myName, board)
                                 chatRepository.sendGameInvite(gid, "tictactoe")
                                 activeGameId = gid
-                                activeGameType = "tictactoe"
                             },
                         )
                         HomeScreen.LUDO -> LudoScreen(
@@ -290,7 +287,6 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                                 val gid = gameRepository.createGame("ludo", myName, board)
                                 chatRepository.sendGameInvite(gid, "ludo")
                                 activeGameId = gid
-                                activeGameType = "ludo"
                             },
                         )
                         HomeScreen.TRUTH_OR_DARE -> TruthOrDareScreen(
@@ -309,7 +305,6 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                                 val gid = gameRepository.createGame("truthdare", myName, board)
                                 chatRepository.sendGameInvite(gid, "truthdare")
                                 activeGameId = gid
-                                activeGameType = "truthdare"
                             },
                         )
                         HomeScreen.WORD_GAME -> WordConnectionScreen(
@@ -327,7 +322,6 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                                 val gid = gameRepository.createGame("wordgame", myName, board)
                                 chatRepository.sendGameInvite(gid, "wordgame")
                                 activeGameId = gid
-                                activeGameType = "wordgame"
                             },
                             chatRepository = chatRepository,
                         )
@@ -359,7 +353,6 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                             onSettingsClick = { navigate(HomeScreen.SETTINGS) },
                             onGameClick = { gameId, gameType ->
                                 activeGameId = gameId
-                                activeGameType = gameType
                                 when (gameType) {
                                     "tictactoe" -> navigate(HomeScreen.TIC_TAC_TOE)
                                     "ludo" -> navigate(HomeScreen.LUDO)
