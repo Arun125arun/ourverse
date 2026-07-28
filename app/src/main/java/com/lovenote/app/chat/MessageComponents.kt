@@ -378,11 +378,7 @@ internal fun MessageRow(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val reactionCounts = remember(message.reactions) {
-                    mutableMapOf<String, Int>()
-                }
-                reactionCounts.clear()
-                for ((userId, emoji) in message.reactions) {
-                    reactionCounts[emoji] = (reactionCounts[emoji] ?: 0) + 1
+                    message.reactions.values.groupingBy { it }.eachCount()
                 }
 
                 REACTION_EMOJIS.forEach { emoji ->

@@ -1,0 +1,27 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+    <!-- Controller body -->
+    <path
+        android:fillColor="#D0BCFF"
+        android:pathData="M25,45 C25,36 33,28 42,28 L78,28 C87,28 95,36 95,45 L95,55 C95,60 93,64 89,67 L80,75 L75,85 L65,85 L60,75 C55,77 45,77 40,75 L35,85 L25,85 L20,75 L11,67 C7,64 5,60 5,55 L5,45 C5,36 13,28 22,28" />
+    <!-- D-pad -->
+    <path
+        android:fillColor="#6750A4"
+        android:pathData="M30,40 L38,40 L38,36 L42,36 L42,40 L50,40 L50,44 L42,44 L42,48 L38,48 L38,44 L30,44 Z" />
+    <!-- Buttons -->
+    <path
+        android:fillColor="#6750A4"
+        android:pathData="M70,36 A4,4 0 1,1 70,36.01 Z" />
+    <path
+        android:fillColor="#6750A4"
+        android:pathData="M82,44 A4,4 0 1,1 82,44.01 Z" />
+    <path
+        android:fillColor="#6750A4"
+        android:pathData="M70,52 A4,4 0 1,1 70,52.01 Z" />
+    <path
+        android:fillColor="#6750A4"
+        android:pathData="M58,44 A4,4 0 1,1 58,44.01 Z" />
+</vector>

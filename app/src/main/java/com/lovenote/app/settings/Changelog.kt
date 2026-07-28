@@ -3,6 +3,24 @@ package com.lovenote.app.settings
 /** Release notes shown in the "What's new" dialog after each update. */
 object Changelog {
     private val NOTES = mapOf(
+        51L to listOf(
+            "✨ New onboarding welcome flow — 3-page feature preview carousel on first launch",
+            "🏗️ Us tab decomposed into 4 focused sub-composables for better maintainability",
+            "⚡ Performance: memoized message list, efficient reaction counting, smarter scroll detection",
+            "🐛 Fixed null-safety crash in coupleId handling, countdown timer crash, batch size cap",
+            "💬 Scroll-to-bottom FAB in chat — tap to jump to newest messages",
+            "🎨 Improved screen transitions (250ms crossfade), staggered game card animations",
+            "📱 All hardcoded UI strings extracted to resources (211 entries) for i18n readiness",
+            "📝 Better copy across screens — tagline, empty states, share messages, call overlay",
+            "🎯 Hub renamed to Play, QuickAction icons corrected",
+            "🖼️ New empty state vector drawables for chat, games, and hearts",
+            "✅ Added @Preview composables for SignInScreen and GamesHubScreen",
+        ),
+        50L to listOf(
+            "🐛 Fixed Tic-Tac-Toe falsely showing 'Draw' after the first move in online mode",
+            "🐛 Fixed partner seeing wrong winner instead of draw in online Tic-Tac-Toe",
+            "🎨 New app logo — cleaner, more modern design",
+        ),
         49L to listOf(
             "🎮 Ludo now supports online play — invite your partner or play locally",
             "🐛 Tic-Tac-Toe fixes — pass device label corrected, no more skipped turns",

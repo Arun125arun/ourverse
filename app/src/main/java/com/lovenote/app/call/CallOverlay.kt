@@ -205,7 +205,7 @@ fun CallOverlay(partnerName: String, partnerPhoto: String) {
                     LaunchedEffect(Unit) { Notifier.vibrate(context) }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "Swipe up to answer",
+                            text = "Tap to answer",
                             color = Color.White.copy(alpha = 0.5f),
                             fontSize = 13.sp,
                         )

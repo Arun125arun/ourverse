@@ -42,9 +42,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.credentials.exceptions.GetCredentialCancellationException
+import com.lovenote.app.R
 import kotlinx.coroutines.launch
 
 @Composable
@@ -89,7 +92,7 @@ fun SignInScreen(onSignedIn: () -> Unit) {
             ) {
                 Icon(
                     imageVector = Icons.Filled.Favorite,
-                    contentDescription = "OurVerse logo",
+                    contentDescription = stringResource(R.string.content_description_ourverse_logo),
                     tint = Color(0xFFE53935),
                     modifier = Modifier
                         .size(48.dp)
@@ -100,14 +103,14 @@ fun SignInScreen(onSignedIn: () -> Unit) {
             Spacer(Modifier.height(24.dp))
 
             Text(
-                text = "OurVerse",
+                text = stringResource(R.string.app_name),
                 fontSize = 34.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
                 letterSpacing = 1.sp,
             )
             Text(
-                text = "love notes for two",
+                text = stringResource(R.string.signin_tagline),
                 fontSize = 14.sp,
                 color = Color(0xFF666666),
                 letterSpacing = 3.sp,
@@ -133,7 +136,7 @@ fun SignInScreen(onSignedIn: () -> Unit) {
                                 onSignedIn()
                             } catch (_: GetCredentialCancellationException) {
                             } catch (e: Exception) {
-                                error = e.message ?: "Sign-in failed, please try again"
+                                error = e.message ?: context.getString(R.string.signin_error_fallback)
                             } finally {
                                 busy = false
                             }
@@ -154,13 +157,13 @@ fun SignInScreen(onSignedIn: () -> Unit) {
                     ) {
                         Icon(
                             imageVector = Icons.Filled.AccountCircle,
-                            contentDescription = "Google account",
+                            contentDescription = stringResource(R.string.content_description_google_account),
                             tint = Color.White,
                             modifier = Modifier.size(22.dp),
                         )
                         Spacer(Modifier.width(10.dp))
                         Text(
-                            "Continue with Google",
+                            stringResource(R.string.continue_with_google),
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Medium,
                         )
@@ -185,7 +188,7 @@ fun SignInScreen(onSignedIn: () -> Unit) {
             Spacer(Modifier.weight(1f))
 
             Text(
-                text = "By continuing, you agree to our Terms of Service and Privacy Policy",
+                text = stringResource(R.string.terms_privacy),
                 fontSize = 11.sp,
                 color = Color(0xFF444444),
                 textAlign = TextAlign.Center,
@@ -195,5 +198,13 @@ fun SignInScreen(onSignedIn: () -> Unit) {
                 maxLines = 2,
             )
         }
+    }
+}
+
+@Composable
+@Preview(showBackground = true, showSystemUi = true)
+private fun SignInScreenPreview() {
+    com.lovenote.app.ui.theme.LoveNoteTheme {
+        SignInScreen(onSignedIn = {})
     }
 }

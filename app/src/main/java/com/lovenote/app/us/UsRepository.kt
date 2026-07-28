@@ -22,6 +22,13 @@ data class Profile(val name: String, val photoUrl: String)
 
 data class QuizEntry(val answer: Int, val guess: Int)
 
+data class CountdownEvent(
+    val id: String,
+    val title: String,
+    val targetMillis: Long,
+    val createdBy: String,
+)
+
 data class Todo(
     val id: String,
     val title: String,
@@ -455,13 +462,6 @@ class UsRepository(
             .fallbackTo(emptyMap())
 
     // --- Shared Countdown ---
-
-    data class CountdownEvent(
-        val id: String,
-        val title: String,
-        val targetMillis: Long,
-        val createdBy: String,
-    )
 
     suspend fun setCountdown(title: String, targetMillis: Long) {
         stateRef.set(

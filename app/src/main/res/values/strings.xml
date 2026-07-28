@@ -3,4 +3,239 @@
     <string name="app_name">OurVerse</string>
     <string name="widget_description">Shows the latest note from your partner</string>
     <string name="wallpaper_description">Your partner\'s latest note as your wallpaper</string>
+
+    <!-- WelcomeScreen -->
+    <string name="welcome_title_chat">Chat, Call &amp; Connect</string>
+    <string name="welcome_subtitle_chat">Unlimited messages, voice notes, and video calls — all free, always.</string>
+    <string name="welcome_title_play">Play Together</string>
+    <string name="welcome_subtitle_play">Tic Tac Toe, Ludo, Truth or Dare, and Word Games — challenge your partner anytime.</string>
+    <string name="welcome_title_sync">Stay in Sync</string>
+    <string name="welcome_subtitle_sync">Daily mood check-ins, relationship questions, countdowns, and shared memories.</string>
+    <string name="welcome_tagline">A tiny universe for two</string>
+    <string name="get_started">Get Started</string>
+    <string name="next">Next</string>
+    <string name="skip">Skip</string>
+
+    <!-- SignInScreen -->
+    <string name="content_description_ourverse_logo">OurVerse logo</string>
+    <string name="signin_tagline">The couple app that\'s actually fun</string>
+    <string name="content_description_google_account">Google account</string>
+    <string name="continue_with_google">Continue with Google</string>
+    <string name="terms_privacy">By continuing, you agree to our Terms of Service and Privacy Policy</string>
+    <string name="signin_error_fallback">Sign-in failed, please try again</string>
+
+    <!-- HomeScreen -->
+    <string name="tab_chat">Chat</string>
+    <string name="tab_us">Us</string>
+    <string name="tab_play">Play</string>
+    <string name="default_name_you">You</string>
+    <string name="default_name_partner">Your partner</string>
+    <string name="notification_doodle">A doodle for you</string>
+    <string name="notification_photo">Photo</string>
+    <string name="notification_voice_note">Voice note</string>
+    <string name="notification_reminder">Reminder: %1$s</string>
+
+    <!-- ChatScreen -->
+    <string name="chat_default_name">OurVerse ❤</string>
+    <string name="presence_active_now">Active now</string>
+    <string name="presence_active_minutes">Active %1$dm ago</string>
+    <string name="presence_active_hours">Active %1$dh ago</string>
+    <string name="typing_indicator">typing</string>
+    <string name="content_description_heart">Heart</string>
+    <string name="empty_chat_title">Start your conversation</string>
+    <string name="empty_chat_subtitle">Send a message, photo, or voice note.</string>
+    <string name="content_description_voice_call">Voice call</string>
+    <string name="content_description_video_call">Video call</string>
+    <string name="content_description_send_nudge">Send a nudge (hold to customize)</string>
+    <string name="nudge_dialog_title">Your heart button ❤</string>
+    <string name="nudge_dialog_description">This is what a tap on the heart sends:</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="content_description_settings">Settings</string>
+    <string name="content_description_scroll_to_bottom">Scroll to bottom</string>
+    <string name="content_description_cancel_reply">Cancel reply</string>
+    <string name="content_description_cancel_edit">Cancel edit</string>
+    <string name="view_once">View once</string>
+    <string name="content_description_cancel">Cancel</string>
+    <string name="content_description_send_photo">Send photo</string>
+    <string name="message_placeholder">Message</string>
+    <string name="content_description_camera">Camera</string>
+    <string name="content_description_gallery">Gallery</string>
+    <string name="recording_duration">Recording\u2026 %1$ds</string>
+    <string name="content_description_cancel_recording">Cancel recording</string>
+    <string name="content_description_stop_recording">Stop recording</string>
+    <string name="content_description_send">Send</string>
+    <string name="content_description_record_voice">Record a voice note</string>
+    <string name="chat_subtitle_days_together">Day %1$d together ❤</string>
+    <string name="quote_label_you">You</string>
+    <string name="quote_label_them">Them</string>
+    <string name="editing_banner">✏ Editing: %1$s</string>
+
+    <!-- GamesHubScreen -->
+    <string name="play_together_title">Play Together</string>
+    <string name="content_description_back">Back</string>
+    <string name="ready_to_play">Ready to play, %1$s?</string>
+    <string name="play_hub_subtitle">Play games, leave notes, and stay connected.</string>
+    <string name="section_notes">Notes</string>
+    <string name="quick_action_send_note">Send Note</string>
+    <string name="quick_action_draw_note">Draw Note</string>
+    <string name="quick_action_history">History</string>
+    <string name="section_games">Games</string>
+    <string name="game_tic_tac_toe">Tic Tac Toe</string>
+    <string name="game_tic_tac_toe_subtitle">Classic strategy game</string>
+    <string name="game_ludo">Ludo</string>
+    <string name="game_ludo_subtitle">Classic board game</string>
+    <string name="game_truth_or_dare">Truth or Dare</string>
+    <string name="game_truth_or_dare_subtitle">Spice things up</string>
+    <string name="game_word_game">Word Game</string>
+    <string name="game_word_game_subtitle">How connected are you?</string>
+
+    <!-- UsScreen -->
+    <string name="us_title">Us ❤</string>
+    <string name="our_color_label">Our color:</string>
+    <string name="memory_lane">Memory Lane</string>
+    <string name="daily_pulse">Daily Pulse</string>
+    <string name="how_are_you_feeling">How are you feeling?</string>
+    <string name="mood_status_you">You\'re %1$s and %2$s</string>
+    <string name="tap_word_to_add_status">Tap a word below to add your status</string>
+    <string name="mood_status_partner_with_word">They\'re %1$s and %2$s</string>
+    <string name="mood_status_partner_emoji">They\'re %1$s</string>
+    <string name="partner_not_checked_in">They haven\'t checked in yet</string>
+    <string name="todays_question">Today\'s question</string>
+    <string name="your_answer_placeholder">Your answer\u2026</string>
+    <string name="answer_button">Answer</string>
+    <string name="partner_answer_unlocks">Their answer unlocks when you\'ve answered too.</string>
+    <string name="label_you">You</string>
+    <string name="label_them_heart">Them ❤</string>
+    <string name="waiting_for_answer">Waiting for their answer\u2026</string>
+    <string name="couple_quiz_title">Couple quiz 🎯</string>
+    <string name="your_pick">Your pick:</string>
+    <string name="what_did_partner_pick">What did %1$s pick?</string>
+    <string name="lock_it_in">Lock it in</string>
+    <string name="quiz_picked_and_guessed">You picked \u201c%1$s\u201d and guessed they\'d pick \u201c%2$s\u201d.</string>
+    <string name="quiz_waiting_for_partner">Waiting for %1$s to play\u2026</string>
+    <string name="quiz_they_picked">They picked: \u201c%1$s\u201d</string>
+    <string name="quiz_guess_right">Your guess was right! 🎉</string>
+    <string name="quiz_guess_wrong">You guessed \u201c%1$s\u201d — not quite 😅</string>
+    <string name="quiz_partner_guessed_right">%1$s guessed your pick correctly too ❤</string>
+    <string name="quiz_partner_guessed_wrong">%1$s thought you\'d pick \u201c%2$s\u201d 😄</string>
+    <string name="streak_day">%1$d day streak!</string>
+    <string name="streak_365">A year of connection! You two are unstoppable.</string>
+    <string name="streak_100">100 days! Your bond is incredible.</string>
+    <string name="streak_30">A whole month! Keep it going.</string>
+    <string name="streak_7">A whole week! You\'re building something beautiful.</string>
+    <string name="streak_default">Keep checking in daily to grow your streak.</string>
+    <string name="days_together">%1$d days together</string>
+    <string name="milestone_today">🎉 Today is day %1$d!</string>
+    <string name="milestone_upcoming">🎉 %1$d days in %2$d %3$s</string>
+    <string name="milestone_day">day</string>
+    <string name="milestone_days">days</string>
+    <string name="our_story_button">📖 Our story</string>
+    <string name="todos_button">📋 To-dos</string>
+
+    <!-- VoiceLettersSection -->
+    <string name="voice_letters_title">💌 Voice Letters</string>
+    <string name="content_description_stop_recording_voice">Stop recording</string>
+    <string name="content_description_record_voice_letter">Record a voice letter</string>
+    <string name="voice_letter_recording">Recording\u2026</string>
+    <string name="voice_letter_empty">Record a voice letter to send love.</string>
+    <string name="sender_me">Me</string>
+    <string name="sender_partner">Partner</string>
+    <string name="voice_caption_dialog_title">Add a caption (optional)</string>
+    <string name="voice_caption_field_label">What\'s this letter about?</string>
+    <string name="send_button">Send</string>
+    <string name="voice_caption_send_error">Failed to send: %1$s</string>
+    <string name="voice_caption_unknown_error">Unknown error</string>
+    <string name="time_just_now">just now</string>
+    <string name="time_yesterday">Yesterday</string>
+
+    <!-- RouletteSection -->
+    <string name="question_roulette_title">🎰 Question Roulette</string>
+    <string name="last_answers_label">Last answers:</string>
+    <string name="roulette_question_fallback">Question</string>
+    <string name="roulette_your_answer">Your answer</string>
+    <string name="skip_button">Skip</string>
+
+    <!-- CountdownSection -->
+    <string name="countdown_title">⏰ Countdown</string>
+    <string name="content_description_clear_countdown">Clear countdown</string>
+    <string name="content_description_set_countdown">Set a countdown</string>
+    <string name="countdown_unit_days">days</string>
+    <string name="countdown_unit_hrs">hrs</string>
+    <string name="countdown_unit_min">min</string>
+    <string name="set_countdown_dialog_title">Set a countdown</string>
+    <string name="countdown_what_label">What are we counting down to?</string>
+    <string name="start_button">Start</string>
+    <string name="ok_button">OK</string>
+    <string name="pick_a_date">Pick a date</string>
+
+    <!-- SpecialDatesSection -->
+    <string name="special_dates_title">Special dates</string>
+    <string name="content_description_add_special_date">Add a special date</string>
+    <string name="no_dates_yet">No dates yet</string>
+    <string name="no_dates_subtitle">Add birthdays, anniversaries, or your next date night.</string>
+    <string name="content_description_delete">Delete</string>
+    <string name="countdown_label_today">today ❤</string>
+    <string name="countdown_label_in_days">in %1$d days</string>
+    <string name="countdown_label_days_ago">%1$d days ago</string>
+    <string name="add_special_date_dialog_title">Add a special date</string>
+    <string name="special_date_field_label">What is it? (e.g. Date night)</string>
+    <string name="add_button">Add</string>
+
+    <!-- PairingScreen -->
+    <string name="create_couple_space">Create your couple space</string>
+    <string name="get_invite_code">Get an invite code</string>
+    <string name="have_partner_code">Already have your partner\'s code?</string>
+    <string name="partner_code_field">Partner\'s code</string>
+    <string name="join_button">Join</string>
+    <string name="log_out_button">Log out</string>
+    <string name="send_code_to_partner">Send this code to your partner</string>
+    <string name="copied_label">Copied ✓</string>
+    <string name="tap_to_copy">Tap to copy</string>
+    <string name="share_invite_message">Hey! Join me on OurVerse ❤\n\nOur invite code: %1$s\n\nDownload the app: https://play.google.com/store/apps/details?id=com.lovenote.app</string>
+    <string name="share_via">Share via</string>
+    <string name="share_invite_link">Share invite link 💌</string>
+    <string name="waiting_for_partner">Waiting for your partner\u2026</string>
+
+    <!-- SettingsScreen -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="theme_auto">Auto</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="dynamic_color_description">Colors follow your wallpaper (Material You)</string>
+    <string name="settings_section_relationship">Relationship</string>
+    <string name="together_since">Together since</string>
+    <string name="anniversary_not_set">Not set — tap to choose</string>
+    <string name="settings_section_account">Account</string>
+    <string name="delete_account_button">Delete account</string>
+    <string name="deleting_everything">Deleting everything\u2026</string>
+    <string name="settings_section_notifications">Notifications</string>
+    <string name="notifications_reliable">Reliable ✓ — the system won\'t put OurVerse to sleep</string>
+    <string name="notifications_unreliable">Your phone may delay notifications by putting OurVerse to sleep in the background.</string>
+    <string name="make_notifications_reliable">Make notifications reliable</string>
+    <string name="settings_section_app_update">App update</string>
+    <string name="installed_version">Installed version: %1$s</string>
+    <string name="update_check_error">Couldn\'t check — are you online?</string>
+    <string name="up_to_date">You\'re up to date ✓</string>
+    <string name="checking_updates">Checking\u2026</string>
+    <string name="check_for_updates">Check for updates</string>
+    <string name="settings_section_about">About</string>
+    <string name="about_us">About us</string>
+    <string name="update_available_title">Update available ❤</string>
+    <string name="update_available_message">Version %1$s is ready. It will download in your browser — open the file when it finishes to install.</string>
+    <string name="download_button">Download</string>
+    <string name="later_button">Later</string>
+    <string name="about_dialog_title">OurVerse ❤</string>
+    <string name="about_dialog_body">Version %1$s\n\nOurVerse is a tiny universe for two people: chat with your partner, leave little notes on each other\'s home screen, and keep them close as your wallpaper.\n\nMade with love, for the two of you.\n\nDeveloper: Arun Adhikari</string>
+    <string name="about_email">✉ adhikariarun549@gmail.com</string>
+    <string name="delete_account_title">Delete your account?</string>
+    <string name="delete_account_warning">This permanently erases everything, for both of you: all messages and photos, every note, your daily answers, special dates, and the pairing itself. Your partner will be unpaired.\n\nThis cannot be undone.</string>
+    <string name="delete_everything_button">Delete everything</string>
+    <string name="delete_error_fallback">Couldn\'t delete — try again</string>
+    <string name="logout_title">Log out?</string>
+    <string name="logout_message">You\'ll need to sign in again to see your messages.</string>
+    <string name="close_button">Close</string>
+    <string name="preview_miss_you">Miss you ❤</string>
+    <string name="preview_miss_you_more">Miss you more 🥰</string>
 </resources>

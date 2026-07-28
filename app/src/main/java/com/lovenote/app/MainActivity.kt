@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.lovenote.app.auth.SignInScreen
+import com.lovenote.app.auth.WelcomeScreen
 import com.lovenote.app.pairing.PairingRepository
 import com.lovenote.app.pairing.PairingScreen
 import com.lovenote.app.settings.Changelog
@@ -88,13 +89,20 @@ class MainActivity : ComponentActivity() {
                         },
                     )
                 }
+                val onboardingPrefs = remember { getSharedPreferences("onboarding", MODE_PRIVATE) }
+                var hasSeenWelcome by remember {
+                    mutableStateOf(onboardingPrefs.getBoolean("seenWelcome", false))
+                }
                 var signedIn by remember {
                     mutableStateOf(FirebaseAuth.getInstance().currentUser != null)
                 }
-                if (!signedIn) {
-                    SignInScreen(onSignedIn = { signedIn = true })
-                } else {
-                    PairedGate(onLoggedOut = { signedIn = false })
+                when {
+                    !hasSeenWelcome -> WelcomeScreen(onGetStarted = {
+                        onboardingPrefs.edit().putBoolean("seenWelcome", true).apply()
+                        hasSeenWelcome = true
+                    })
+                    !signedIn -> SignInScreen(onSignedIn = { signedIn = true })
+                    else -> PairedGate(onLoggedOut = { signedIn = false })
                 }
             }
         }
@@ -115,7 +123,11 @@ private fun PairedGate(onLoggedOut: () -> Unit) {
                 repository = repository,
                 onLoggedOut = onLoggedOut,
             )
-        else -> Home(coupleId = status?.coupleId!!, onLoggedOut = onLoggedOut)
+        else -> {
+            val coupleId = status?.coupleId
+            if (coupleId != null) Home(coupleId = coupleId, onLoggedOut = onLoggedOut)
+            else LoadingScreen()
+        }
     }
 }
 

@@ -116,14 +116,16 @@ class ChatRepository(
         ).await()
     }
 
+    private fun gameLabel(gameType: String): String = when (gameType) {
+        "tictactoe" -> "Tic Tac Toe"
+        "ludo" -> "Ludo"
+        "truthdare" -> "Truth or Dare"
+        "wordgame" -> "Word Game"
+        else -> "Game"
+    }
+
     suspend fun sendGameInvite(gameId: String, gameType: String) {
-        val label = when (gameType) {
-            "tictactoe" -> "Tic Tac Toe"
-            "ludo" -> "Ludo"
-            "truthdare" -> "Truth or Dare"
-            "wordgame" -> "Word Game"
-            else -> "Game"
-        }
+        val label = gameLabel(gameType)
         messagesRef.add(
             mapOf(
                 "senderUid" to myUid,
@@ -137,13 +139,7 @@ class ChatRepository(
     }
 
     suspend fun sendGameEnd(gameId: String, gameType: String, result: String) {
-        val label = when (gameType) {
-            "tictactoe" -> "Tic Tac Toe"
-            "ludo" -> "Ludo"
-            "truthdare" -> "Truth or Dare"
-            "wordgame" -> "Word Game"
-            else -> "Game"
-        }
+        val label = gameLabel(gameType)
         messagesRef.add(
             mapOf(
                 "senderUid" to myUid,
@@ -161,7 +157,7 @@ class ChatRepository(
 
     /** Stamps seenAt on every unseen partner message (read receipts). */
     suspend fun markPartnerMessagesSeen(messages: List<Message>) {
-        val unseen = messages.filter { !it.isMine(myUid) && !it.seen }
+        val unseen = messages.filter { !it.isMine(myUid) && !it.seen }.take(500)
         if (unseen.isEmpty()) return
         val batch = db.batch()
         unseen.forEach { message ->

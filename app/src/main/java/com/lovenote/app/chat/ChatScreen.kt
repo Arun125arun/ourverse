@@ -4,8 +4,13 @@ import android.Manifest
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Base64
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
@@ -48,10 +53,13 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -83,6 +91,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
@@ -122,7 +131,7 @@ fun ChatScreen(
     var hasMore by remember { mutableStateOf(true) }
 
     // Snap to the newest message whenever one is sent or received.
-    LaunchedEffect(messages.firstOrNull()?.id) {
+    LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) listState.animateScrollToItem(0)
     }
 
@@ -134,8 +143,9 @@ fun ChatScreen(
     }
 
     // Combined list: newest first (real-time) + older (paginated, appended at tail).
-    val allMessages = messages + olderMessages.filter {
-        it.id !in messages.map { m -> m.id }.toSet()
+    val messageIds = remember(messages) { messages.map { it.id }.toSet() }
+    val allMessages = remember(messages, olderMessages) {
+        messages + olderMessages.filter { it.id !in messageIds }
     }
 
     // Load older messages when the user scrolls to the oldest end (top in reversed layout).
@@ -288,19 +298,19 @@ fun ChatScreen(
                         )
                         Column(modifier = Modifier.padding(start = 10.dp)) {
                             Text(
-                                text = partner?.name?.takeIf { it.isNotBlank() } ?: "OurVerse ❤",
+                                text = partner?.name?.takeIf { it.isNotBlank() } ?: stringResource(R.string.chat_default_name),
                                 style = MaterialTheme.typography.titleSmall,
                             )
                             if (partnerTyping) {
                                 TypingDots()
                             } else {
                                 val subtitle = presenceLabel(partner?.lastActiveMillis, presenceNow)
-                                    ?: anniversary?.let { "Day ${daysTogether(it)} together ❤" }
+                                    ?: anniversary?.let { stringResource(R.string.chat_subtitle_days_together, daysTogether(it)) }
                                 subtitle?.let {
                                     Text(
                                         text = it,
                                         style = MaterialTheme.typography.labelMedium,
-                                        color = if (it == "Active now") {
+                                        color = if (it == stringResource(R.string.presence_active_now)) {
                                             Color(0xFF4CAF50)
                                         } else {
                                             MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
@@ -337,14 +347,14 @@ fun ChatScreen(
                     IconButton(onClick = { requestCall(false) }) {
                         Icon(
                             Icons.Filled.Call,
-                            contentDescription = "Voice call",
+                            contentDescription = stringResource(R.string.content_description_voice_call),
                             tint = MaterialTheme.colorScheme.primary,
                         )
                     }
                     IconButton(onClick = { requestCall(true) }) {
                         Icon(
                             painter = painterResource(R.drawable.ic_videocam),
-                            contentDescription = "Video call",
+                            contentDescription = stringResource(R.string.content_description_video_call),
                             tint = MaterialTheme.colorScheme.primary,
                         )
                     }
@@ -377,7 +387,7 @@ fun ChatScreen(
                     ) {
                         Icon(
                             Icons.Filled.Favorite,
-                            contentDescription = "Send a nudge (hold to customize)",
+                            contentDescription = stringResource(R.string.content_description_send_nudge),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.scale(heartPulse),
                         )
@@ -386,11 +396,11 @@ fun ChatScreen(
                         var draft by remember { mutableStateOf(AppSettings.nudgeText) }
                         AlertDialog(
                             onDismissRequest = { editNudge = false },
-                            title = { Text("Your heart button ❤") },
+                            title = { Text(stringResource(R.string.nudge_dialog_title)) },
                             text = {
                                 Column {
                                     Text(
-                                        "This is what a tap on the heart sends:",
+                                        stringResource(R.string.nudge_dialog_description),
                                         style = MaterialTheme.typography.bodyMedium,
                                     )
                                     Spacer(Modifier.height(10.dp))
@@ -406,15 +416,15 @@ fun ChatScreen(
                                 TextButton(onClick = {
                                     AppSettings.setNudge(context, draft)
                                     editNudge = false
-                                }) { Text("Save") }
+                                }) { Text(stringResource(R.string.save)) }
                             },
                             dismissButton = {
-                                TextButton(onClick = { editNudge = false }) { Text("Cancel") }
+                                TextButton(onClick = { editNudge = false }) { Text(stringResource(R.string.cancel)) }
                             },
                         )
                     }
                     IconButton(onClick = onSettingsClick) {
-                        Icon(Icons.Filled.Settings, contentDescription = "Settings")
+                        Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.content_description_settings))
                     }
                 },
             )
@@ -458,7 +468,7 @@ fun ChatScreen(
                         modifier = Modifier.padding(horizontal = 32.dp),
                     ) {
                         Text(
-                            text = "\u2764\uFE0F",
+                            text = stringResource(R.string.content_description_heart),
                             fontSize = 48.sp,
                             modifier = Modifier
                                 .scale(beat)
@@ -466,14 +476,14 @@ fun ChatScreen(
                         )
                         Spacer(Modifier.height(12.dp))
                         Text(
-                            text = "Say hi to your partner",
+                            text = stringResource(R.string.empty_chat_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            text = "Send a message, photo, or voice note to start your conversation.",
+                            text = stringResource(R.string.empty_chat_subtitle),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -484,103 +494,136 @@ fun ChatScreen(
                 val newestSeenMineId = visibleMessages
                     .firstOrNull { it.isMine(repository.myUid) && it.seen }
                     ?.id
-                LazyColumn(
-                    state = listState,
+                val showScrollToBottom by remember {
+                    derivedStateOf {
+                        listState.firstVisibleItemIndex > 2
+                    }
+                }
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
-                    reverseLayout = true,
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    itemsIndexed(visibleMessages, key = { _, m -> m.id }) { index, message ->
-                        // reverseLayout: chip rendered above the bubble marks a new day
-                        val startsNewDay = index == visibleMessages.lastIndex ||
-                            !sameDay(message.sentAt, visibleMessages[index + 1].sentAt)
-                        // reversed list: index-1 is the *next* (newer) message
-                        val lastOfRun = index == 0 ||
-                            visibleMessages[index - 1].senderUid != message.senderUid
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .animateItem(),
-                        ) {
-                            if (startsNewDay) DayChip(dayLabel(message.sentAt))
-                            MessageRow(
-                                message = message,
-                                mine = message.isMine(repository.myUid),
-                                showCaption = lastOfRun,
-                                showSeen = message.id == newestSeenMineId,
-                                onPhotoClick = {
-                                    if (!message.onceConsumed) viewingPhoto = message
-                                },
-                                playingVoice = playingVoiceId == message.id,
-                                onVoiceToggle = {
-                                    val nowPlaying = VoicePlayer.toggle(
-                                        context,
-                                        message.id,
-                                        message.body,
-                                    ) { playingVoiceId = null }
-                                    playingVoiceId = if (nowPlaying) message.id else null
-                                },
-                                reactionPickerOpen = reactingTo == message.id,
-                                onLongPress = { reactingTo = message.id },
-                                onDismissPicker = { reactingTo = null },
-                                myReaction = message.reactions[repository.myUid],
-                                quoteLabel = message.replySender?.let { sender ->
-                                    if (sender == repository.myUid) "You"
-                                    else partner?.name?.substringBefore(' ') ?: "Them"
-                                },
-                                onReply = {
-                                    reactingTo = null
-                                    editing = null
-                                    replying = message
-                                },
-                                onDelete = {
-                                    reactingTo = null
-                                    if (message.isMine(repository.myUid)) {
-                                        scope.launch { runCatching { repository.delete(message.id) } }
-                                    } else {
-                                        hiddenIds = HiddenMessages.hide(context, message.id)
-                                    }
-                                },
-                                onEdit = {
-                                    reactingTo = null
-                                    editing = message
-                                    input = message.body
-                                },
-                                onCopy = {
-                                    reactingTo = null
-                                    clipboard.setText(AnnotatedString(message.body))
-                                },
-                                onReact = { emoji ->
-                                    reactingTo = null
-                                    scope.launch {
-                                        val current = message.reactions[repository.myUid]
-                                        runCatching {
-                                            repository.react(
-                                                message.id,
-                                                if (current == emoji) null else emoji,
-                                            )
-                                        }
-                                    }
-                                },
-                                onGameClick = onGameClick,
-                            )
-                        }
-                    }
-                    // Loading indicator for older messages (at the oldest end of reversed list).
-                    if (loadingMore) {
-                        item {
-                            Box(
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        reverseLayout = true,
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        itemsIndexed(visibleMessages, key = { _, m -> m.id }) { index, message ->
+                            // reverseLayout: chip rendered above the bubble marks a new day
+                            val startsNewDay = index == visibleMessages.lastIndex ||
+                                !sameDay(message.sentAt, visibleMessages[index + 1].sentAt)
+                            // reversed list: index-1 is the *next* (newer) message
+                            val lastOfRun = index == 0 ||
+                                visibleMessages[index - 1].senderUid != message.senderUid
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(12.dp),
-                                contentAlignment = Alignment.Center,
+                                    .animateItem(),
                             ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp,
+                                if (startsNewDay) DayChip(dayLabel(message.sentAt))
+                                MessageRow(
+                                    message = message,
+                                    mine = message.isMine(repository.myUid),
+                                    showCaption = lastOfRun,
+                                    showSeen = message.id == newestSeenMineId,
+                                    onPhotoClick = {
+                                        if (!message.onceConsumed) viewingPhoto = message
+                                    },
+                                    playingVoice = playingVoiceId == message.id,
+                                    onVoiceToggle = {
+                                        val nowPlaying = VoicePlayer.toggle(
+                                            context,
+                                            message.id,
+                                            message.body,
+                                        ) { playingVoiceId = null }
+                                        playingVoiceId = if (nowPlaying) message.id else null
+                                    },
+                                    reactionPickerOpen = reactingTo == message.id,
+                                    onLongPress = { reactingTo = message.id },
+                                    onDismissPicker = { reactingTo = null },
+                                    myReaction = message.reactions[repository.myUid],
+                                    quoteLabel = message.replySender?.let { sender ->
+                                        if (sender == repository.myUid) stringResource(R.string.quote_label_you)
+                                        else partner?.name?.substringBefore(' ') ?: stringResource(R.string.quote_label_them)
+                                    },
+                                    onReply = {
+                                        reactingTo = null
+                                        editing = null
+                                        replying = message
+                                    },
+                                    onDelete = {
+                                        reactingTo = null
+                                        if (message.isMine(repository.myUid)) {
+                                            scope.launch { runCatching { repository.delete(message.id) } }
+                                        } else {
+                                            hiddenIds = HiddenMessages.hide(context, message.id)
+                                        }
+                                    },
+                                    onEdit = {
+                                        reactingTo = null
+                                        editing = message
+                                        input = message.body
+                                    },
+                                    onCopy = {
+                                        reactingTo = null
+                                        clipboard.setText(AnnotatedString(message.body))
+                                    },
+                                    onReact = { emoji ->
+                                        reactingTo = null
+                                        scope.launch {
+                                            val current = message.reactions[repository.myUid]
+                                            runCatching {
+                                                repository.react(
+                                                    message.id,
+                                                    if (current == emoji) null else emoji,
+                                                )
+                                            }
+                                        }
+                                    },
+                                    onGameClick = onGameClick,
+                                )
+                            }
+                        }
+                        // Loading indicator for older messages (at the oldest end of reversed list).
+                        if (loadingMore) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp),
+                                        strokeWidth = 2.dp,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Box(modifier = Modifier.align(Alignment.BottomCenter)) {
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = showScrollToBottom,
+                            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                        ) {
+                            FloatingActionButton(
+                                onClick = {
+                                    scope.launch { listState.animateScrollToItem(0) }
+                                },
+                                modifier = Modifier.padding(bottom = 16.dp),
+                                shape = CircleShape,
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                elevation = FloatingActionButtonDefaults.elevation(
+                                    defaultElevation = 4.dp,
+                                ),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.KeyboardArrowDown,
+                                    contentDescription = stringResource(R.string.content_description_scroll_to_bottom),
                                 )
                             }
                         }
@@ -613,8 +656,8 @@ fun ChatScreen(
                                 .padding(horizontal = 10.dp, vertical = 8.dp),
                         ) {
                             Text(
-                                text = if (target.isMine(repository.myUid)) "You"
-                                else partner?.name?.substringBefore(' ') ?: "Them",
+                                text = if (target.isMine(repository.myUid)) stringResource(R.string.quote_label_you)
+                                else partner?.name?.substringBefore(' ') ?: stringResource(R.string.quote_label_them),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -625,7 +668,7 @@ fun ChatScreen(
                             )
                         }
                         IconButton(onClick = { replying = null }) {
-                            Icon(Icons.Filled.Close, contentDescription = "Cancel reply")
+                            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.content_description_cancel_reply))
                         }
                     }
                 }
@@ -645,7 +688,7 @@ fun ChatScreen(
                         modifier = Modifier.padding(start = 12.dp),
                     ) {
                         Text(
-                            text = "✏ Editing: ${target.body.take(40)}",
+                            text = stringResource(R.string.editing_banner, target.body.take(40)),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                             maxLines = 1,
@@ -655,7 +698,7 @@ fun ChatScreen(
                             editing = null
                             input = ""
                         }) {
-                            Icon(Icons.Filled.Close, contentDescription = "Cancel edit")
+                            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.content_description_cancel_edit))
                         }
                     }
                 }
@@ -702,7 +745,7 @@ fun ChatScreen(
                                     onCheckedChange = { pendingOnce = it },
                                 )
                                 Text(
-                                    text = "View once",
+                                    text = stringResource(R.string.view_once),
                                     style = MaterialTheme.typography.bodyMedium,
                                     modifier = Modifier.padding(start = 6.dp),
                                 )
@@ -712,7 +755,7 @@ fun ChatScreen(
                             pendingPhoto = null
                             pendingOnce = false
                         }) {
-                            Icon(Icons.Filled.Close, contentDescription = "Cancel")
+                            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.content_description_cancel))
                         }
                         IconButton(onClick = {
                             val photo = encoded
@@ -723,7 +766,7 @@ fun ChatScreen(
                         }) {
                             Icon(
                                 Icons.AutoMirrored.Filled.Send,
-                                contentDescription = "Send photo",
+                                contentDescription = stringResource(R.string.content_description_send_photo),
                                 tint = MaterialTheme.colorScheme.primary,
                             )
                         }
@@ -761,7 +804,7 @@ fun ChatScreen(
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                text = "Recording\u2026 ${recordSeconds}s",
+                                text = stringResource(R.string.recording_duration, recordSeconds),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = if (VoiceRecorder.MAX_SECONDS - recordSeconds <= 5) {
                                     MaterialTheme.colorScheme.error
@@ -804,7 +847,7 @@ fun ChatScreen(
                             }) {
                                 Icon(
                                     Icons.Filled.Close,
-                                    contentDescription = "Cancel recording",
+                                    contentDescription = stringResource(R.string.content_description_cancel_recording),
                                     tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
                                     modifier = Modifier.size(20.dp),
                                 )
@@ -830,7 +873,7 @@ fun ChatScreen(
                                         },
                                         placeholder = {
                                             Text(
-                                                "Message",
+                                                stringResource(R.string.message_placeholder),
                                                 style = MaterialTheme.typography.bodyMedium,
                                             )
                                         },
@@ -852,7 +895,7 @@ fun ChatScreen(
                                     ) {
                                         Icon(
                                             painter = painterResource(R.drawable.ic_camera),
-                                            contentDescription = "Camera",
+                                            contentDescription = stringResource(R.string.content_description_camera),
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
                                             modifier = Modifier.size(20.dp),
                                         )
@@ -869,7 +912,7 @@ fun ChatScreen(
                                     ) {
                                         Icon(
                                             painter = painterResource(R.drawable.ic_gallery),
-                                            contentDescription = "Gallery",
+                                            contentDescription = stringResource(R.string.content_description_gallery),
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
                                             modifier = Modifier.size(20.dp),
                                         )
@@ -926,7 +969,7 @@ fun ChatScreen(
                             recording -> {
                                 Icon(
                                     Icons.Filled.Close,
-                                    contentDescription = "Stop recording",
+                                    contentDescription = stringResource(R.string.content_description_stop_recording),
                                     tint = MaterialTheme.colorScheme.onError,
                                     modifier = Modifier.size(22.dp),
                                 )
@@ -934,7 +977,7 @@ fun ChatScreen(
                             input.isNotBlank() -> {
                                 Icon(
                                     Icons.AutoMirrored.Filled.Send,
-                                    contentDescription = "Send",
+                                    contentDescription = stringResource(R.string.content_description_send),
                                     tint = MaterialTheme.colorScheme.onPrimary,
                                     modifier = Modifier.size(22.dp),
                                 )
@@ -942,7 +985,7 @@ fun ChatScreen(
                             else -> {
                                 Icon(
                                     painter = painterResource(R.drawable.ic_mic),
-                                    contentDescription = "Record a voice note",
+                                    contentDescription = stringResource(R.string.content_description_record_voice),
                                     tint = MaterialTheme.colorScheme.onPrimary,
                                     modifier = Modifier.size(22.dp),
                                 )

@@ -1,0 +1,18 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+    <!-- Back bubble -->
+    <path
+        android:fillColor="#E8DEF8"
+        android:pathData="M20,30 C20,24 25,19 31,19 L65,19 C71,19 76,24 76,30 L76,52 C76,58 71,63 65,63 L42,63 L30,75 L30,63 L31,63 C25,63 20,58 20,52 Z" />
+    <!-- Front bubble -->
+    <path
+        android:fillColor="#D0BCFF"
+        android:pathData="M44,42 C44,36 49,31 55,31 L89,31 C95,31 100,36 100,42 L100,64 C100,70 95,75 89,75 L66,75 L54,87 L54,75 L55,75 C49,75 44,70 44,64 Z" />
+    <!-- Heart in back bubble -->
+    <path
+        android:fillColor="#6750A4"
+        android:pathData="M44,36 C44,33 46,31 49,31 C51,31 53,32 53,34 C53,32 55,31 57,31 C60,31 62,33 62,36 C62,40 53,46 53,46 C53,46 44,40 44,36 Z" />
+</vector>

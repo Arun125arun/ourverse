@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
@@ -37,6 +38,7 @@ import androidx.compose.ui.unit.sp
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import com.google.firebase.auth.FirebaseAuth
+import com.lovenote.app.R
 import com.lovenote.app.notify.Notifier
 import kotlinx.coroutines.launch
 
@@ -83,7 +85,7 @@ fun PairingScreen(
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = "Link with your partner",
+            text = stringResource(R.string.create_couple_space),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.primary,
         )
@@ -109,7 +111,7 @@ fun PairingScreen(
                 },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Get an invite code")
+                Text(stringResource(R.string.get_invite_code))
             }
 
             Spacer(Modifier.height(24.dp))
@@ -117,14 +119,14 @@ fun PairingScreen(
             Spacer(Modifier.height(24.dp))
 
             Text(
-                text = "Already have your partner's code?",
+                text = stringResource(R.string.have_partner_code),
                 style = MaterialTheme.typography.bodyMedium,
             )
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(
                 value = codeInput,
                 onValueChange = { codeInput = it.uppercase().take(InviteCode.LENGTH) },
-                label = { Text("Partner's code") },
+                label = { Text(stringResource(R.string.partner_code_field)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
                 modifier = Modifier.fillMaxWidth(),
@@ -147,7 +149,7 @@ fun PairingScreen(
                 enabled = codeInput.isNotBlank(),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Join")
+                Text(stringResource(R.string.join_button))
             }
         }
 
@@ -163,7 +165,7 @@ fun PairingScreen(
 
         Spacer(Modifier.height(24.dp))
         TextButton(onClick = { logOut() }) {
-            Text("Log out", color = MaterialTheme.colorScheme.secondary)
+            Text(stringResource(R.string.log_out_button), color = MaterialTheme.colorScheme.secondary)
         }
     }
 }
@@ -183,7 +185,7 @@ private fun WaitingForPartner(code: String, onLogOut: () -> Unit) {
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = "Share this code with your partner",
+            text = stringResource(R.string.send_code_to_partner),
             style = MaterialTheme.typography.titleMedium,
         )
         Spacer(Modifier.height(16.dp))
@@ -199,7 +201,7 @@ private fun WaitingForPartner(code: String, onLogOut: () -> Unit) {
             },
         )
         Text(
-            text = if (copied) "Copied ✓" else "Tap to copy",
+            text = if (copied) stringResource(R.string.copied_label) else stringResource(R.string.tap_to_copy),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.secondary,
         )
@@ -209,27 +211,26 @@ private fun WaitingForPartner(code: String, onLogOut: () -> Unit) {
                 type = "text/plain"
                 putExtra(
                     Intent.EXTRA_TEXT,
-                    "Join me on OurVerse ❤ My invite code is $code — " +
-                        "get the app at https://ourverse-98c44.web.app",
+                    context.getString(R.string.share_invite_message, code),
                 )
             }
             runCatching {
-                context.startActivity(Intent.createChooser(share, "Invite your partner"))
+                context.startActivity(Intent.createChooser(share, context.getString(R.string.share_via)))
             }
         }) {
-            Text("Send it to them 💌")
+            Text(stringResource(R.string.share_invite_link))
         }
         Spacer(Modifier.height(24.dp))
         CircularProgressIndicator()
         Spacer(Modifier.height(16.dp))
         Text(
-            text = "Waiting for them to join…",
+            text = stringResource(R.string.waiting_for_partner),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.secondary,
         )
         Spacer(Modifier.height(24.dp))
         TextButton(onClick = onLogOut) {
-            Text("Log out", color = MaterialTheme.colorScheme.secondary)
+            Text(stringResource(R.string.log_out_button), color = MaterialTheme.colorScheme.secondary)
         }
     }
 }

@@ -6,55 +6,36 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- partner (lavender), drawn first so the pink figure overlaps in the hug -->
+    <!-- Two overlapping circles representing two people -->
     <path
-        android:fillColor="#C9B6F0"
-        android:pathData="M75,86 C77,68 73,55 62.5,54.5 C57,54.2 54.5,58 53.5,63 C52.5,68 52,74 52,86 Z" />
+        android:fillColor="#33FFFFFF"
+        android:pathData="M44,56 m-20,0 a20,20 0 1,0 40,0 a20,20 0 1,0 -40,0" />
     <path
-        android:fillColor="#C9B6F0"
-        android:pathData="M62.5,42 m-8,0 a8,8 0 1,0 16,0 a8,8 0 1,0 -16,0" />
+        android:fillColor="#33FFFFFF"
+        android:pathData="M64,56 m-20,0 a20,20 0 1,0 40,0 a20,20 0 1,0 -40,0" />
 
-    <!-- you (pink) -->
-    <path android:pathData="M33,86 C31,68 35,55 45.5,54.5 C51,54.2 54,58 55.5,64 C56.5,68 57,74 57,86 Z">
-        <aapt:attr name="android:fillColor">
-            <gradient
-                android:type="linear"
-                android:startX="33"
-                android:startY="54"
-                android:endX="57"
-                android:endY="86"
-                android:startColor="#FF5C8A"
-                android:endColor="#D81B60" />
-        </aapt:attr>
-    </path>
+    <!-- Bright overlap area (vesica piscis) -->
     <path
-        android:fillColor="#FF5C8A"
-        android:pathData="M45.5,42 m-8,0 a8,8 0 1,0 16,0 a8,8 0 1,0 -16,0" />
+        android:fillColor="#22FFFFFF"
+        android:pathData="M54,38 C48,44 44,50 44,56 C44,62 48,68 54,74 C60,68 64,62 64,56 C64,50 60,44 54,38Z" />
 
-    <!-- pink arm wrapping around the partner -->
+    <!-- Clean white heart in the center -->
     <path
-        android:pathData="M48,62 Q60,56 67,62"
-        android:strokeColor="#E91E63"
-        android:strokeWidth="5"
-        android:strokeLineCap="round"
-        android:fillColor="#00000000" />
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,64 C54,64 36,52 36,42 C36,34 42,30 54,44 C66,30 72,34 72,42 C72,52 54,64 54,64Z" />
 
-    <!-- little heart above the kiss -->
-    <group
-        android:translateX="49.2"
-        android:translateY="20"
-        android:scaleX="0.4"
-        android:scaleY="0.4">
-        <path
-            android:fillColor="#FFFFFF"
-            android:pathData="M12,21.35l-1.45,-1.32C5.4,15.36 2,12.28 2,8.5 2,5.42 4.42,3 7.5,3c1.74,0 3.41,0.81 4.5,2.09C13.09,3.81 14.76,3 16.5,3 19.58,3 22,5.42 22,8.5c0,3.78 -3.4,6.86 -8.55,11.54L12,21.35z" />
-    </group>
+    <!-- Subtle glow dot top-left -->
+    <path
+        android:fillColor="#44FFFFFF"
+        android:pathData="M32,32 m-2,0 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0" />
 
-    <!-- little stars -->
+    <!-- Subtle glow dot top-right -->
     <path
-        android:fillColor="#B3EEDDFF"
-        android:pathData="M30,30 m-1.5,0 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0" />
+        android:fillColor="#33FFFFFF"
+        android:pathData="M76,36 m-1.5,0 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0" />
+
+    <!-- Tiny sparkle bottom -->
     <path
-        android:fillColor="#99CCBBEE"
-        android:pathData="M79,34 m-1.2,0 a1.2,1.2 0 1,0 2.4,0 a1.2,1.2 0 1,0 -2.4,0" />
+        android:fillColor="#22FFFFFF"
+        android:pathData="M54,78 m-1,0 a1,1 0 1,0 2,0 a1,1 0 1,0 -2,0" />
 </vector>

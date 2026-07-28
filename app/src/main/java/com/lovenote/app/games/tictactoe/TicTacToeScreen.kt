@@ -200,7 +200,7 @@ fun TicTacToeScreen(
             board = rawCells.map { cellValueFromRaw(it) }
         }
         if (session.winner.isEmpty() && !gameEndSent) {
-            val allEmpty = rawCells?.all { it == "" || it == null } ?: false
+            val allEmpty = rawCells?.all { cellValueFromRaw(it) == CellValue.Empty } ?: false
             if (allEmpty && (winner != null || isDraw)) {
                 winner = null
                 winningLine = null
@@ -210,7 +210,11 @@ fun TicTacToeScreen(
                 if (isLocal) currentPiece = CellValue.X
             }
         }
-        if (session.winner.isNotEmpty() && !gameOver) {
+        if (session.winner == "draw" && !gameOver) {
+            isDraw = true
+            scores = scores.copy(draws = scores.draws + 1)
+            showGameOverDialog = true
+        } else if (session.winner.isNotEmpty() && session.winner != "draw" && !gameOver) {
             val winnerPiece = if (session.winner == session.p1Uid) CellValue.X else CellValue.O
             val wp = if (winnerPiece == CellValue.X) player1 else player2
             winner = wp
@@ -227,7 +231,7 @@ fun TicTacToeScreen(
         }
         if (session.winner.isEmpty() && session.board["cells"] != null && !gameOver) {
             val rawCells = session.board["cells"] as? List<*>
-            if (rawCells != null && rawCells.all { it != "" && it != null }) {
+            if (rawCells != null && rawCells.size == 9 && rawCells.all { cellValueFromRaw(it) != CellValue.Empty }) {
                 isDraw = true
                 scores = scores.copy(draws = scores.draws + 1)
                 showGameOverDialog = true

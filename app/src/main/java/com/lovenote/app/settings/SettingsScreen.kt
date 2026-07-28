@@ -56,12 +56,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.glance.appwidget.updateAll
 import com.google.firebase.auth.FirebaseAuth
+import com.lovenote.app.R
 import com.lovenote.app.auth.AuthRepository
 import com.lovenote.app.chat.ChatRepository
 import com.lovenote.app.widget.NoteWidget
@@ -92,10 +94,10 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_description_back))
                     }
                 },
             )
@@ -109,7 +111,7 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            SettingsCard(title = "Appearance") {
+            SettingsCard(title = stringResource(R.string.settings_section_appearance)) {
                 ThemePreview()
                 Spacer(Modifier.height(16.dp))
 
@@ -123,9 +125,9 @@ fun SettingsScreen(
                         ) {
                             Text(
                                 when (mode) {
-                                    AppSettings.ThemeMode.SYSTEM -> "Auto"
-                                    AppSettings.ThemeMode.LIGHT -> "Light"
-                                    AppSettings.ThemeMode.DARK -> "Dark"
+                                    AppSettings.ThemeMode.SYSTEM -> stringResource(R.string.theme_auto)
+                                    AppSettings.ThemeMode.LIGHT -> stringResource(R.string.theme_light)
+                                    AppSettings.ThemeMode.DARK -> stringResource(R.string.theme_dark)
                                 },
                             )
                         }
@@ -159,7 +161,7 @@ fun SettingsScreen(
                 if (AppSettings.accentName == AppSettings.DYNAMIC) {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "Colors follow your wallpaper (Material You)",
+                        text = stringResource(R.string.dynamic_color_description),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.secondary,
                     )
@@ -167,19 +169,19 @@ fun SettingsScreen(
             }
 
             if (chatRepository != null) {
-                SettingsCard(title = "Relationship") {
+                SettingsCard(title = stringResource(R.string.settings_section_relationship)) {
                     val anniversary by chatRepository.anniversaryMillis()
                         .collectAsState(initial = null)
                     val anniversaryText = anniversary?.let {
                         SimpleDateFormat("MMMM d, yyyy", Locale.getDefault()).format(Date(it))
-                    } ?: "Not set — tap to choose"
+                    } ?: stringResource(R.string.anniversary_not_set)
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { showDatePicker = true }
                             .padding(vertical = 4.dp),
                     ) {
-                        Text("Together since", style = MaterialTheme.typography.bodyLarge)
+                        Text(stringResource(R.string.together_since), style = MaterialTheme.typography.bodyLarge)
                         Text(
                             text = anniversaryText,
                             style = MaterialTheme.typography.bodyMedium,
@@ -189,7 +191,7 @@ fun SettingsScreen(
                 }
             }
 
-            SettingsCard(title = "Account") {
+            SettingsCard(title = stringResource(R.string.settings_section_account)) {
                 val user = FirebaseAuth.getInstance().currentUser
                 Text(
                     text = user?.displayName ?: "",
@@ -205,7 +207,7 @@ fun SettingsScreen(
                     onClick = { confirmLogout = true },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Log out")
+                    Text(stringResource(R.string.log_out_button))
                 }
                 Spacer(Modifier.height(8.dp))
                 TextButton(
@@ -214,7 +216,7 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
-                        text = if (deleting) "Deleting everything…" else "Delete account",
+                        text = if (deleting) stringResource(R.string.deleting_everything) else stringResource(R.string.delete_account_button),
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
@@ -227,7 +229,7 @@ fun SettingsScreen(
                 }
             }
 
-            SettingsCard(title = "Notifications") {
+            SettingsCard(title = stringResource(R.string.settings_section_notifications)) {
                 val powerManager = context.getSystemService(PowerManager::class.java)
                 var unrestricted by remember {
                     mutableStateOf(
@@ -243,10 +245,9 @@ fun SettingsScreen(
                 }
                 Text(
                     text = if (unrestricted) {
-                        "Reliable ✓ — the system won't put OurVerse to sleep"
+                        stringResource(R.string.notifications_reliable)
                     } else {
-                        "Your phone may delay notifications by putting OurVerse " +
-                            "to sleep in the background."
+                        stringResource(R.string.notifications_unreliable)
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.secondary,
@@ -266,14 +267,14 @@ fun SettingsScreen(
                         },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text("Make notifications reliable")
+                        Text(stringResource(R.string.make_notifications_reliable))
                     }
                 }
             }
 
-            SettingsCard(title = "App update") {
+            SettingsCard(title = stringResource(R.string.settings_section_app_update)) {
                 Text(
-                    text = "Installed version: ${UpdateChecker.installedVersionName(context)}",
+                    text = stringResource(R.string.installed_version, UpdateChecker.installedVersionName(context)),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.secondary,
                 )
@@ -287,18 +288,18 @@ fun SettingsScreen(
                             checkingUpdate = false
                             when {
                                 latest == null ->
-                                    updateStatus = "Couldn't check — are you online?"
+                                    updateStatus = context.getString(R.string.update_check_error)
                                 latest.versionCode > UpdateChecker.installedVersionCode(context) ->
                                     availableUpdate = latest
                                 else ->
-                                    updateStatus = "You're up to date ✓"
+                                    updateStatus = context.getString(R.string.up_to_date)
                             }
                         }
                     },
                     enabled = !checkingUpdate,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(if (checkingUpdate) "Checking…" else "Check for updates")
+                    Text(if (checkingUpdate) stringResource(R.string.checking_updates) else stringResource(R.string.check_for_updates))
                 }
                 updateStatus?.let {
                     Spacer(Modifier.height(8.dp))
@@ -306,9 +307,9 @@ fun SettingsScreen(
                 }
             }
 
-            SettingsCard(title = "About") {
+            SettingsCard(title = stringResource(R.string.settings_section_about)) {
                 Text(
-                    text = "About us",
+                    text = stringResource(R.string.about_us),
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -324,11 +325,10 @@ fun SettingsScreen(
     availableUpdate?.let { update ->
         AlertDialog(
             onDismissRequest = { availableUpdate = null },
-            title = { Text("Update available ❤") },
+            title = { Text(stringResource(R.string.update_available_title)) },
             text = {
                 Text(
-                    "Version ${update.versionName} is ready. It will download in " +
-                        "your browser — open the file when it finishes to install.",
+                    stringResource(R.string.update_available_message, update.versionName),
                 )
             },
             confirmButton = {
@@ -339,10 +339,10 @@ fun SettingsScreen(
                             Intent(Intent.ACTION_VIEW, Uri.parse(update.url)),
                         )
                     }
-                }) { Text("Download") }
+                }) { Text(stringResource(R.string.download_button)) }
             },
             dismissButton = {
-                TextButton(onClick = { availableUpdate = null }) { Text("Later") }
+                TextButton(onClick = { availableUpdate = null }) { Text(stringResource(R.string.later_button)) }
             },
         )
     }
@@ -357,10 +357,10 @@ fun SettingsScreen(
                         scope.launch { runCatching { chatRepository.setAnniversary(millis) } }
                     }
                     showDatePicker = false
-                }) { Text("Save") }
+                }) { Text(stringResource(R.string.save)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+                TextButton(onClick = { showDatePicker = false }) { Text(stringResource(R.string.cancel)) }
             },
         ) {
             DatePicker(state = dateState)
@@ -371,18 +371,13 @@ fun SettingsScreen(
         AlertDialog(
             onDismissRequest = { showAbout = false },
             confirmButton = {
-                TextButton(onClick = { showAbout = false }) { Text("Close") }
+                TextButton(onClick = { showAbout = false }) { Text(stringResource(R.string.close_button)) }
             },
-            title = { Text("OurVerse ❤") },
+            title = { Text(stringResource(R.string.about_dialog_title)) },
             text = {
                 Column {
                     Text(
-                        "Version ${UpdateChecker.installedVersionName(context)}\n\n" +
-                            "OurVerse is a tiny universe for two people: chat with your " +
-                            "partner, leave little notes on each other's home screen, and " +
-                            "keep them close as your wallpaper.\n\n" +
-                            "Made with love, for the two of you.\n\n" +
-                            "Developer: Arun Adhikari",
+                        stringResource(R.string.about_dialog_body, UpdateChecker.installedVersionName(context)),
                     )
                     TextButton(onClick = {
                         runCatching {
@@ -394,7 +389,7 @@ fun SettingsScreen(
                             )
                         }
                     }) {
-                        Text("✉ adhikariarun549@gmail.com")
+                        Text(stringResource(R.string.about_email))
                     }
                 }
             },
@@ -404,13 +399,10 @@ fun SettingsScreen(
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("Delete your account?") },
+            title = { Text(stringResource(R.string.delete_account_title)) },
             text = {
                 Text(
-                    "This permanently erases everything, for both of you: all " +
-                        "messages and photos, every note, your daily answers, " +
-                        "special dates, and the pairing itself. Your partner will " +
-                        "be unpaired.\n\nThis cannot be undone.",
+                    stringResource(R.string.delete_account_warning),
                 )
             },
             confirmButton = {
@@ -424,17 +416,17 @@ fun SettingsScreen(
                             NoteWidget().updateAll(context)
                             onLoggedOut()
                         } catch (e: Exception) {
-                            deleteError = e.message ?: "Couldn't delete — try again"
+                            deleteError = e.message ?: context.getString(R.string.delete_error_fallback)
                         } finally {
                             deleting = false
                         }
                     }
                 }) {
-                    Text("Delete everything", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.delete_everything_button), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { confirmDelete = false }) { Text("Cancel") }
+                TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
@@ -442,8 +434,8 @@ fun SettingsScreen(
     if (confirmLogout) {
         AlertDialog(
             onDismissRequest = { confirmLogout = false },
-            title = { Text("Log out?") },
-            text = { Text("You'll need to sign in again to see your messages.") },
+            title = { Text(stringResource(R.string.logout_title)) },
+            text = { Text(stringResource(R.string.logout_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmLogout = false
@@ -455,10 +447,10 @@ fun SettingsScreen(
                         FirebaseAuth.getInstance().signOut()
                         onLoggedOut()
                     }
-                }) { Text("Log out") }
+                }) { Text(stringResource(R.string.log_out_button)) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmLogout = false }) { Text("Cancel") }
+                TextButton(onClick = { confirmLogout = false }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
@@ -497,7 +489,7 @@ private fun ThemePreview() {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(modifier = Modifier.fillMaxWidth()) {
                 PreviewBubble(
-                    text = "Miss you ❤",
+                    text = stringResource(R.string.preview_miss_you),
                     container = MaterialTheme.colorScheme.primaryContainer,
                     textColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
@@ -508,7 +500,7 @@ private fun ThemePreview() {
                 horizontalArrangement = Arrangement.End,
             ) {
                 PreviewBubble(
-                    text = "Miss you more 🥰",
+                    text = stringResource(R.string.preview_miss_you_more),
                     container = MaterialTheme.colorScheme.primary,
                     textColor = MaterialTheme.colorScheme.onPrimary,
                 )

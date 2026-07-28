@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -48,6 +49,7 @@ import androidx.glance.appwidget.updateAll
 import com.lovenote.app.call.CallManager
 import com.lovenote.app.call.CallOverlay
 import com.lovenote.app.chat.ChatRepository
+import com.lovenote.app.R
 import com.lovenote.app.chat.ChatScreen
 import com.lovenote.app.games.GameRepository
 import com.lovenote.app.games.GamesHubScreen
@@ -120,10 +122,10 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                 NoteWidget().updateAll(context)
                 val millis = note.sentAt?.toDate()?.time ?: 0L
                 if (!firstEmission && millis > NotifyState.lastNoteMillis(context)) {
-                    Notifier.notifyNote(
-                        context,
-                        note.text.ifBlank { "A doodle for you" },
-                    )
+                Notifier.notifyNote(
+                    context,
+                    note.text.ifBlank { context.getString(R.string.notification_doodle) },
+                )
                 }
                 NotifyState.setLastNote(context, millis)
                 firstEmission = false
@@ -144,8 +146,8 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                     Notifier.notifyMessage(
                         context,
                         when {
-                            newest.isPhoto -> "Photo"
-                            newest.isVoice -> "Voice note"
+                            newest.isPhoto -> context.getString(R.string.notification_photo)
+                            newest.isVoice -> context.getString(R.string.notification_voice_note)
                             else -> newest.body
                         },
                     )
@@ -156,8 +158,8 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
         }
     }
 
-    val myName = myProfile?.name?.ifBlank { "You" } ?: "You"
-    val partnerName = partner?.name?.ifBlank { "Your partner" } ?: "Your partner"
+    val myName = myProfile?.name?.ifBlank { stringResource(R.string.default_name_you) } ?: stringResource(R.string.default_name_you)
+    val partnerName = partner?.name?.ifBlank { stringResource(R.string.default_name_partner) } ?: stringResource(R.string.default_name_partner)
     var activeGameId by remember { mutableStateOf<String?>(null) }
 
     fun startGame(gameType: String) {
@@ -189,20 +191,20 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                     ) {
                         BottomBarItem(
                             icon = Icons.Filled.Email,
-                            label = "Chat",
+                            label = stringResource(R.string.tab_chat),
                             selected = screen == HomeScreen.CHAT || screen == HomeScreen.SETTINGS,
                             onClick = { navigate(HomeScreen.CHAT) },
                         )
                         BottomBarItem(
                             icon = Icons.Filled.Favorite,
-                            label = "Us",
+                            label = stringResource(R.string.tab_us),
                             selected = screen == HomeScreen.US || screen == HomeScreen.MEMORIES ||
                                 screen == HomeScreen.TODOS,
                             onClick = { navigate(HomeScreen.US) },
                         )
                         BottomBarItem(
                             icon = Icons.Filled.Star,
-                            label = "Hub",
+                            label = stringResource(R.string.tab_play),
                             selected = screen == HomeScreen.HUB || screen == HomeScreen.NOTE ||
                                 screen == HomeScreen.DRAW || screen == HomeScreen.HISTORY ||
                                 screen == HomeScreen.TIC_TAC_TOE || screen == HomeScreen.LUDO ||
@@ -219,7 +221,11 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                     .padding(padding)
                     .consumeWindowInsets(padding),
             ) {
-                Crossfade(targetState = screen, label = "screens") { target ->
+                Crossfade(
+                    targetState = screen,
+                    label = "screens",
+                    animationSpec = tween(durationMillis = 250),
+                ) { target ->
                     when (target) {
                         HomeScreen.HUB -> GamesHubScreen(
                             onBack = { navigate(HomeScreen.CHAT) },
@@ -344,7 +350,7 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                             onBack = { navigate(HomeScreen.US) },
                             onRemind = { title ->
                                 homeScope.launch {
-                                    runCatching { chatRepository.send("Reminder: $title") }
+                                    runCatching { chatRepository.send(context.getString(R.string.notification_reminder, title)) }
                                 }
                             },
                         )
@@ -366,7 +372,7 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
             }
         }
         CallOverlay(
-            partnerName = partner?.name ?: "Your partner",
+            partnerName = partner?.name ?: stringResource(R.string.default_name_partner),
             partnerPhoto = partner?.photoUrl ?: "",
         )
     }

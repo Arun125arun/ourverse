@@ -15,8 +15,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,6 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,10 +42,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,10 +55,13 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
+import com.lovenote.app.R
 
 private data class GameCard(
     val title: String,
@@ -81,10 +93,10 @@ fun GamesHubScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Couple Hub") },
+                title = { Text(stringResource(R.string.play_together_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_description_back))
                     }
                 },
             )
@@ -100,14 +112,14 @@ fun GamesHubScreen(
             Spacer(Modifier.height(8.dp))
 
             Text(
-                text = "Welcome back, $myName",
+                text = stringResource(R.string.ready_to_play, myName),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "What would you like to do today?",
+                text = stringResource(R.string.play_hub_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -115,13 +127,13 @@ fun GamesHubScreen(
             Spacer(Modifier.height(28.dp))
 
             // ── Notes section ──
-            SectionHeader("Notes")
+            SectionHeader(stringResource(R.string.section_notes))
             Spacer(Modifier.height(12.dp))
 
             val noteActions = listOf(
-                QuickAction("Send Note", Icons.Filled.Edit, onSendNote),
-                QuickAction("Draw Note", Icons.Filled.Edit, onDrawNote),
-                QuickAction("History", Icons.Filled.Favorite, onNoteHistory),
+                QuickAction(stringResource(R.string.quick_action_send_note), Icons.Filled.Edit, onSendNote),
+                QuickAction(stringResource(R.string.quick_action_draw_note), Icons.Filled.Favorite, onDrawNote),
+                QuickAction(stringResource(R.string.quick_action_history), Icons.Filled.Star, onNoteHistory),
             )
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -138,34 +150,34 @@ fun GamesHubScreen(
             Spacer(Modifier.height(32.dp))
 
             // ── Games section ──
-            SectionHeader("Games")
+            SectionHeader(stringResource(R.string.section_games))
             Spacer(Modifier.height(12.dp))
 
             val games = listOf(
                 GameCard(
-                    title = "Tic Tac Toe",
-                    subtitle = "Classic strategy game",
+                    title = stringResource(R.string.game_tic_tac_toe),
+                    subtitle = stringResource(R.string.game_tic_tac_toe_subtitle),
                     icon = "X O",
                     gradient = listOf(Color(0xFF6C63FF), Color(0xFF3F51B5)),
                     onClick = onTicTacToe,
                 ),
                 GameCard(
-                    title = "Ludo",
-                    subtitle = "Classic board game",
+                    title = stringResource(R.string.game_ludo),
+                    subtitle = stringResource(R.string.game_ludo_subtitle),
                     icon = "🎲",
                     gradient = listOf(Color(0xFFFF6B6B), Color(0xFFEE5A24)),
                     onClick = onLudo,
                 ),
                 GameCard(
-                    title = "Truth or Dare",
-                    subtitle = "Spice things up",
+                    title = stringResource(R.string.game_truth_or_dare),
+                    subtitle = stringResource(R.string.game_truth_or_dare_subtitle),
                     icon = "!",
                     gradient = listOf(Color(0xFFE84393), Color(0xFFD63031)),
                     onClick = onTruthOrDare,
                 ),
                 GameCard(
-                    title = "Word Game",
-                    subtitle = "How connected are you?",
+                    title = stringResource(R.string.game_word_game),
+                    subtitle = stringResource(R.string.game_word_game_subtitle),
                     icon = "Aa",
                     gradient = listOf(Color(0xFF0984E3), Color(0xFF6C5CE7)),
                     onClick = onWordGame,
@@ -176,43 +188,29 @@ fun GamesHubScreen(
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                items(games) { game ->
-                    GameFeatureCard(
-                        title = game.title,
-                        subtitle = game.subtitle,
-                        icon = game.icon,
-                        gradient = game.gradient,
-                        onClick = game.onClick,
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(24.dp))
-
-            // ── Game grid (compact view) ──
-            Text(
-                text = "All Games",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(Modifier.height(12.dp))
-
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                games.chunked(2).forEach { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        row.forEach { game ->
-                            CompactGameCard(
-                                title = game.title,
-                                subtitle = game.subtitle,
-                                icon = game.icon,
-                                gradient = game.gradient,
-                                onClick = game.onClick,
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                        if (row.size == 1) {
-                            Spacer(Modifier.weight(1f))
-                        }
+                itemsIndexed(games) { index, game ->
+                    val visible = remember { mutableStateOf(false) }
+                    LaunchedEffect(Unit) {
+                        delay(index * 100L)
+                        visible.value = true
+                    }
+                    AnimatedVisibility(
+                        visible = visible.value,
+                        enter = fadeIn() + slideInVertically(
+                            initialOffsetY = { it / 3 },
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessLow,
+                            ),
+                        ),
+                    ) {
+                        GameFeatureCard(
+                            title = game.title,
+                            subtitle = game.subtitle,
+                            icon = game.icon,
+                            gradient = game.gradient,
+                            onClick = game.onClick,
+                        )
                     }
                 }
             }
@@ -349,56 +347,19 @@ private fun GameFeatureCard(
 }
 
 @Composable
-private fun CompactGameCard(
-    title: String,
-    subtitle: String,
-    icon: String,
-    gradient: List<Color>,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Card(
-        modifier = modifier
-            .height(72.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(Brush.linearGradient(gradient)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = icon,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
+@Preview(showBackground = true, showSystemUi = true)
+private fun GamesHubPreview() {
+    com.lovenote.app.ui.theme.LoveNoteTheme {
+        GamesHubScreen(
+            onBack = {},
+            onSendNote = {},
+            onDrawNote = {},
+            onNoteHistory = {},
+            onTicTacToe = {},
+            onLudo = {},
+            onTruthOrDare = {},
+            onWordGame = {},
+            myName = "You",
+        )
     }
 }

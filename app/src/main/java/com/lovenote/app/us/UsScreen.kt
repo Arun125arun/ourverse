@@ -1,5 +1,11 @@
 package com.lovenote.app.us
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,18 +26,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -40,43 +38,33 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import android.Manifest
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lovenote.app.R
 import com.lovenote.app.chat.VoicePlayer
 import com.lovenote.app.chat.VoiceRecorder
 import com.lovenote.app.ui.Avatar
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlinx.coroutines.launch
 
 private val MOOD_EMOJIS = listOf("🥰", "😊", "😐", "😔", "😤", "😴")
 
@@ -118,8 +106,9 @@ fun UsScreen(
     val rouletteState by repository.rouletteState().collectAsState(initial = emptyMap())
     val countdown by repository.countdownEvent().collectAsState(initial = null)
     var countdownTick by remember { mutableIntStateOf(0) }
-    LaunchedEffect(countdown?.targetMillis) {
-        while (countdown != null && countdown!!.targetMillis > System.currentTimeMillis()) {
+    val currentCountdown = countdown
+    LaunchedEffect(currentCountdown?.targetMillis) {
+        while (currentCountdown != null && currentCountdown.targetMillis > System.currentTimeMillis()) {
             countdownTick++
             delay(60_000L)
         }
@@ -156,7 +145,7 @@ fun UsScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Us ❤") }) },
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.us_title)) }) },
     ) { padding ->
         Column(
             modifier = Modifier
@@ -179,7 +168,7 @@ fun UsScreen(
                 horizontalArrangement = Arrangement.Center,
             ) {
                 Text(
-                    text = "Our color:",
+                    text = stringResource(R.string.our_color_label),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                 )
@@ -247,19 +236,19 @@ fun UsScreen(
                         Spacer(Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "$streak day streak!",
+                                text = stringResource(R.string.streak_day, streak),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onTertiaryContainer,
                                 fontWeight = FontWeight.Bold,
                             )
                             Text(
-                                text = when {
-                                    streak >= 365 -> "A year of connection! You two are unstoppable."
-                                    streak >= 100 -> "100 days! Your bond is incredible."
-                                    streak >= 30 -> "A whole month! Keep it going."
-                                    streak >= 7 -> "A whole week! You're building something beautiful."
-                                    else -> "Keep checking in daily to grow your streak."
-                                },
+                                text = stringResource(when {
+                                    streak >= 365 -> R.string.streak_365
+                                    streak >= 100 -> R.string.streak_100
+                                    streak >= 30 -> R.string.streak_30
+                                    streak >= 7 -> R.string.streak_7
+                                    else -> R.string.streak_default
+                                }),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.65f),
                             )
@@ -275,14 +264,14 @@ fun UsScreen(
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(14.dp),
                 ) {
-                    Text("\uD83D\uDCD6 Our story")
+                    Text(stringResource(R.string.our_story_button))
                 }
                 OutlinedButton(
                     onClick = onTodosClick,
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(14.dp),
                 ) {
-                    Text("\uD83D\uDCCB To-dos")
+                    Text(stringResource(R.string.todos_button))
                 }
             }
 
@@ -312,7 +301,7 @@ fun UsScreen(
                             Text("\uD83D\uDCF8", fontSize = 18.sp)
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                text = "Memory Lane",
+                                text = stringResource(R.string.memory_lane),
                                 style = MaterialTheme.typography.titleSmall,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                                 fontWeight = FontWeight.SemiBold,
@@ -365,18 +354,18 @@ fun UsScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // Voice Letters section
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "\uD83D\uDC8C Voice Letters",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.weight(1f),
-                )
-                IconButton(onClick = {
+            VoiceLettersSection(
+                voiceLetters = voiceLetters,
+                myUid = repository.myUid,
+                me = me,
+                partner = partner,
+                recording = recording,
+                recordSeconds = recordSeconds,
+                playingVoiceId = playingVoiceId,
+                showCaptionDialog = showCaptionDialog,
+                pendingAudio = pendingAudio,
+                context = context,
+                onToggleRecording = {
                     if (recording) {
                         val result = runCatching { recorder.stop() }.getOrNull()
                         recording = false
@@ -387,432 +376,43 @@ fun UsScreen(
                     } else {
                         micPermission.launch(Manifest.permission.RECORD_AUDIO)
                     }
-                }) {
-                    if (recording) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Filled.Delete,
-                                contentDescription = "Stop recording",
-                                tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(28.dp),
-                            )
-                            Text(
-                                text = "${VoiceRecorder.MAX_SECONDS - recordSeconds}s",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                        }
-                    } else {
-                        Icon(
-                            Icons.Filled.Add,
-                            contentDescription = "Record a voice letter",
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                }
-            }
-            if (recording) {
-                val infiniteTransition = rememberInfiniteTransition(label = "rec")
-                val pulse by infiniteTransition.animateFloat(
-                    initialValue = 0.8f, targetValue = 1f,
-                    animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse),
-                    label = "pulse",
-                )
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(12.dp)
-                                .scale(pulse)
-                                .background(MaterialTheme.colorScheme.error, CircleShape),
-                        )
-                        Spacer(Modifier.width(10.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Recording\u2026",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                            )
-                            Text(
-                                text = "${recordSeconds}s / ${VoiceRecorder.MAX_SECONDS}s",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.6f),
-                            )
-                        }
-                        // Mini waveform bars
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            repeat(5) { i ->
-                                val barHeight by infiniteTransition.animateFloat(
-                                    initialValue = 6f,
-                                    targetValue = 18f + (i * 3),
-                                    animationSpec = infiniteRepeatable(
-                                        tween(300 + i * 100),
-                                        RepeatMode.Reverse,
-                                    ),
-                                    label = "bar$i",
-                                )
-                                Box(
-                                    modifier = Modifier
-                                        .width(3.dp)
-                                        .height(barHeight.dp)
-                                        .background(
-                                            MaterialTheme.colorScheme.error.copy(alpha = 0.6f),
-                                            RoundedCornerShape(2.dp),
-                                        ),
-                                )
-                            }
-                        }
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
-            }
-            if (voiceLetters.isEmpty() && !recording) {
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text("\uD83C\uDF99\uFE0F", fontSize = 22.sp, modifier = Modifier.padding(end = 10.dp))
-                        Text(
-                            text = "Record a voice letter to send love.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                        )
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
-            }
-            voiceLetters.forEach { letter ->
-                val isMine = letter.senderUid == repository.myUid
-                val senderName = if (isMine) me?.name?.substringBefore(' ') ?: "Me" else partner?.name?.substringBefore(' ') ?: "Partner"
-                val timeAgo = voiceLetterTimeAgo(letter.createdAtMillis)
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = if (isMine) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 3.dp),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        IconButton(onClick = {
-                            val nowPlaying = VoicePlayer.toggle(
-                                context, letter.id, letter.audioBase64,
-                            ) { playingVoiceId = null }
-                            playingVoiceId = if (nowPlaying) letter.id else null
-                        }, modifier = Modifier.size(36.dp)) {
-                            Text(
-                                text = if (playingVoiceId == letter.id) "\u23F8" else "\u25B6",
-                                fontSize = 18.sp,
-                            )
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = senderName,
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                            )
-                            if (letter.caption.isNotBlank()) {
-                                Text(
-                                    text = letter.caption,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                                )
-                            }
-                            Text(
-                                text = "${letter.durationSec}s \u00B7 $timeAgo",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                            )
-                        }
-                    }
-                }
-            }
+                },
+                onPlayVoice = { letter ->
+                    val nowPlaying = VoicePlayer.toggle(
+                        context, letter.id, letter.audioBase64,
+                    ) { playingVoiceId = null }
+                    playingVoiceId = if (nowPlaying) letter.id else null
+                },
+                onDismissCaption = {
+                    showCaptionDialog = false
+                    pendingAudio = null
+                },
+                onConfirmCaption = { caption ->
+                    val audio = pendingAudio!!
+                    repository.sendVoiceLetter(audio.first, audio.second, caption)
+                },
+            )
 
             Spacer(Modifier.height(24.dp))
 
-            // Question Roulette
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "\uD83E\uDE86 Question Roulette",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.weight(1f),
-                )
-                IconButton(onClick = {
+            RouletteSection(
+                rouletteState = rouletteState,
+                myUid = repository.myUid,
+                me = me,
+                partner = partner,
+                showAnswer = showRouletteAnswer,
+                question = rouletteQuestion,
+                answer = rouletteAnswer,
+                onSpin = {
                     scope.launch {
                         val q = repository.nextRouletteQuestion()
                         rouletteQuestion = q
                         rouletteAnswer = ""
                         showRouletteAnswer = true
                     }
-                }) {
-                    Text("\uD83C\uDFB2", fontSize = 26.sp)
-                }
-            }
-            val rouletteAnswers = (rouletteState["answers"] as? Map<*, *>).orEmpty()
-            if (rouletteAnswers.isNotEmpty()) {
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.45f),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Last answers:",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.5f),
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        rouletteAnswers.entries.forEach { (uid, value) ->
-                            val entry = value as? Map<*, *> ?: return@forEach
-                            val ans = entry["answer"] as? String ?: ""
-                            val isMine = uid == repository.myUid
-                            val name = if (isMine) me?.name?.substringBefore(' ') ?: "Me" else partner?.name?.substringBefore(' ') ?: "Partner"
-                            Row(
-                                modifier = Modifier.padding(vertical = 3.dp),
-                                verticalAlignment = Alignment.Top,
-                            ) {
-                                Text(
-                                    text = if (isMine) "\uD83D\uDC64" else "\uD83D\uDC65",
-                                    fontSize = 14.sp,
-                                )
-                                Spacer(Modifier.width(6.dp))
-                                Column {
-                                    Text(
-                                        text = name,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onTertiaryContainer,
-                                    )
-                                    Text(
-                                        text = ans.take(100),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f),
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(24.dp))
-
-            // Shared Countdown
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "\u23F0 Countdown",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.weight(1f),
-                )
-                IconButton(onClick = {
-                    if (countdown != null) {
-                        scope.launch { repository.clearCountdown() }
-                    } else {
-                        countdownTitle = ""
-                        showCountdownPicker = true
-                    }
-                }) {
-                    if (countdown != null) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Clear countdown")
-                    } else {
-                        Icon(Icons.Filled.Add, contentDescription = "Set a countdown")
-                    }
-                }
-            }
-            countdown?.let { cd ->
-                countdownTick // read to trigger recomposition every minute
-                val remainingMs = cd.targetMillis - System.currentTimeMillis()
-                if (remainingMs > 0) {
-                    val days = remainingMs / (1000L * 60 * 60 * 24)
-                    val hours = (remainingMs % (1000L * 60 * 60 * 24)) / (1000L * 60 * 60)
-                    val minutes = (remainingMs % (1000L * 60 * 60)) / (1000L * 60)
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(20.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            Text(
-                                text = cd.title,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                            )
-                            Spacer(Modifier.height(12.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                CountdownUnit(value = days, label = "days", highlight = true)
-                                CountdownUnit(value = hours, label = "hrs", highlight = false)
-                                CountdownUnit(value = minutes, label = "min", highlight = false)
-                            }
-                            Spacer(Modifier.height(6.dp))
-                            Text(
-                                text = "\u2764\uFE0F",
-                                fontSize = 20.sp,
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(24.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "Special dates",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.weight(1f),
-                )
-                IconButton(onClick = { showAddEvent = true }) {
-                    Icon(Icons.Filled.Add, contentDescription = "Add a special date")
-                }
-            }
-            if (events.isEmpty()) {
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = "\u2764\uFE0F",
-                            fontSize = 22.sp,
-                            modifier = Modifier.padding(end = 10.dp),
-                        )
-                        Column {
-                            Text(
-                                text = "No dates yet",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium,
-                            )
-                            Text(
-                                text = "Add birthdays, anniversaries, or your next date night.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                            )
-                        }
-                    }
-                }
-            } else {
-                events.forEach { event ->
-                    EventRow(
-                        event = event,
-                        onDelete = {
-                            scope.launch { runCatching { repository.deleteEvent(event.id) } }
-                        },
-                    )
-                }
-            }
-        }
-    }
-
-    if (showAddEvent) {
-        AddEventDialog(
-            onDismiss = { showAddEvent = false },
-            onAdd = { title, millis ->
-                showAddEvent = false
-                scope.launch { runCatching { repository.addEvent(title, millis) } }
-            },
-        )
-    }
-    if (showCaptionDialog && pendingAudio != null) {
-        var captionText by remember { mutableStateOf("") }
-        var sendingError by remember { mutableStateOf<String?>(null) }
-        AlertDialog(
-            onDismissRequest = {
-                showCaptionDialog = false
-                pendingAudio = null
-            },
-            title = { Text("Add a caption (optional)") },
-            text = {
-                Column {
-                    OutlinedTextField(
-                        value = captionText,
-                        onValueChange = { captionText = it },
-                        label = { Text("What's this letter about?") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    sendingError?.let {
-                        Spacer(Modifier.height(8.dp))
-                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val audio = pendingAudio!!
-                    showCaptionDialog = false
-                    pendingAudio = null
-                    sendingError = null
-                    scope.launch {
-                        val result = runCatching { repository.sendVoiceLetter(audio.first, audio.second, captionText) }
-                        if (result.isFailure) {
-                            sendingError = "Failed to send: ${result.exceptionOrNull()?.message ?: "Unknown error"}"
-                            showCaptionDialog = true
-                            pendingAudio = audio
-                        }
-                    }
-                }) { Text("Send") }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showCaptionDialog = false
-                    pendingAudio = null
-                }) { Text("Cancel") }
-            },
-        )
-    }
-    if (showRouletteAnswer) {
-        AlertDialog(
-            onDismissRequest = { showRouletteAnswer = false },
-            title = { Text(rouletteQuestion ?: "Question") },
-            text = {
-                OutlinedTextField(
-                    value = rouletteAnswer,
-                    onValueChange = { rouletteAnswer = it },
-                    label = { Text("Your answer") },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
+                },
+                onAnswerChange = { rouletteAnswer = it },
+                onSubmitAnswer = {
                     val q = rouletteQuestion
                     if (q != null) {
                         val idx = repository.rouletteQuestions.indexOf(q)
@@ -821,61 +421,40 @@ fun UsScreen(
                         }
                     }
                     showRouletteAnswer = false
-                }) { Text("Send") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRouletteAnswer = false }) { Text("Skip") }
-            },
-        )
-    }
-    if (showCountdownPicker) {
-        var cdPickDate by remember { mutableStateOf(false) }
-        val cdDateState = rememberDatePickerState()
-        val cdDateLabel = cdDateState.selectedDateMillis?.let {
-            SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(Date(it))
-        } ?: "Pick a date"
-        AlertDialog(
-            onDismissRequest = { showCountdownPicker = false },
-            title = { Text("Set a countdown") },
-            text = {
-                Column {
-                    OutlinedTextField(
-                        value = countdownTitle,
-                        onValueChange = { countdownTitle = it },
-                        label = { Text("What are we counting down to?") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    TextButton(onClick = { cdPickDate = true }) { Text(cdDateLabel) }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        cdDateState.selectedDateMillis?.let { millis ->
-                            showCountdownPicker = false
-                            scope.launch {
-                                runCatching { repository.setCountdown(countdownTitle, millis) }
-                            }
-                        }
-                    },
-                    enabled = countdownTitle.isNotBlank() && cdDateState.selectedDateMillis != null,
-                ) { Text("Start") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showCountdownPicker = false }) { Text("Cancel") }
-            },
-        )
-        if (cdPickDate) {
-            DatePickerDialog(
-                onDismissRequest = { cdPickDate = false },
-                confirmButton = {
-                    TextButton(onClick = { cdPickDate = false }) { Text("OK") }
                 },
-            ) {
-                DatePicker(state = cdDateState)
-            }
+                onDismissAnswer = { showRouletteAnswer = false },
+            )
+
+            Spacer(Modifier.height(24.dp))
+
+            CountdownSection(
+                countdown = countdown,
+                countdownTick = countdownTick,
+                showPicker = showCountdownPicker,
+                pickerTitle = countdownTitle,
+                onClearCountdown = { scope.launch { repository.clearCountdown() } },
+                onShowPicker = { countdownTitle = ""; showCountdownPicker = true },
+                onDismissPicker = { showCountdownPicker = false },
+                onPickerTitleChange = { countdownTitle = it },
+                onStartCountdown = { millis ->
+                    showCountdownPicker = false
+                    scope.launch { runCatching { repository.setCountdown(countdownTitle, millis) } }
+                },
+            )
+
+            Spacer(Modifier.height(24.dp))
+
+            SpecialDatesSection(
+                events = events,
+                showAddEvent = showAddEvent,
+                onAddClick = { showAddEvent = true },
+                onDeleteEvent = { id -> scope.launch { runCatching { repository.deleteEvent(id) } } },
+                onDismissAddEvent = { showAddEvent = false },
+                onConfirmAddEvent = { title, millis ->
+                    showAddEvent = false
+                    scope.launch { runCatching { repository.addEvent(title, millis) } }
+                },
+            )
         }
     }
 }
@@ -917,7 +496,7 @@ private fun CoupleHero(
             Spacer(Modifier.height(12.dp))
             val days = (System.currentTimeMillis() - it) / 86_400_000L + 1
             Text(
-                text = "$days days together",
+                text = stringResource(R.string.days_together, days),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -925,9 +504,9 @@ private fun CoupleHero(
                 val remaining = next - days
                 Text(
                     text = if (remaining == 0L) {
-                        "🎉 Today is day $next!"
+                        stringResource(R.string.milestone_today, next)
                     } else {
-                        "🎉 $next days in $remaining ${if (remaining == 1L) "day" else "days"}"
+                        stringResource(R.string.milestone_upcoming, next, remaining, stringResource(if (remaining == 1L) R.string.milestone_day else R.string.milestone_days))
                     },
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.secondary,
@@ -957,13 +536,13 @@ private fun MoodSection(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Daily Pulse",
+                text = stringResource(R.string.daily_pulse),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "How are you feeling?",
+                text = stringResource(R.string.how_are_you_feeling),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
             )
@@ -1007,14 +586,14 @@ private fun MoodSection(
             if (myMood != null && myMood.statusWord != null) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "You're ${myMood.emoji} and ${myMood.statusWord}",
+                        text = stringResource(R.string.mood_status_you, myMood.emoji, myMood.statusWord),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
                 }
             } else if (myMood != null) {
                 Text(
-                    text = "Tap a word below to add your status",
+                    text = stringResource(R.string.tap_word_to_add_status),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
                 )
@@ -1055,8 +634,8 @@ private fun MoodSection(
             // Partner pulse
             val partnerText = partnerMood?.let { mood ->
                 val word = mood.statusWord
-                if (word != null) "They're ${mood.emoji} and $word" else "They're ${mood.emoji}"
-            } ?: "They haven't checked in yet"
+                if (word != null) stringResource(R.string.mood_status_partner_with_word, mood.emoji, word) else stringResource(R.string.mood_status_partner_emoji, mood.emoji)
+            } ?: stringResource(R.string.partner_not_checked_in)
             Text(
                 text = partnerText,
                 style = MaterialTheme.typography.bodyMedium,
@@ -1082,7 +661,7 @@ private fun DailyQuestionCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Today's question",
+                text = stringResource(R.string.todays_question),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
             )
@@ -1099,7 +678,7 @@ private fun DailyQuestionCard(
                     OutlinedTextField(
                         value = draft,
                         onValueChange = { draft = it },
-                        placeholder = { Text("Your answer…") },
+                        placeholder = { Text(stringResource(R.string.your_answer_placeholder)) },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 2,
                     )
@@ -1109,23 +688,23 @@ private fun DailyQuestionCard(
                         enabled = draft.isNotBlank(),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text("Answer")
+                        Text(stringResource(R.string.answer_button))
                     }
                     Text(
-                        text = "Their answer unlocks when you've answered too.",
+                        text = stringResource(R.string.partner_answer_unlocks),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.padding(top = 6.dp),
                     )
                 }
                 else -> {
-                    AnswerBlock(label = "You", text = myAnswer)
+                    AnswerBlock(label = stringResource(R.string.label_you), text = myAnswer)
                     Spacer(Modifier.height(10.dp))
                     if (partnerAnswer != null) {
-                        AnswerBlock(label = "Them ❤", text = partnerAnswer)
+                        AnswerBlock(label = stringResource(R.string.label_them_heart), text = partnerAnswer)
                     } else {
                         Text(
-                            text = "Waiting for their answer…",
+                            text = stringResource(R.string.waiting_for_answer),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
@@ -1178,7 +757,7 @@ private fun QuizCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Couple quiz 🎯",
+                text = stringResource(R.string.couple_quiz_title),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -1188,12 +767,12 @@ private fun QuizCard(
 
             when {
                 mine == null -> {
-                    Text("Your pick:", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.your_pick), style = MaterialTheme.typography.labelMedium)
                     Spacer(Modifier.height(6.dp))
                     OptionGrid(question.options, myPick) { myPick = it }
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        "What did $partnerName pick?",
+                        stringResource(R.string.what_did_partner_pick, partnerName),
                         style = MaterialTheme.typography.labelMedium,
                     )
                     Spacer(Modifier.height(6.dp))
@@ -1204,18 +783,17 @@ private fun QuizCard(
                         enabled = myPick != null && myGuess != null,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text("Lock it in")
+                        Text(stringResource(R.string.lock_it_in))
                     }
                 }
                 theirs == null -> {
                     Text(
-                        "You picked “${opt(mine.answer)}” and guessed " +
-                            "they'd pick “${opt(mine.guess)}”.",
+                        stringResource(R.string.quiz_picked_and_guessed, opt(mine.answer), opt(mine.guess)),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        "Waiting for $partnerName to play…",
+                        stringResource(R.string.quiz_waiting_for_partner, partnerName),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.secondary,
                     )
@@ -1224,26 +802,17 @@ private fun QuizCard(
                     val iWasRight = mine.guess == theirs.answer
                     val theyWereRight = theirs.guess == mine.answer
                     Text(
-                        "They picked: “${opt(theirs.answer)}”",
+                        stringResource(R.string.quiz_they_picked, opt(theirs.answer)),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Text(
-                        if (iWasRight) {
-                            "Your guess was right! 🎉"
-                        } else {
-                            "You guessed “${opt(mine.guess)}” — not quite 😅"
-                        },
+                        stringResource(if (iWasRight) R.string.quiz_guess_right else R.string.quiz_guess_wrong, opt(mine.guess)),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        if (theyWereRight) {
-                            "$partnerName guessed your pick correctly too ❤"
-                        } else {
-                            "$partnerName thought you'd pick " +
-                                "“${opt(theirs.guess)}” 😄"
-                        },
+                        stringResource(if (theyWereRight) R.string.quiz_partner_guessed_right else R.string.quiz_partner_guessed_wrong, partnerName, opt(theirs.guess)),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
@@ -1292,141 +861,4 @@ private fun OptionGrid(
     }
 }
 
-@Composable
-private fun EventRow(event: CoupleEvent, onDelete: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(event.title, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                text = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
-                    .format(Date(event.dateMillis)),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.secondary,
-            )
-        }
-        Text(
-            text = countdownLabel(event.dateMillis),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        IconButton(onClick = onDelete) {
-            Icon(
-                Icons.Filled.Delete,
-                contentDescription = "Delete",
-                tint = MaterialTheme.colorScheme.secondary,
-            )
-        }
-    }
-}
 
-private fun countdownLabel(dateMillis: Long): String {
-    val days = ((dateMillis - System.currentTimeMillis()) / 86_400_000.0)
-    return when {
-        days in -1.0..0.0 -> "today ❤"
-        days > 0 -> "in ${days.toInt() + 1} days"
-        else -> "${-days.toInt()} days ago"
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun AddEventDialog(
-    onDismiss: () -> Unit,
-    onAdd: (String, Long) -> Unit,
-) {
-    var title by remember { mutableStateOf("") }
-    var pickDate by remember { mutableStateOf(false) }
-    val dateState = rememberDatePickerState()
-    val dateLabel = dateState.selectedDateMillis?.let {
-        SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(Date(it))
-    } ?: "Pick a date"
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Add a special date") },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text("What is it? (e.g. Date night)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(Modifier.height(8.dp))
-                TextButton(onClick = { pickDate = true }) { Text(dateLabel) }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    dateState.selectedDateMillis?.let { onAdd(title, it) }
-                },
-                enabled = title.isNotBlank() && dateState.selectedDateMillis != null,
-            ) { Text("Add") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        },
-    )
-
-    if (pickDate) {
-        DatePickerDialog(
-            onDismissRequest = { pickDate = false },
-            confirmButton = {
-                TextButton(onClick = { pickDate = false }) { Text("OK") }
-            },
-        ) {
-            DatePicker(state = dateState)
-        }
-    }
-}
-
-@Composable
-private fun CountdownUnit(value: Long, label: String, highlight: Boolean = false) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .then(
-                if (highlight) Modifier
-                    .background(
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
-                        RoundedCornerShape(12.dp),
-                    )
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-                else Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
-            ),
-    ) {
-        Text(
-            text = "%02d".format(value),
-            style = if (highlight) MaterialTheme.typography.headlineLarge
-            else MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = if (highlight) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.onPrimaryContainer,
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = if (highlight) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
-            else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
-        )
-    }
-}
-
-private fun voiceLetterTimeAgo(millis: Long): String {
-    val now = System.currentTimeMillis()
-    val diff = now - millis
-    return when {
-        diff < 60_000 -> "just now"
-        diff < 3_600_000 -> "${diff / 60_000}m ago"
-        diff < 86_400_000 -> "${diff / 3_600_000}h ago"
-        diff < 172_800_000 -> "Yesterday"
-        else -> SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(millis))
-    }
-}
