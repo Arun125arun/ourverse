@@ -89,6 +89,7 @@ fun WordConnectionScreen(
 
     var mode by remember { mutableStateOf<String?>(null) }
     var showModeDialog by remember { mutableStateOf(gameId == null) }
+    var isSendingInvite by remember { mutableStateOf(false) }
 
     val selectedPrompts = remember { PROMPTS.shuffled().take(8) }
     var phase by remember { mutableStateOf("intro") }
@@ -121,6 +122,14 @@ fun WordConnectionScreen(
             gameRepository.joinGame(gameId!!, myName)
         }
         waitingForPartner = session.p2Uid.isNullOrEmpty()
+    }
+
+    // Set mode when gameId arrives from online invite creation
+    LaunchedEffect(gameId) {
+        if (gameId != null && mode == null) {
+            mode = "online"
+            showModeDialog = false
+        }
     }
 
     // Sync state from Firestore in online mode
@@ -165,7 +174,8 @@ fun WordConnectionScreen(
             },
             text = {
                 Text(
-                    "How well do you think alike? Choose how to play:",
+                    if (isSendingInvite) "Creating game..."
+                    else "How well do you think alike? Choose how to play:",
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth(),
                     style = MaterialTheme.typography.bodyLarge,
@@ -175,16 +185,25 @@ fun WordConnectionScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        mode = "online"
-                        showModeDialog = false
+                        isSendingInvite = true
                         scope.launch {
                             runCatching { onInvitePartner() }
+                            isSendingInvite = false
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
+                    enabled = !isSendingInvite,
                 ) {
-                    Text("Send Invitation")
+                    if (isSendingInvite) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    } else {
+                        Text("Send Invitation")
+                    }
                 }
             },
             dismissButton = {
@@ -194,6 +213,7 @@ fun WordConnectionScreen(
                         showModeDialog = false
                     },
                     modifier = Modifier.fillMaxWidth(),
+                    enabled = !isSendingInvite,
                 ) {
                     Text("Play Locally")
                 }
@@ -290,6 +310,8 @@ fun WordConnectionScreen(
                         Button(onClick = {
                             if (mode == "online") {
                                 phase = myPhase
+                            } else if (localTurn == 2) {
+                                phase = "p2"
                             } else {
                                 phase = "p1"
                             }

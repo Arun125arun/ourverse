@@ -128,14 +128,20 @@ fun TicTacToeScreen(
     val gid = gameId
 
     var gameMode by remember { mutableStateOf(GameMode.None) }
+    var isSendingInvite by remember { mutableStateOf(false) }
 
     val isOnline = gameMode == GameMode.Online && repo != null && gid != null
     val isLocal = gameMode == GameMode.Local
 
     if (gameId == null && gameMode == GameMode.None) {
         ModeChoiceDialog(
+            isSending = isSendingInvite,
             onSendInvitation = {
-                gameMode = GameMode.Online
+                isSendingInvite = true
+                scope.launch {
+                    runCatching { onInvitePartner?.invoke() }
+                    isSendingInvite = false
+                }
             },
             onPlayLocally = {
                 gameMode = GameMode.Local
@@ -146,12 +152,6 @@ fun TicTacToeScreen(
 
     if (gameId != null && gameMode == GameMode.None) {
         gameMode = GameMode.Online
-    }
-
-    LaunchedEffect(gameMode) {
-        if (gameMode == GameMode.Online && gameId == null && onInvitePartner != null) {
-            runCatching { onInvitePartner() }
-        }
     }
 
     val firestoreSession by remember(gid, repo) {
@@ -526,12 +526,13 @@ fun TicTacToeScreen(
 
 @Composable
 private fun ModeChoiceDialog(
+    isSending: Boolean = false,
     onSendInvitation: () -> Unit,
     onPlayLocally: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = if (isSending) {{}} else onDismiss,
         title = {
             Text(
                 "How to play?",
@@ -545,19 +546,24 @@ private fun ModeChoiceDialog(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 ModeOption(
                     title = "Send Invitation",
-                    subtitle = "Play with your partner online",
-                    onClick = onSendInvitation,
+                    subtitle = if (isSending) "Creating game..." else "Play with your partner online",
+                    onClick = if (isSending) {{}} else onSendInvitation,
+                    trailing = if (isSending) {
+                        { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp) }
+                    } else null,
                 )
                 ModeOption(
                     title = "Play Locally",
                     subtitle = "Two players, same device",
-                    onClick = onPlayLocally,
+                    onClick = if (isSending) {{}} else onPlayLocally,
                 )
             }
         },
         confirmButton = {},
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            if (!isSending) {
+                TextButton(onClick = onDismiss) { Text("Cancel") }
+            }
         },
     )
 }
@@ -567,6 +573,7 @@ private fun ModeOption(
     title: String,
     subtitle: String,
     onClick: () -> Unit,
+    trailing: @Composable (() -> Unit)? = null,
 ) {
     Surface(
         onClick = onClick,
@@ -574,21 +581,27 @@ private fun ModeOption(
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(
+        Row(
             modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (trailing != null) {
+                trailing()
+            }
         }
     }
 }

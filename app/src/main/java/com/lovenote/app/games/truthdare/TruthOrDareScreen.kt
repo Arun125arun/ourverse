@@ -118,8 +118,9 @@ fun TruthOrDareScreen(
 
     // --- Mode decision ---
     var showModeDialog by remember { mutableStateOf(gameId == null) }
-    var localMode by remember { mutableStateOf(gameId == null) }
-    var onlineMode by remember { mutableStateOf(gameId != null) }
+    var localMode by remember { mutableStateOf(false) }
+    var onlineMode by remember { mutableStateOf(false) }
+    var isSendingInvite by remember { mutableStateOf(false) }
 
     // --- Firestore session (online mode) ---
     val gid = gameId
@@ -154,8 +155,6 @@ fun TruthOrDareScreen(
 
     val isMyTurn = if (onlineMode && session != null) {
         session.currentTurn == myUid
-    } else if (localMode) {
-        localTurn == 1
     } else true
 
     val currentTurnName = if (onlineMode && session != null) {
@@ -167,31 +166,39 @@ fun TruthOrDareScreen(
     // --- ModeChoiceDialog ---
     if (showModeDialog) {
         AlertDialog(
-            onDismissRequest = { showModeDialog = false },
+            onDismissRequest = if (isSendingInvite) {{}} else onBack,
             title = {
                 Text("Truth or Dare", fontWeight = FontWeight.Bold)
             },
             text = {
-                Text("How would you like to play?")
+                Text(if (isSendingInvite) "Creating game..." else "How would you like to play?")
             },
             confirmButton = {
-                TextButton(onClick = {
-                    showModeDialog = false
-                    onlineMode = true
-                    localMode = false
-                    scope.launch {
-                        runCatching { onInvitePartner?.invoke() }
+                TextButton(
+                    onClick = {
+                        isSendingInvite = true
+                        scope.launch {
+                            runCatching { onInvitePartner?.invoke() }
+                            isSendingInvite = false
+                        }
+                    },
+                    enabled = !isSendingInvite,
+                ) {
+                    if (isSendingInvite) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(8.dp))
                     }
-                }) {
                     Text("Send Invitation")
                 }
             },
             dismissButton = {
-                TextButton(onClick = {
-                    showModeDialog = false
-                    localMode = true
-                    onlineMode = false
-                }) {
+                TextButton(
+                    onClick = {
+                        showModeDialog = false
+                        localMode = true
+                    },
+                    enabled = !isSendingInvite,
+                ) {
                     Text("Play Locally")
                 }
             },
