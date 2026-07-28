@@ -1,6 +1,8 @@
 package com.lovenote.app
 
 import android.Manifest
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -17,6 +19,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,8 +27,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
+import com.lovenote.app.R
 import com.lovenote.app.auth.SignInScreen
 import com.lovenote.app.auth.WelcomeScreen
 import com.lovenote.app.pairing.PairingRepository
@@ -66,6 +72,8 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             LoveNoteTheme {
+                val context = LocalContext.current
+
                 var showWhatsNew by remember { mutableStateOf(updatedFromOlder) }
                 if (showWhatsNew) {
                     AlertDialog(
@@ -89,6 +97,9 @@ class MainActivity : ComponentActivity() {
                         },
                     )
                 }
+
+                var availableUpdate by remember { mutableStateOf<UpdateChecker.UpdateInfo?>(null) }
+
                 val onboardingPrefs = remember { getSharedPreferences("onboarding", MODE_PRIVATE) }
                 var hasSeenWelcome by remember {
                     mutableStateOf(onboardingPrefs.getBoolean("seenWelcome", false))
@@ -96,6 +107,41 @@ class MainActivity : ComponentActivity() {
                 var signedIn by remember {
                     mutableStateOf(FirebaseAuth.getInstance().currentUser != null)
                 }
+
+                LaunchedEffect(Unit) {
+                    if (!showWhatsNew && signedIn && hasSeenWelcome) {
+                        val latest = UpdateChecker.fetchLatest()
+                        if (latest != null && latest.versionCode > currentVersion) {
+                            availableUpdate = latest
+                        }
+                    }
+                }
+
+                availableUpdate?.let { update ->
+                    AlertDialog(
+                        onDismissRequest = { availableUpdate = null },
+                        title = { Text(stringResource(R.string.update_available_title)) },
+                        text = {
+                            Text(stringResource(R.string.update_available_message, update.versionName))
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                availableUpdate = null
+                                runCatching {
+                                    context.startActivity(
+                                        Intent(Intent.ACTION_VIEW, Uri.parse(update.url)),
+                                    )
+                                }
+                            }) { Text(stringResource(R.string.download_button)) }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { availableUpdate = null }) {
+                                Text(stringResource(R.string.later_button))
+                            }
+                        },
+                    )
+                }
+
                 when {
                     !hasSeenWelcome -> WelcomeScreen(onGetStarted = {
                         onboardingPrefs.edit().putBoolean("seenWelcome", true).apply()

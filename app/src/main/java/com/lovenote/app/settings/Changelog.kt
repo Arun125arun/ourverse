@@ -5,6 +5,7 @@ object Changelog {
     private val NOTES = mapOf(
         51L to listOf(
             "✨ New onboarding welcome flow — 3-page feature preview carousel on first launch",
+            "🔔 Auto-update check on app launch — you'll be prompted when a new version is available",
             "🏗️ Us tab decomposed into 4 focused sub-composables for better maintainability",
             "⚡ Performance: memoized message list, efficient reaction counting, smarter scroll detection",
             "🐛 Fixed null-safety crash in coupleId handling, countdown timer crash, batch size cap",
