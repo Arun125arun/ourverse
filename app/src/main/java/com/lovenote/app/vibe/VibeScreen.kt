@@ -34,12 +34,15 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,6 +60,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
 import coil.compose.AsyncImage
 import com.lovenote.app.rituals.ritualTemplates
 import kotlinx.coroutines.launch
@@ -69,21 +75,61 @@ import java.util.Locale
 fun VibeScreen(
     repository: VibeRepository,
     onRitualDetail: (String) -> Unit,
+    onShareSong: (uri: String, source: String, title: String, artist: String, albumArtUrl: String?, audioUrl: String?) -> Unit = { _, _, _, _, _, _ -> },
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val songs by repository.songs().collectAsState(initial = emptyList())
     val rituals by repository.rituals().collectAsState(initial = emptyList())
     val partner by repository.partnerProfile().collectAsState(initial = null)
     var showShareSheet by remember { mutableStateOf(false) }
     var showCreateRitual by remember { mutableStateOf(false) }
     var showTemplates by remember { mutableStateOf(false) }
-    val context = LocalContext.current
+
+    val player = remember { ExoPlayer.Builder(context).build() }
+    var playingSong by remember { mutableStateOf<SharedSong?>(null) }
+    var isPlaying by remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
+        onDispose { player.release() }
+    }
+
+    LaunchedEffect(playingSong) {
+        if (playingSong?.audioUrl != null) {
+            player.apply {
+                stop()
+                setMediaItem(MediaItem.fromUri(playingSong!!.audioUrl!!))
+                prepare()
+                playWhenReady = true
+                play()
+            }
+        } else {
+            player.stop()
+        }
+    }
+
+    listener@
+    DisposableEffect(player) {
+        val listener = object : Player.Listener {
+            override fun onIsPlayingChanged(playing: Boolean) {
+                isPlaying = playing
+            }
+            override fun onPlaybackStateChanged(state: Int) {
+                if (state == Player.STATE_ENDED) {
+                    playingSong = null
+                    isPlaying = false
+                }
+            }
+        }
+        player.addListener(listener)
+        onDispose { player.removeListener(listener) }
+    }
 
     if (showShareSheet) {
         ShareSongSheet(
             onDismiss = { showShareSheet = false },
-            onShare = { uri, source, title, artist, albumArt ->
-                scope.launch { runCatching { repository.shareSong(uri, source, title, artist, albumArt) } }
+            onShare = { uri, source, title, artist, albumArt, audioUrl ->
+                onShareSong(uri, source, title, artist, albumArt, audioUrl)
                 showShareSheet = false
             },
         )
@@ -121,139 +167,226 @@ fun VibeScreen(
         )
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("Vibe") })
-        },
-        floatingActionButton = {
-            FilledIconButton(
-                onClick = { showShareSheet = true },
-                modifier = Modifier.size(56.dp),
-                shape = CircleShape,
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = "Share a song")
-            }
-        },
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(0.dp),
-        ) {
-            item {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "\uD83C\uDFB5 Our Soundtrack",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Spacer(Modifier.height(12.dp))
-            }
-
-            if (songs.isEmpty()) {
-                item {
-                    EmptyStateCard(
-                        emoji = "\uD83C\uDFB5",
-                        title = "No songs yet",
-                        subtitle = "Share a song with your partner \u2014 it appears here instantly.",
-                        actionLabel = "Share your first song",
-                        onAction = { showShareSheet = true },
-                    )
-                }
-            } else {
-                items(songs.take(5)) { song ->
-                    SongCard(
-                        song = song,
-                        isMine = song.sharedBy == repository.myUid,
-                        partnerName = partner?.name,
-                        onPlay = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(song.uri))
-                            runCatching<Unit> { context.startActivity(intent) }
-                        },
-                        onReact = { emoji ->
-                            val newReaction = if (song.reaction == emoji) null else emoji
-                            scope.launch { runCatching { repository.reactToSong(song.id, newReaction) } }
-                        },
-                        onDelete = {
-                            scope.launch { runCatching { repository.deleteSong(song.id) } }
-                        },
-                    )
-                    Spacer(Modifier.height(8.dp))
-                }
-                if (songs.size > 5) {
-                    item {
-                        Text(
-                            text = "+ ${songs.size - 5} more songs",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
-                        )
-                    }
-                }
-            }
-
-            item {
-                Spacer(Modifier.height(24.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(1.dp)
-                        .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                )
-                Spacer(Modifier.height(16.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
+    Box {
+        Scaffold(
+            topBar = {
+                TopAppBar(title = { Text("Vibe") })
+            },
+            floatingActionButton = {
+                FilledIconButton(
+                    onClick = { showShareSheet = true },
+                    modifier = Modifier.size(56.dp),
+                    shape = CircleShape,
                 ) {
+                    Icon(Icons.Filled.Add, contentDescription = "Share a song")
+                }
+            },
+        ) { padding ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = if (playingSong != null) 56.dp else 0.dp),
+                verticalArrangement = Arrangement.spacedBy(0.dp),
+            ) {
+                item {
+                    Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "\uD83D\uDD01 Our Rituals",
+                        text = "\uD83C\uDFB5 Our Soundtrack",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary,
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = { showTemplates = true },
-                            shape = RoundedCornerShape(12.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                        ) {
-                            Text("Templates", style = MaterialTheme.typography.labelSmall)
-                        }
-                        Button(
-                            onClick = { showCreateRitual = true },
-                            shape = RoundedCornerShape(12.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                        ) {
-                            Text("+ New", style = MaterialTheme.typography.labelSmall)
+                    Spacer(Modifier.height(12.dp))
+                }
+
+                if (songs.isEmpty()) {
+                    item {
+                        EmptyStateCard(
+                            emoji = "\uD83C\uDFB5",
+                            title = "No songs yet",
+                            subtitle = "Share a song with your partner \u2014 it appears here instantly.",
+                            actionLabel = "Share your first song",
+                            onAction = { showShareSheet = true },
+                        )
+                    }
+                } else {
+                    items(songs.take(5)) { song ->
+                        SongCard(
+                            song = song,
+                            isMine = song.sharedBy == repository.myUid,
+                            partnerName = partner?.name,
+                            isNowPlaying = playingSong?.id == song.id,
+                            onPlay = {
+                                if (song.audioUrl != null) {
+                                    if (playingSong?.id == song.id) {
+                                        if (isPlaying) player.pause() else player.play()
+                                    } else {
+                                        playingSong = song
+                                    }
+                                } else {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(song.uri))
+                                    runCatching<Unit> { context.startActivity(intent) }
+                                }
+                            },
+                            onReact = { emoji ->
+                                val newReaction = if (song.reaction == emoji) null else emoji
+                                scope.launch { runCatching { repository.reactToSong(song.id, newReaction) } }
+                            },
+                            onDelete = {
+                                if (playingSong?.id == song.id) {
+                                    player.stop()
+                                    playingSong = null
+                                }
+                                scope.launch { runCatching { repository.deleteSong(song.id) } }
+                            },
+                        )
+                        Spacer(Modifier.height(8.dp))
+                    }
+                    if (songs.size > 5) {
+                        item {
+                            Text(
+                                text = "+ ${songs.size - 5} more songs",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
+                            )
                         }
                     }
                 }
-                Spacer(Modifier.height(12.dp))
-            }
 
-            val activeRituals = rituals.filter { it.active }
-            if (activeRituals.isEmpty()) {
                 item {
-                    EmptyStateCard(
-                        emoji = "\uD83D\uDD01",
-                        title = "No rituals yet",
-                        subtitle = "Create a custom ritual or pick from templates to build daily connection habits.",
-                        actionLabel = "Browse templates",
-                        onAction = { showTemplates = true },
+                    Spacer(Modifier.height(24.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                     )
+                    Spacer(Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "\uD83D\uDD01 Our Rituals",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = { showTemplates = true },
+                                shape = RoundedCornerShape(12.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                            ) {
+                                Text("Templates", style = MaterialTheme.typography.labelSmall)
+                            }
+                            Button(
+                                onClick = { showCreateRitual = true },
+                                shape = RoundedCornerShape(12.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                            ) {
+                                Text("+ New", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(12.dp))
                 }
-            } else {
-                items(activeRituals) { ritual ->
-                    RitualCard(ritual = ritual, onClick = { onRitualDetail(ritual.id) })
-                    Spacer(Modifier.height(8.dp))
+
+                val activeRituals = rituals.filter { it.active }
+                if (activeRituals.isEmpty()) {
+                    item {
+                        EmptyStateCard(
+                            emoji = "\uD83D\uDD01",
+                            title = "No rituals yet",
+                            subtitle = "Create a custom ritual or pick from templates to build daily connection habits.",
+                            actionLabel = "Browse templates",
+                            onAction = { showTemplates = true },
+                        )
+                    }
+                } else {
+                    items(activeRituals) { ritual ->
+                        RitualCard(ritual = ritual, onClick = { onRitualDetail(ritual.id) })
+                        Spacer(Modifier.height(8.dp))
+                    }
+                }
+
+                item { Spacer(Modifier.height(80.dp)) }
+            }
+        }
+
+        playingSong?.let { song ->
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f))
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (!song.albumArtUrl.isNullOrEmpty()) {
+                            AsyncImage(
+                                model = song.albumArtUrl,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop,
+                            )
+                        } else {
+                            Icon(Icons.Filled.Star, contentDescription = null, modifier = Modifier.size(18.dp))
+                        }
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = song.title,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            text = song.artist,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    IconButton(onClick = {
+                        if (isPlaying) player.pause() else player.play()
+                    }) {
+                        Text(
+                            text = if (isPlaying) "\u23F8" else "\u25B6",
+                            fontSize = 20.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    IconButton(onClick = {
+                        player.stop()
+                        playingSong = null
+                    }) {
+                        Icon(
+                            Icons.Filled.Close,
+                            contentDescription = "Stop",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
-
-            item { Spacer(Modifier.height(80.dp)) }
         }
     }
 }
@@ -264,16 +397,21 @@ private fun SongCard(
     song: SharedSong,
     isMine: Boolean,
     partnerName: String?,
+    isNowPlaying: Boolean,
     onPlay: () -> Unit,
     onReact: (String) -> Unit,
     onDelete: () -> Unit,
 ) {
+    val bgColor = if (isNowPlaying) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        ),
+        colors = CardDefaults.cardColors(containerColor = bgColor),
     ) {
         Row(
             modifier = Modifier

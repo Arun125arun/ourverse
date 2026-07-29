@@ -41,7 +41,7 @@ import java.net.URL
 @Composable
 fun ShareSongSheet(
     onDismiss: () -> Unit,
-    onShare: (uri: String, source: String, title: String, artist: String, albumArtUrl: String?) -> Unit,
+    onShare: (uri: String, source: String, title: String, artist: String, albumArtUrl: String?, audioUrl: String?) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -54,6 +54,7 @@ fun ShareSongSheet(
     var fetchedAlbumArt by remember { mutableStateOf<String?>(null) }
     var fetchError by remember { mutableStateOf<String?>(null) }
     var isFetching by remember { mutableStateOf(false) }
+    var audioLink by remember { mutableStateOf("") }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -167,11 +168,29 @@ fun ShareSongSheet(
 
                 Spacer(Modifier.height(8.dp))
 
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = audioLink,
+                    onValueChange = { audioLink = it },
+                    label = { Text("Audio link (optional)") },
+                    placeholder = { Text("https://example.com/song.mp3") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Paste a direct audio URL (mp3, m4a) to play inside the app.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(12.dp))
+
                 Button(
                     onClick = {
                         val title = fetchedTitle ?: manualTitle.ifBlank { "Unknown" }
                         val artist = fetchedArtist ?: "Unknown"
-                        onShare(uriInput.trim(), "spotify", title, artist, fetchedAlbumArt)
+                        onShare(uriInput.trim(), "spotify", title, artist, fetchedAlbumArt, audioLink.trim().ifBlank { null })
                     },
                     enabled = uriInput.isNotBlank() && (fetchedTitle != null || uriInput.isNotBlank()),
                     modifier = Modifier.fillMaxWidth(),
@@ -198,12 +217,28 @@ fun ShareSongSheet(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
                 )
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = audioLink,
+                    onValueChange = { audioLink = it },
+                    label = { Text("Audio link (optional)") },
+                    placeholder = { Text("https://example.com/song.mp3") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Paste a direct audio URL (mp3, m4a) to play inside the app.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Spacer(Modifier.height(16.dp))
                 Button(
                     onClick = {
                         val title = manualTitle.trim().ifBlank { "Unknown" }
                         val artist = manualArtist.trim().ifBlank { "Unknown" }
-                        onShare("manual", "manual", title, artist, null)
+                        onShare("manual", "manual", title, artist, null, audioLink.trim().ifBlank { null })
                     },
                     enabled = manualTitle.isNotBlank() || manualArtist.isNotBlank(),
                     modifier = Modifier.fillMaxWidth(),

@@ -22,6 +22,7 @@ data class SharedSong(
     val title: String,
     val artist: String,
     val albumArtUrl: String?,
+    val audioUrl: String?,
     val sharedBy: String,
     val sharedAtMillis: Long,
     val reaction: String?,
@@ -71,6 +72,7 @@ class VibeRepository(
         title: String,
         artist: String,
         albumArtUrl: String?,
+        audioUrl: String? = null,
     ): String {
         val doc = coupleRef.collection("soundtrack").add(
             mapOf(
@@ -79,6 +81,7 @@ class VibeRepository(
                 "title" to title.trim(),
                 "artist" to artist.trim(),
                 "albumArtUrl" to albumArtUrl,
+                "audioUrl" to audioUrl?.trim()?.ifBlank { null },
                 "sharedBy" to myUid,
                 "sharedAt" to FieldValue.serverTimestamp(),
                 "reaction" to null,
@@ -113,6 +116,7 @@ class VibeRepository(
                         title = title,
                         artist = artist,
                         albumArtUrl = doc.getString("albumArtUrl"),
+                        audioUrl = doc.getString("audioUrl"),
                         sharedBy = doc.getString("sharedBy") ?: "",
                         sharedAtMillis = doc.getTimestamp("sharedAt")?.toDate()?.time ?: 0L,
                         reaction = doc.getString("reaction"),

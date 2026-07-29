@@ -230,6 +230,9 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                                 selectedRitualId = id
                                 navigate(HomeScreen.RITUAL_DETAIL)
                             },
+                            onShareSong = { uri, source, title, artist, albumArt, audioUrl ->
+                                scope.launch { runCatching { vibeRepository.shareSong(uri, source, title, artist, albumArt, audioUrl) } }
+                            },
                         )
                         HomeScreen.RITUAL_DETAIL -> RitualDetailScreen(
                             repository = vibeRepository,
