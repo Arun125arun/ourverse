@@ -1,5 +1,7 @@
 package com.lovenote.app.vibe
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,8 +24,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -48,6 +51,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -73,7 +77,7 @@ fun VibeScreen(
     var showShareSheet by remember { mutableStateOf(false) }
     var showCreateRitual by remember { mutableStateOf(false) }
     var showTemplates by remember { mutableStateOf(false) }
-    var playingSongId by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
 
     if (showShareSheet) {
         ShareSongSheet(
@@ -163,15 +167,18 @@ fun VibeScreen(
                 items(songs.take(5)) { song ->
                     SongCard(
                         song = song,
-                        isPlaying = playingSongId == song.id,
                         isMine = song.sharedBy == repository.myUid,
                         partnerName = partner?.name,
-                        onTap = {
-                            playingSongId = if (playingSongId == song.id) null else song.id
+                        onPlay = {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(song.uri))
+                            runCatching<Unit> { context.startActivity(intent) }
                         },
                         onReact = { emoji ->
                             val newReaction = if (song.reaction == emoji) null else emoji
                             scope.launch { runCatching { repository.reactToSong(song.id, newReaction) } }
+                        },
+                        onDelete = {
+                            scope.launch { runCatching { repository.deleteSong(song.id) } }
                         },
                     )
                     Spacer(Modifier.height(8.dp))
@@ -255,35 +262,31 @@ fun VibeScreen(
 @OptIn(ExperimentalLayoutApi::class)
 private fun SongCard(
     song: SharedSong,
-    isPlaying: Boolean,
     isMine: Boolean,
     partnerName: String?,
-    onTap: () -> Unit,
+    onPlay: () -> Unit,
     onReact: (String) -> Unit,
+    onDelete: () -> Unit,
 ) {
-    val bgColor = if (isPlaying) {
-        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-    }
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = bgColor),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        ),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { onTap() }
-                .padding(12.dp),
+                .padding(start = 12.dp, top = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable { onPlay() },
                 contentAlignment = Alignment.Center,
             ) {
                 if (!song.albumArtUrl.isNullOrEmpty()) {
@@ -300,7 +303,11 @@ private fun SongCard(
 
             Spacer(Modifier.width(12.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { onPlay() },
+            ) {
                 Text(
                     text = song.title,
                     style = MaterialTheme.typography.bodyLarge,
@@ -323,19 +330,10 @@ private fun SongCard(
                 )
             }
 
-            if (isPlaying) {
-                Icon(
-                    Icons.Filled.PlayArrow,
-                    contentDescription = "Playing",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(28.dp),
-                )
-            }
-
             val emojiOptions = listOf("\u2764\uFE0F", "\uD83C\uDF89", "\uD83D\uDE22", "\uD83D\uDD25")
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
-                modifier = Modifier.width(80.dp),
+                modifier = Modifier.width(70.dp),
             ) {
                 emojiOptions.forEach { emoji ->
                     val isActive = song.reaction == emoji
@@ -352,6 +350,19 @@ private fun SongCard(
                             .padding(2.dp),
                     )
                 }
+            }
+
+            if (isMine) {
+                Icon(
+                    Icons.Filled.Close,
+                    contentDescription = "Remove song",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier
+                        .padding(start = 4.dp)
+                        .size(20.dp)
+                        .clip(CircleShape)
+                        .clickable { onDelete() },
+                )
             }
         }
     }
