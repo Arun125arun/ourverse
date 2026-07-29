@@ -108,7 +108,6 @@ fun VibeScreen(
         }
     }
 
-    listener@
     DisposableEffect(player) {
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(playing: Boolean) {
