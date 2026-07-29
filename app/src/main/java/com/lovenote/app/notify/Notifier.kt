@@ -20,7 +20,11 @@ object Notifier {
     private const val CHANNEL_MESSAGES = "messages"
     private const val CHANNEL_NOTES = "notes"
     private const val CHANNEL_CALLS = "calls"
+    private const val CHANNEL_PINGS = "pings"
     private const val CALL_NOTIFICATION_ID = 5
+    private const val PING_NOTIFICATION_ID = 6
+    private const val CAPSULE_NOTIFICATION_ID = 7
+    private const val STORY_NOTIFICATION_ID = 8
     private val VIBRATION = longArrayOf(0, 250, 150, 250)
 
     fun ensureChannels(context: Context) {
@@ -45,6 +49,17 @@ object Notifier {
                 description = "New notes from your partner"
                 enableVibration(true)
                 vibrationPattern = VIBRATION
+            },
+        )
+        manager.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_PINGS,
+                "Pings",
+                NotificationManager.IMPORTANCE_HIGH,
+            ).apply {
+                description = "One-tap pings from your partner"
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 100)
             },
         )
     }
@@ -101,6 +116,15 @@ object Notifier {
     fun notifyNote(context: Context, preview: String) =
         notify(context, CHANNEL_NOTES, 2, "A note for you ❤", preview)
 
+    fun notifyPing(context: Context, pingLabel: String) =
+        notify(context, CHANNEL_PINGS, PING_NOTIFICATION_ID, "Ping! 💛", pingLabel)
+
+    fun notifyTimeCapsuleReady(context: Context, title: String) =
+        notify(context, CHANNEL_PINGS, CAPSULE_NOTIFICATION_ID, "Time capsule unlocked 🔓", title)
+
+    fun notifyNewStory(context: Context) =
+        notify(context, CHANNEL_PINGS, STORY_NOTIFICATION_ID, "New photo story 📸", "Tap to see")
+
     private fun notify(
         context: Context,
         channel: String,
@@ -150,6 +174,8 @@ object NotifyState {
 
     fun lastMessageMillis(context: Context) = prefs(context).getLong("msg", 0L)
     fun lastNoteMillis(context: Context) = prefs(context).getLong("note", 0L)
+    fun lastPingMillis(context: Context) = prefs(context).getLong("ping", 0L)
+    fun lastStoryMillis(context: Context) = prefs(context).getLong("story", 0L)
 
     fun setLastMessage(context: Context, millis: Long) {
         if (millis > lastMessageMillis(context)) {
@@ -160,6 +186,18 @@ object NotifyState {
     fun setLastNote(context: Context, millis: Long) {
         if (millis > lastNoteMillis(context)) {
             prefs(context).edit().putLong("note", millis).apply()
+        }
+    }
+
+    fun setLastPing(context: Context, millis: Long) {
+        if (millis > lastPingMillis(context)) {
+            prefs(context).edit().putLong("ping", millis).apply()
+        }
+    }
+
+    fun setLastStory(context: Context, millis: Long) {
+        if (millis > lastStoryMillis(context)) {
+            prefs(context).edit().putLong("story", millis).apply()
         }
     }
 }

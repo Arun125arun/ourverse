@@ -58,6 +58,37 @@ data class VoiceLetter(
     val createdAtMillis: Long,
 )
 
+enum class PingType(val emoji: String, val label: String) {
+    HEART("❤️", "I love you"),
+    HUG("🤗", "I need a hug"),
+    THINKING("💭", "Thinking of you"),
+    MISS("🥺", "I miss you"),
+    KISS("💋", "Blow a kiss"),
+    STAR("⭐", "You're amazing"),
+    FOOD("🍕", "Let's eat"),
+    MOVIE("🎬", "Movie night"),
+}
+
+data class Ping(
+    val id: String,
+    val senderUid: String,
+    val type: PingType,
+    val sentAtMillis: Long,
+    val opened: Boolean = false,
+)
+
+data class TimeCapsule(
+    val id: String,
+    val senderUid: String,
+    val title: String,
+    val message: String,
+    val photoBase64: String?,
+    val unlockAtMillis: Long,
+    val createdAtMillis: Long,
+    val opened: Boolean = false,
+    val openedAtMillis: Long? = null,
+)
+
 class UsRepository(
     private val coupleId: String,
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
@@ -486,4 +517,107 @@ class UsRepository(
     suspend fun clearCountdown() {
         stateRef.set(mapOf("countdown" to FieldValue.delete()), SetOptions.merge()).await()
     }
+
+    // --- One-Tap Pings ---
+
+    suspend fun sendPing(type: PingType): String {
+        val doc = coupleRef.collection("pings").add(
+            mapOf(
+                "senderUid" to myUid,
+                "type" to type.name,
+                "sentAt" to FieldValue.serverTimestamp(),
+                "opened" to false,
+            ),
+        ).await()
+        return doc.id
+    }
+
+    fun pings(): Flow<List<Ping>> =
+        coupleRef.collection("pings")
+            .orderBy("sentAt", Query.Direction.DESCENDING)
+            .limit(50)
+            .snapshots()
+            .map { snapshot ->
+                snapshot.documents.mapNotNull { doc ->
+                    val sender = doc.getString("senderUid") ?: return@mapNotNull null
+                    val typeName = doc.getString("type") ?: return@mapNotNull null
+                    val type = try { PingType.valueOf(typeName) } catch (_: Exception) { return@mapNotNull null }
+                    val millis = doc.getTimestamp("sentAt")?.toDate()?.time ?: 0L
+                    val opened = doc.getBoolean("opened") ?: false
+                    Ping(doc.id, sender, type, millis, opened)
+                }
+            }.fallbackTo(emptyList())
+
+    suspend fun openPing(id: String) {
+        coupleRef.collection("pings").document(id).update("opened", true).await()
+    }
+
+    /** True if the partner has unread pings. */
+    fun hasUnreadPings(): Flow<Boolean> =
+        coupleRef.collection("pings")
+            .whereEqualTo("senderUid", myUid)
+            .whereEqualTo("opened", false)
+            .snapshots()
+            .map { false } // my pings, not relevant
+            .combine(
+                coupleRef.collection("pings")
+                    .whereNotEqualTo("senderUid", myUid)
+                    .whereEqualTo("opened", false)
+                    .snapshots()
+                    .map { it.size() > 0 },
+            ) { _, hasUnread -> hasUnread }
+            .fallbackTo(false)
+
+    // --- Time Capsule Messages ---
+
+    suspend fun sendTimeCapsule(
+        title: String,
+        message: String,
+        photoBase64: String?,
+        unlockAtMillis: Long,
+    ): String {
+        val t = title.trim().ifEmpty { "A capsule from me" }
+        val doc = coupleRef.collection("timeCapsules").add(
+            mapOf(
+                "senderUid" to myUid,
+                "title" to t,
+                "message" to message.trim(),
+                "photo" to photoBase64,
+                "unlockAt" to com.google.firebase.Timestamp(java.util.Date(unlockAtMillis)),
+                "createdAt" to FieldValue.serverTimestamp(),
+                "opened" to false,
+            ),
+        ).await()
+        return doc.id
+    }
+
+    fun timeCapsules(): Flow<List<TimeCapsule>> =
+        coupleRef.collection("timeCapsules")
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .limit(30)
+            .snapshots()
+            .map { snapshot ->
+                snapshot.documents.mapNotNull { doc ->
+                    val sender = doc.getString("senderUid") ?: return@mapNotNull null
+                    val title = doc.getString("title") ?: return@mapNotNull null
+                    val message = doc.getString("message").orEmpty()
+                    val unlockAt = doc.getTimestamp("unlockAt")?.toDate()?.time ?: return@mapNotNull null
+                    val created = doc.getTimestamp("createdAt")?.toDate()?.time ?: 0L
+                    val opened = doc.getBoolean("opened") ?: false
+                    val openedAt = doc.getTimestamp("openedAt")?.toDate()?.time
+                    TimeCapsule(doc.id, sender, title, message, doc.getString("photo"), unlockAt, created, opened, openedAt)
+                }
+            }.fallbackTo(emptyList())
+
+    suspend fun openTimeCapsule(id: String) {
+        coupleRef.collection("timeCapsules").document(id).update(
+            mapOf("opened" to true, "openedAt" to FieldValue.serverTimestamp()),
+        ).await()
+    }
+
+    fun sealedCapsules(): Flow<List<TimeCapsule>> =
+        timeCapsules().map { list -> list.filter { !it.opened } }
+
+    fun openedCapsules(): Flow<List<TimeCapsule>> =
+        timeCapsules().map { list -> list.filter { it.opened } }
 }

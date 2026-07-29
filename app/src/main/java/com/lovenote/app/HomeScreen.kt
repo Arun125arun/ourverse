@@ -20,6 +20,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -66,6 +68,9 @@ import com.lovenote.app.notify.AppVisibility
 import com.lovenote.app.notify.Notifier
 import com.lovenote.app.notify.NotifyState
 import com.lovenote.app.settings.SettingsScreen
+import com.lovenote.app.ping.PingScreen
+import com.lovenote.app.stories.StoryRepository
+import com.lovenote.app.stories.StoryScreen
 import com.lovenote.app.us.MemoriesScreen
 import com.lovenote.app.us.TodosScreen
 import com.lovenote.app.us.UsRepository
@@ -77,6 +82,7 @@ import kotlinx.coroutines.launch
 internal enum class HomeScreen {
     CHAT, US, MEMORIES, TODOS, HUB, NOTE, DRAW, HISTORY, SETTINGS,
     TIC_TAC_TOE, LUDO, TRUTH_OR_DARE, WORD_GAME,
+    STORY, PING,
 }
 
 @Composable
@@ -86,6 +92,7 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
     val noteRepository = remember(coupleId) { NoteRepository(coupleId) }
     val usRepository = remember(coupleId) { UsRepository(coupleId) }
     val gameRepository = remember(coupleId) { GameRepository(coupleId) }
+    val storyRepository = remember(coupleId) { StoryRepository(coupleId) }
     val homeScope = rememberCoroutineScope()
     val partner by chatRepository.partnerProfile().collectAsState(initial = null)
     val myProfile by chatRepository.myProfile().collectAsState(initial = null)
@@ -201,6 +208,12 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                             selected = screen == HomeScreen.US || screen == HomeScreen.MEMORIES ||
                                 screen == HomeScreen.TODOS,
                             onClick = { navigate(HomeScreen.US) },
+                        )
+                        BottomBarItem(
+                            icon = Icons.Filled.Add,
+                            label = stringResource(R.string.tab_story),
+                            selected = screen == HomeScreen.STORY,
+                            onClick = { navigate(HomeScreen.STORY) },
                         )
                         BottomBarItem(
                             icon = Icons.Filled.Star,
@@ -340,6 +353,15 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                             repository = usRepository,
                             onMemoriesClick = { navigate(HomeScreen.MEMORIES) },
                             onTodosClick = { navigate(HomeScreen.TODOS) },
+                            onPingClick = { navigate(HomeScreen.PING) },
+                        )
+                        HomeScreen.STORY -> StoryScreen(
+                            repository = storyRepository,
+                            onBack = { navigate(HomeScreen.CHAT) },
+                        )
+                        HomeScreen.PING -> PingScreen(
+                            repository = usRepository,
+                            onBack = { navigate(HomeScreen.US) },
                         )
                         HomeScreen.MEMORIES -> MemoriesScreen(
                             repository = usRepository,

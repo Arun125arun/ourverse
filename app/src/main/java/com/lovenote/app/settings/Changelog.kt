@@ -3,6 +3,11 @@ package com.lovenote.app.settings
 /** Release notes shown in the "What's new" dialog after each update. */
 object Changelog {
     private val NOTES = mapOf(
+        52L to listOf(
+            "📸 Photo Stories — capture and share moments that disappear after 24 hours",
+            "💬 Quick pings — one-tap emoji reactions (love, hug, miss, kiss & more)",
+            "⏰ Time Capsules — seal a message for your future selves to open together",
+        ),
         51L to listOf(
             "✨ New onboarding welcome flow — 3-page feature preview carousel on first launch",
             "🔔 Auto-update check on app launch — you'll be prompted when a new version is available",

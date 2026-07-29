@@ -3,9 +3,11 @@ package com.lovenote.app.us
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -80,6 +82,7 @@ fun UsScreen(
     repository: UsRepository,
     onMemoriesClick: () -> Unit,
     onTodosClick: () -> Unit,
+    onPingClick: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val today = Questions.dateKey()
@@ -158,6 +161,16 @@ fun UsScreen(
                 me = me,
                 partner = partner,
                 anniversaryMillis = anniversary,
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            // Quick ping row
+            QuickPingRow(
+                onPingClick = onPingClick,
+                onSendPing = { type ->
+                    scope.launch { runCatching { repository.sendPing(type) } }
+                },
             )
 
             // Shared Color Theme picker
@@ -255,7 +268,6 @@ fun UsScreen(
                         }
                     }
                 }
-                Spacer(Modifier.height(14.dp))
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -273,7 +285,9 @@ fun UsScreen(
                 ) {
                     Text(stringResource(R.string.todos_button))
                 }
+                }
             }
+
 
             Spacer(Modifier.height(24.dp))
 
@@ -444,6 +458,10 @@ fun UsScreen(
 
             Spacer(Modifier.height(24.dp))
 
+            TimeCapsuleSection(repository = repository)
+
+            Spacer(Modifier.height(24.dp))
+
             SpecialDatesSection(
                 events = events,
                 showAddEvent = showAddEvent,
@@ -457,7 +475,6 @@ fun UsScreen(
             )
         }
     }
-}
 
 @Composable
 private fun CoupleHero(
@@ -629,7 +646,7 @@ private fun MoodSection(
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(16.dp))
 
             // Partner pulse
             val partnerText = partnerMood?.let { mood ->
@@ -861,4 +878,78 @@ private fun OptionGrid(
     }
 }
 
+@Composable
+private fun QuickPingRow(
+    onPingClick: () -> Unit,
+    onSendPing: (PingType) -> Unit,
+) {
+    val quickPings = listOf(PingType.HEART, PingType.MISS, PingType.THINKING, PingType.STAR)
+    var animPhase by remember { mutableStateOf(0) }
+    LaunchedEffect(Unit) { delay(100); animPhase = 1 }
 
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 12.dp, vertical = 10.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "\u26A1",
+                fontSize = 18.sp,
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = "Quick ping",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+            )
+            Spacer(Modifier.weight(1f))
+
+            quickPings.forEachIndexed { index, type ->
+                AnimatedVisibility(
+                    visible = animPhase > 0,
+                    enter = fadeIn(),
+                ) {
+                    var bounced by remember { mutableStateOf(false) }
+                    val bounceScale by animateFloatAsState(
+                        targetValue = if (bounced) 1.3f else 1f,
+                        animationSpec = spring(dampingRatio = 0.4f, stiffness = 500f),
+                        label = "pingBounce",
+                    )
+                    LaunchedEffect(bounced) {
+                        if (bounced) { delay(250); bounced = false }
+                    }
+                    Text(
+                        text = type.emoji,
+                        fontSize = 24.sp,
+                        modifier = Modifier
+                            .padding(horizontal = 6.dp)
+                            .scale(bounceScale)
+                            .clickable {
+                                bounced = true
+                                onSendPing(type)
+                            },
+                    )
+                }
+            }
+            Spacer(Modifier.width(4.dp))
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                modifier = Modifier.clickable(onClick = onPingClick),
+            ) {
+                Text(
+                    text = "More",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                )
+            }
+        }
+    }
+}

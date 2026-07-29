@@ -143,6 +143,39 @@ class ListenerService : Service() {
                     Notifier.notifyNote(this, note.text.ifBlank { "🎨 A doodle for you" })
                 }
             }
+
+        coupleRegistrations += db.collection("couples").document(cid).collection("pings")
+            .orderBy("sentAt", Query.Direction.DESCENDING).limit(1)
+            .addSnapshotListener { snap, _ ->
+                val doc = snap?.documents?.firstOrNull() ?: return@addSnapshotListener
+                val sender = doc.getString("senderUid") ?: return@addSnapshotListener
+                if (sender == uid) return@addSnapshotListener
+                val opened = doc.getBoolean("opened") ?: false
+                val millis = doc.getTimestamp("sentAt")?.toDate()?.time ?: return@addSnapshotListener
+                if (!opened && !AppVisibility.appVisible && millis > NotifyState.lastPingMillis(this)) {
+                    val typeName = doc.getString("type") ?: "PING"
+                    val label = try {
+                        com.lovenote.app.us.PingType.valueOf(typeName).label
+                    } catch (_: Exception) { "Ping" }
+                    NotifyState.setLastPing(this, millis)
+                    Notifier.notifyPing(this, label)
+                }
+            }
+
+        coupleRegistrations += db.collection("couples").document(cid).collection("stories")
+            .orderBy("createdAt", Query.Direction.DESCENDING).limit(1)
+            .addSnapshotListener { snap, _ ->
+                val doc = snap?.documents?.firstOrNull() ?: return@addSnapshotListener
+                val sender = doc.getString("senderUid") ?: return@addSnapshotListener
+                if (sender == uid) return@addSnapshotListener
+                val millis = doc.getTimestamp("createdAt")?.toDate()?.time ?: return@addSnapshotListener
+                val expires = doc.getTimestamp("expiresAt")?.toDate()?.time ?: (millis + 86_400_000L)
+                if (expires < System.currentTimeMillis()) return@addSnapshotListener
+                if (!AppVisibility.appVisible && millis > NotifyState.lastStoryMillis(this)) {
+                    NotifyState.setLastStory(this, millis)
+                    Notifier.notifyNewStory(this)
+                }
+            }
     }
 
     private fun buildQuietNotification(): Notification {

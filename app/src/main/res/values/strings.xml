@@ -238,4 +238,38 @@
     <string name="close_button">Close</string>
     <string name="preview_miss_you">Miss you ❤</string>
     <string name="preview_miss_you_more">Miss you more 🥰</string>
+
+    <!-- v0.52: Navigation -->
+    <string name="tab_story">Story</string>
+
+    <!-- v0.52: Time Capsule -->
+    <string name="time_capsule_title">Time Capsules</string>
+    <string name="time_capsule_subtitle">Seal a message for the future</string>
+    <string name="time_capsule_new">+ New</string>
+    <string name="time_capsule_empty">No capsules yet. Seal a message for your future selves!</string>
+    <string name="time_capsule_ready">Ready to open!</string>
+    <string name="time_capsule_reveal">Reveal</string>
+    <string name="time_capsule_create_title">Create a capsule</string>
+    <string name="time_capsule_label_title">Title</string>
+    <string name="time_capsule_label_message">Your message</string>
+    <string name="time_capsule_unlock_in">Unlock in</string>
+    <string name="time_capsule_1day">1 day</string>
+    <string name="time_capsule_3days">3 days</string>
+    <string name="time_capsule_1week">1 week</string>
+    <string name="time_capsule_1month">1 month</string>
+    <string name="time_capsule_1year">1 year</string>
+    <string name="time_capsule_seal">Seal it</string>
+    <string name="time_capsule_cancel">Cancel</string>
+
+    <!-- v0.52: Photo Stories -->
+    <string name="story_title">Photo Stories</string>
+    <string name="story_empty_title">Share a moment</string>
+    <string name="story_empty_subtitle">Stories disappear after 24 hours.\nYour partner sees them instantly.</string>
+    <string name="story_your_stories">Stories</string>
+    <string name="story_create_title">New story</string>
+    <string name="story_create_subtitle">Capture a moment for your partner.\nDisappears after 24 hours.</string>
+    <string name="story_camera">Camera</string>
+    <string name="story_gallery">Gallery</string>
+    <string name="story_caption_placeholder">Add a caption…</string>
+    <string name="story_share">Share story</string>
 </resources>
