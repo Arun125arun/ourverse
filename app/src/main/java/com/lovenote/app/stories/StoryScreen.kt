@@ -1,24 +1,24 @@
 package com.lovenote.app.stories
 
+import android.graphics.BitmapFactory
 import android.net.Uri
+import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -27,12 +27,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -55,8 +58,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -84,7 +87,7 @@ fun StoryScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val stories by repository.activeStories().collectAsState(initial = emptyList())
-    var viewingIndex by remember { mutableStateOf<Int?>(null) }
+    var viewingIndex by remember { mutableIntStateOf(-1) }
     var showCreate by remember { mutableStateOf(false) }
     var showCaptionInput by remember { mutableStateOf(false) }
     var pendingPhotoUri by remember { mutableStateOf<Uri?>(null) }
@@ -99,14 +102,6 @@ fun StoryScreen(
         }
     }
 
-    val cameraLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.TakePicturePreview()
-    ) { bitmap ->
-        if (bitmap != null) {
-            showCaptionInput = true
-        }
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -117,7 +112,7 @@ fun StoryScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showCreate = !showCreate }) {
+                    IconButton(onClick = { showCreate = true }) {
                         Icon(Icons.Default.Add, "New story")
                     }
                 },
@@ -137,67 +132,79 @@ fun StoryScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    Text("📸", fontSize = 48.sp)
-                    Spacer(Modifier.height(16.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(36.dp),
+                        )
+                    }
+                    Spacer(Modifier.height(24.dp))
                     Text(
-                        text = stringResource(R.string.story_empty_title),
+                        text = "No stories yet",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         textAlign = TextAlign.Center,
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = stringResource(R.string.story_empty_subtitle),
+                        text = "Share a photo moment with your partner.\nIt disappears after 24 hours.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                         textAlign = TextAlign.Center,
                     )
-                }
-            } else {
-                // Story ring
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .padding(top = 12.dp),
-                ) {
-                    Text(
-                        text = stringResource(R.string.story_your_stories),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        stories.forEachIndexed { index, story ->
-                            StoryRingItem(
-                                story = story,
-                                myUid = repository.myUid,
-                                onClick = { viewingIndex = index },
-                            )
-                        }
+                    Spacer(Modifier.height(24.dp))
+                    Button(
+                        onClick = { showCreate = true },
+                        shape = RoundedCornerShape(14.dp),
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Share a moment")
                     }
                 }
-
-                Spacer(Modifier.height(24.dp))
-
-                // Story cards list
-                androidx.compose.foundation.lazy.LazyColumn(
+            } else {
+                LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.padding(horizontal = 16.dp),
                 ) {
-                    items(stories.size) { index ->
+                    item {
+                        Spacer(Modifier.height(8.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            stories.forEachIndexed { index, story ->
+                                StoryRingItem(
+                                    story = story,
+                                    myUid = repository.myUid,
+                                    onClick = { viewingIndex = index },
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(20.dp))
+                    }
+                    itemsIndexed(stories) { index, story ->
                         StoryCard(
-                            story = stories[index],
+                            story = story,
                             myUid = repository.myUid,
                             onReact = { emoji ->
                                 scope.launch { runCatching { repository.reactToStory(stories[index].id, emoji) } }
                             },
+                            onTap = { viewingIndex = index },
                         )
                     }
+                    item { Spacer(Modifier.height(80.dp)) }
                 }
             }
 
-            // Create overlay
             AnimatedVisibility(
                 visible = showCreate,
                 enter = fadeIn() + slideInVertically { it },
@@ -212,51 +219,84 @@ fun StoryScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .statusBarsPadding()
-                            .padding(16.dp),
+                            .padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Row(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = "New story",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                            )
                             IconButton(onClick = { showCreate = false }) {
                                 Icon(Icons.Default.Close, "Close")
                             }
                         }
-                        Spacer(Modifier.height(24.dp))
+                        Spacer(Modifier.height(32.dp))
                         Text(
-                            text = stringResource(R.string.story_create_title),
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            text = stringResource(R.string.story_create_subtitle),
+                            text = "Capture or pick a photo.\nIt vanishes after 24 hours.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
                             textAlign = TextAlign.Center,
                         )
-                        Spacer(Modifier.height(32.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            StoryActionCard(
-                                emoji = "📷",
-                                label = stringResource(R.string.story_camera),
+                        Spacer(Modifier.height(40.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Button(
+                                onClick = { showCreate = false; photoLauncher.launch("image/*") },
+                                shape = RoundedCornerShape(16.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(120.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                ),
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("Gallery", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        "Pick from photos",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
+                                    )
+                                }
+                            }
+                            Button(
                                 onClick = {
                                     showCreate = false
-                                    // TODO: camera capture via TakePicture contract
                                 },
-                            )
-                            StoryActionCard(
-                                emoji = "🖼️",
-                                label = stringResource(R.string.story_gallery),
-                                onClick = {
-                                    showCreate = false
-                                    photoLauncher.launch("image/*")
-                                },
-                            )
+                                shape = RoundedCornerShape(16.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(120.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                                ),
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("Camera", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        "Capture now",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.6f),
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             }
 
-            // Caption input overlay
             AnimatedVisibility(
                 visible = showCaptionInput,
                 enter = fadeIn(),
@@ -271,9 +311,18 @@ fun StoryScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .statusBarsPadding()
-                            .padding(16.dp),
+                            .padding(24.dp),
                     ) {
-                        Row(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = "Add a caption",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                            )
                             IconButton(onClick = {
                                 showCaptionInput = false
                                 pendingPhotoUri = null
@@ -281,28 +330,29 @@ fun StoryScreen(
                                 Icon(Icons.Default.Close, "Cancel")
                             }
                         }
-                        Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.height(20.dp))
                         pendingPhotoUri?.let { uri ->
                             AsyncImage(
                                 model = uri,
                                 contentDescription = null,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(220.dp)
+                                    .height(260.dp)
                                     .clip(RoundedCornerShape(16.dp)),
                                 contentScale = ContentScale.Crop,
                             )
                         }
-                        Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.height(20.dp))
                         OutlinedTextField(
                             value = captionDraft,
                             onValueChange = { captionDraft = it },
-                            label = { Text(stringResource(R.string.story_caption_placeholder)) },
+                            label = { Text("Write a caption...") },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
+                            shape = RoundedCornerShape(14.dp),
                         )
-                        Spacer(Modifier.height(16.dp))
-                        androidx.compose.material3.Button(
+                        Spacer(Modifier.height(20.dp))
+                        Button(
                             onClick = {
                                 val uri = pendingPhotoUri ?: return@Button
                                 scope.launch {
@@ -316,26 +366,23 @@ fun StoryScreen(
                                 captionDraft = ""
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(14.dp),
                         ) {
-                            Text(stringResource(R.string.story_share))
+                            Text("Share story")
                         }
                     }
                 }
             }
 
-            // Full-screen viewer
-            viewingIndex?.let { idx ->
-                if (idx in stories.indices) {
-                    StoryFullScreenViewer(
-                        story = stories[idx],
-                        myUid = repository.myUid,
-                        onDismiss = { viewingIndex = null },
-                        onReact = { emoji ->
-                            scope.launch { runCatching { repository.reactToStory(stories[idx].id, emoji) } }
-                        },
-                    )
-                }
+            if (viewingIndex in stories.indices) {
+                StoryFullScreenViewer(
+                    story = stories[viewingIndex],
+                    myUid = repository.myUid,
+                    onDismiss = { viewingIndex = -1 },
+                    onReact = { emoji ->
+                        scope.launch { runCatching { repository.reactToStory(stories[viewingIndex].id, emoji) } }
+                    },
+                )
             }
         }
     }
@@ -344,34 +391,55 @@ fun StoryScreen(
 @Composable
 private fun StoryRingItem(story: Story, myUid: String, onClick: () -> Unit) {
     val hasReacted = story.myReaction != null
-    val scale by animateFloatAsState(
-        targetValue = 1f,
-        animationSpec = spring(dampingRatio = 0.6f),
-        label = "ring",
-    )
-    val borderColor = if (hasReacted) MaterialTheme.colorScheme.primary
-    else MaterialTheme.colorScheme.tertiary
+    val bitmap = remember(story.photoBase64) {
+        runCatching {
+            val bytes = Base64.decode(story.photoBase64, Base64.NO_WRAP)
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+        }.getOrNull()
+    }
+    val ringColor = if (hasReacted) MaterialTheme.colorScheme.primary
+    else MaterialTheme.colorScheme.outlineVariant
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .scale(scale)
-            .clickable(onClick = onClick),
+        modifier = Modifier.clickable(onClick = onClick),
     ) {
         Box(
             modifier = Modifier
-                .size(64.dp)
-                .border(3.dp, borderColor, CircleShape)
-                .padding(3.dp)
+                .size(68.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+                .background(
+                    brush = androidx.compose.ui.graphics.Brush.sweepGradient(
+                        listOf(ringColor, ringColor.copy(alpha = 0.3f), ringColor)
+                    ),
+                    shape = CircleShape,
+                )
+                .padding(3.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = if (story.senderUid == myUid) "Me" else "❤",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-            )
+            Box(
+                modifier = Modifier
+                    .size(62.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (bitmap != null) {
+                    androidx.compose.foundation.Image(
+                        bitmap = bitmap,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                    )
+                } else {
+                    Text(
+                        text = (story.senderUid.firstOrNull()?.uppercase() ?: "?"),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
         Spacer(Modifier.height(4.dp))
         val timeAgo = remember(story.createdAtMillis) {
@@ -384,7 +452,7 @@ private fun StoryRingItem(story: Story, myUid: String, onClick: () -> Unit) {
             }
         }
         Text(
-            text = timeAgo,
+            text = if (story.senderUid == myUid) "You" else timeAgo,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
         )
@@ -392,39 +460,65 @@ private fun StoryRingItem(story: Story, myUid: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun StoryCard(story: Story, myUid: String, onReact: (String) -> Unit) {
+private fun StoryCard(story: Story, myUid: String, onReact: (String) -> Unit, onTap: () -> Unit) {
     val isMine = story.senderUid == myUid
     val timeText = remember(story.createdAtMillis) {
         SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(story.createdAtMillis))
     }
+    val bitmap = remember(story.photoBase64) {
+        runCatching {
+            val bytes = Base64.decode(story.photoBase64, Base64.NO_WRAP)
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+        }.getOrNull()
+    }
 
     Card(
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
         ),
+        modifier = Modifier.clickable(onClick = onTap),
     ) {
         Column {
-            // Photo
-            story.photoBase64.let { photo ->
-                // In a real app, decode and show. For now, colored placeholder
+            if (bitmap != null) {
+                androidx.compose.foundation.Image(
+                    bitmap = bitmap,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(240.dp),
+                    contentScale = ContentScale.Crop,
+                )
+            } else {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(200.dp)
-                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)),
+                        .height(240.dp)
+                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("📸", fontSize = 40.sp)
+                    Text(
+                        text = story.senderUid.firstOrNull()?.uppercase() ?: "?",
+                        fontSize = 48.sp,
+                        fontWeight = FontWeight.Light,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                    )
                 }
             }
 
-            Column(modifier = Modifier.padding(14.dp)) {
+            Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = if (isMine) "You" else "Partner",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(4.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)),
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
@@ -434,37 +528,35 @@ private fun StoryCard(story: Story, myUid: String, onReact: (String) -> Unit) {
                     )
                 }
                 if (story.caption.isNotBlank()) {
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text(
                         text = story.caption,
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
 
-                // Reaction bar
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
                 val reactionOptions = listOf("❤️", "😍", "🔥", "😂", "🥰", "✨")
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     reactionOptions.forEach { emoji ->
                         val isActive = story.myReaction == emoji
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = if (isActive) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                            else MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
-                            modifier = Modifier.clickable { onReact(emoji) },
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    if (isActive) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                    else Color(0x00000000)
+                                )
+                                .clickable { onReact(emoji) }
+                                .padding(horizontal = 6.dp, vertical = 4.dp),
                         ) {
-                            Text(
-                                text = emoji,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                                fontSize = 16.sp,
-                            )
+                            Text(emoji, fontSize = 16.sp)
                         }
                     }
                 }
 
-                // Partner reaction
                 if (story.partnerReaction != null) {
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text(
                         text = "Partner reacted ${story.partnerReaction}",
                         style = MaterialTheme.typography.labelSmall,
@@ -479,97 +571,96 @@ private fun StoryCard(story: Story, myUid: String, onReact: (String) -> Unit) {
 @Composable
 private fun StoryFullScreenViewer(story: Story, myUid: String, onDismiss: () -> Unit, onReact: (String) -> Unit) {
     val reactionOptions = listOf("❤️", "😍", "🔥", "😂", "🥰", "✨")
+    val bitmap = remember(story.photoBase64) {
+        runCatching {
+            val bytes = Base64.decode(story.photoBase64, Base64.NO_WRAP)
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+        }.getOrNull()
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.95f))
-            .clickable(onClick = onDismiss)
+            .background(Color.Black)
             .navigationBarsPadding()
             .statusBarsPadding(),
-        contentAlignment = Alignment.Center,
     ) {
+        if (bitmap != null) {
+            androidx.compose.foundation.Image(
+                bitmap = bitmap,
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxSize(),
+                contentScale = ContentScale.Fit,
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                        listOf(Color.Black.copy(alpha = 0.3f), Color(0x00000000), Color.Black.copy(alpha = 0.4f))
+                    )
+                ),
+        )
+
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(24.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
         ) {
-            Text("📸", fontSize = 64.sp)
-            Spacer(Modifier.height(16.dp))
-            Text(
-                text = if (story.caption.isNotBlank()) story.caption else "Photo story",
-                color = Color.White,
-                style = MaterialTheme.typography.titleLarge,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = if (story.senderUid == myUid) "You · 24h story" else "Partner · 24h story",
-                color = Color.White.copy(alpha = 0.6f),
-                style = MaterialTheme.typography.labelMedium,
-            )
-
-            Spacer(Modifier.height(24.dp))
-
-            // Reaction bar
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = if (story.senderUid == myUid) "You" else "Partner",
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Close",
+                        tint = Color.White,
+                    )
+                }
+            }
+            Spacer(Modifier.weight(1f))
+            if (story.caption.isNotBlank()) {
+                Text(
+                    text = story.caption,
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(Modifier.height(8.dp))
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 reactionOptions.forEach { emoji ->
                     val isActive = story.myReaction == emoji
                     Box(
                         modifier = Modifier
-                            .size(48.dp)
-                            .border(
-                                2.dp,
-                                if (isActive) Color.White else Color.White.copy(alpha = 0.3f),
-                                CircleShape,
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isActive) Color.White.copy(alpha = 0.25f)
+                                else Color(0x00000000)
                             )
-                            .clickable {
-                                onReact(emoji)
-                            },
+                            .clickable { onReact(emoji) },
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(emoji, fontSize = 22.sp)
+                        Text(emoji, fontSize = 20.sp)
                     }
                 }
             }
-        }
-
-        // Close button
-        IconButton(
-            onClick = onDismiss,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(16.dp),
-        ) {
-            Icon(
-                Icons.Default.Close,
-                contentDescription = "Close",
-                tint = Color.White,
-                modifier = Modifier.size(28.dp),
-            )
-        }
-    }
-}
-
-@Composable
-private fun StoryActionCard(emoji: String, label: String, onClick: () -> Unit) {
-    Surface(
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-        modifier = Modifier
-            .size(140.dp)
-            .clickable(onClick = onClick),
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Text(emoji, fontSize = 36.sp)
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
+            Spacer(Modifier.height(16.dp))
         }
     }
 }
