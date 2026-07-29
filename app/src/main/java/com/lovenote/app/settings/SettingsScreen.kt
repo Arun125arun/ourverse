@@ -61,12 +61,10 @@ import androidx.compose.ui.unit.dp
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.compose.LifecycleResumeEffect
-import androidx.glance.appwidget.updateAll
 import com.google.firebase.auth.FirebaseAuth
 import com.lovenote.app.R
 import com.lovenote.app.auth.AuthRepository
 import com.lovenote.app.chat.ChatRepository
-import com.lovenote.app.widget.NoteWidget
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -413,7 +411,6 @@ fun SettingsScreen(
                     scope.launch {
                         try {
                             AuthRepository().deleteAccount(context)
-                            NoteWidget().updateAll(context)
                             onLoggedOut()
                         } catch (e: Exception) {
                             deleteError = e.message ?: context.getString(R.string.delete_error_fallback)

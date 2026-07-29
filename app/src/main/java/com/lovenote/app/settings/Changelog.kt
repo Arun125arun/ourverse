@@ -3,6 +3,11 @@ package com.lovenote.app.settings
 /** Release notes shown in the "What's new" dialog after each update. */
 object Changelog {
     private val NOTES = mapOf(
+        54L to listOf(
+            "🎵 Shared Soundtrack — share songs and react with emojis in the new Vibe tab",
+            "🔁 Couple's Rituals — design custom relationship habits and track streaks",
+            "🎮 Removed games to focus on deeper connection features",
+        ),
         53L to listOf(
             "🐛 Fixed Us tab layout — misplaced sections restored to correct positions",
         ),

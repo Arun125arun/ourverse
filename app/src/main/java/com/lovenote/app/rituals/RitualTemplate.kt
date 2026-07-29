@@ -1,0 +1,93 @@
+package com.lovenote.app.rituals
+
+data class RitualTemplate(
+    val name: String,
+    val description: String,
+    val frequency: String,
+    val actionType: String,
+    val category: String,
+    val prompt: String,
+)
+
+val ritualTemplates: List<RitualTemplate> = listOf(
+    RitualTemplate(
+        name = "Good Morning Check-in",
+        description = "Send each other a good morning message every day",
+        frequency = "daily",
+        actionType = "text",
+        category = "communication",
+        prompt = "What's one thing you're looking forward to today?",
+    ),
+    RitualTemplate(
+        name = "Gratitude Share",
+        description = "Share three things you're grateful for about your partner",
+        frequency = "weekly",
+        actionType = "text",
+        category = "gratitude",
+        prompt = "What's something your partner did this week that made you smile?",
+    ),
+    RitualTemplate(
+        name = "Monthly Goal Review",
+        description = "Review your month together and set intentions for the next",
+        frequency = "monthly",
+        actionType = "custom",
+        category = "growth",
+        prompt = "What went well this month? What do we want to focus on next month?",
+    ),
+    RitualTemplate(
+        name = "Surprise Compliment",
+        description = "Send an unexpected compliment to brighten their day",
+        frequency = "daily",
+        actionType = "ping",
+        category = "intimacy",
+        prompt = "What do you love most about your partner right now?",
+    ),
+    RitualTemplate(
+        name = "Evening Wind Down",
+        description = "Share your mood and a thought before bed",
+        frequency = "daily",
+        actionType = "mood",
+        category = "connection",
+        prompt = "How was your day? What's on your mind?",
+    ),
+    RitualTemplate(
+        name = "Date Idea Pitch",
+        description = "Send each other a date idea to try together",
+        frequency = "weekly",
+        actionType = "text",
+        category = "fun",
+        prompt = "What's a date you'd love to have with your partner?",
+    ),
+    RitualTemplate(
+        name = "Weekly Appreciation",
+        description = "Tell your partner what you appreciated most this week",
+        frequency = "weekly",
+        actionType = "voice_note",
+        category = "gratitude",
+        prompt = "Record a quick voice note sharing what you appreciated this week.",
+    ),
+    RitualTemplate(
+        name = "Adventure Planning",
+        description = "Dream up your next adventure together",
+        frequency = "monthly",
+        actionType = "custom",
+        category = "growth",
+        prompt = "Where should we go or what should we try next?",
+    ),
+    RitualTemplate(
+        name = "Memory Share",
+        description = "Share a photo memory from your story together",
+        frequency = "weekly",
+        actionType = "photo",
+        category = "connection",
+        prompt = "Share a photo that reminds you of a special moment together.",
+    ),
+    RitualTemplate(
+        name = "Check-in Call",
+        description = "Have a quick call or voice note to connect",
+        frequency = "daily",
+        actionType = "custom",
+        category = "communication",
+        prompt = "Take a few minutes to check in with each other.",
+    ),
+)

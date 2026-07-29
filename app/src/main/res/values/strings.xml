@@ -27,7 +27,7 @@
     <!-- HomeScreen -->
     <string name="tab_chat">Chat</string>
     <string name="tab_us">Us</string>
-    <string name="tab_play">Play</string>
+    <string name="tab_vibe">Vibe</string>
     <string name="default_name_you">You</string>
     <string name="default_name_partner">Your partner</string>
     <string name="notification_doodle">A doodle for you</string>
@@ -41,6 +41,7 @@
     <string name="presence_active_minutes">Active %1$dm ago</string>
     <string name="presence_active_hours">Active %1$dh ago</string>
     <string name="typing_indicator">typing</string>
+    <string name="content_description_back">Back</string>
     <string name="content_description_heart">Heart</string>
     <string name="empty_chat_title">Start your conversation</string>
     <string name="empty_chat_subtitle">Send a message, photo, or voice note.</string>
@@ -71,24 +72,8 @@
     <string name="quote_label_them">Them</string>
     <string name="editing_banner">✏ Editing: %1$s</string>
 
-    <!-- GamesHubScreen -->
-    <string name="play_together_title">Play Together</string>
-    <string name="content_description_back">Back</string>
-    <string name="ready_to_play">Ready to play, %1$s?</string>
-    <string name="play_hub_subtitle">Play games, leave notes, and stay connected.</string>
-    <string name="section_notes">Notes</string>
-    <string name="quick_action_send_note">Send Note</string>
-    <string name="quick_action_draw_note">Draw Note</string>
-    <string name="quick_action_history">History</string>
-    <string name="section_games">Games</string>
-    <string name="game_tic_tac_toe">Tic Tac Toe</string>
-    <string name="game_tic_tac_toe_subtitle">Classic strategy game</string>
-    <string name="game_ludo">Ludo</string>
-    <string name="game_ludo_subtitle">Classic board game</string>
-    <string name="game_truth_or_dare">Truth or Dare</string>
-    <string name="game_truth_or_dare_subtitle">Spice things up</string>
-    <string name="game_word_game">Word Game</string>
-    <string name="game_word_game_subtitle">How connected are you?</string>
+    <!-- v0.54: Vibe strings are hardcoded in composables; nothing needed here yet. -->
+
 
     <!-- UsScreen -->
     <string name="us_title">Us ❤</string>

@@ -2,16 +2,16 @@ package com.lovenote.app
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -20,23 +20,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,26 +41,11 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.glance.appwidget.updateAll
 import com.lovenote.app.call.CallManager
 import com.lovenote.app.call.CallOverlay
 import com.lovenote.app.chat.ChatRepository
 import com.lovenote.app.R
 import com.lovenote.app.chat.ChatScreen
-import com.lovenote.app.games.GameRepository
-import com.lovenote.app.games.GamesHubScreen
-import com.lovenote.app.games.ludo.LudoScreen
-import com.lovenote.app.games.tictactoe.TicTacToeScreen
-import com.lovenote.app.games.truthdare.TruthOrDareScreen
-import com.lovenote.app.games.wordgame.WordConnectionScreen
-import com.lovenote.app.notes.DrawNoteScreen
-import com.lovenote.app.notes.NoteCache
-import com.lovenote.app.notes.NoteRepository
-import com.lovenote.app.notes.NotesHistoryScreen
-import com.lovenote.app.notes.SendNoteScreen
 import com.lovenote.app.notify.AppVisibility
 import com.lovenote.app.notify.Notifier
 import com.lovenote.app.notify.NotifyState
@@ -75,25 +57,25 @@ import com.lovenote.app.us.MemoriesScreen
 import com.lovenote.app.us.TodosScreen
 import com.lovenote.app.us.UsRepository
 import com.lovenote.app.us.UsScreen
-import com.lovenote.app.widget.NoteWidget
+import com.lovenote.app.vibe.VibeRepository
+import com.lovenote.app.vibe.VibeScreen
+import com.lovenote.app.rituals.RitualDetailScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 internal enum class HomeScreen {
-    CHAT, US, MEMORIES, TODOS, HUB, NOTE, DRAW, HISTORY, SETTINGS,
-    TIC_TAC_TOE, LUDO, TRUTH_OR_DARE, WORD_GAME,
+    CHAT, US, MEMORIES, TODOS, SETTINGS,
     STORY, PING,
+    VIBE, RITUAL_DETAIL,
 }
 
 @Composable
 internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
     val context = LocalContext.current
     val chatRepository = remember(coupleId) { ChatRepository(coupleId) }
-    val noteRepository = remember(coupleId) { NoteRepository(coupleId) }
     val usRepository = remember(coupleId) { UsRepository(coupleId) }
-    val gameRepository = remember(coupleId) { GameRepository(coupleId) }
+    val vibeRepository = remember(coupleId) { VibeRepository(coupleId) }
     val storyRepository = remember(coupleId) { StoryRepository(coupleId) }
-    val homeScope = rememberCoroutineScope()
     val partner by chatRepository.partnerProfile().collectAsState(initial = null)
     val myProfile by chatRepository.myProfile().collectAsState(initial = null)
     var screen by remember { mutableStateOf(HomeScreen.CHAT) }
@@ -123,25 +105,6 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
 
     LaunchedEffect(coupleId) {
         var firstEmission = true
-        noteRepository.latestFromPartner().collect { note ->
-            if (note != null) {
-                NoteCache.save(context, note)
-                NoteWidget().updateAll(context)
-                val millis = note.sentAt?.toDate()?.time ?: 0L
-                if (!firstEmission && millis > NotifyState.lastNoteMillis(context)) {
-                Notifier.notifyNote(
-                    context,
-                    note.text.ifBlank { context.getString(R.string.notification_doodle) },
-                )
-                }
-                NotifyState.setLastNote(context, millis)
-                firstEmission = false
-            }
-        }
-    }
-
-    LaunchedEffect(coupleId) {
-        var firstEmission = true
         chatRepository.messages().collect { list ->
             val newest = list.firstOrNull { !it.isMine(chatRepository.myUid) }
                 ?: return@collect
@@ -165,19 +128,9 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
         }
     }
 
-    val myName = myProfile?.name?.ifBlank { stringResource(R.string.default_name_you) } ?: stringResource(R.string.default_name_you)
     val partnerName = partner?.name?.ifBlank { stringResource(R.string.default_name_partner) } ?: stringResource(R.string.default_name_partner)
-    var activeGameId by remember { mutableStateOf<String?>(null) }
-
-    fun startGame(gameType: String) {
-        activeGameId = null
-        when (gameType) {
-            "tictactoe" -> navigate(HomeScreen.TIC_TAC_TOE)
-            "ludo" -> navigate(HomeScreen.LUDO)
-            "truthdare" -> navigate(HomeScreen.TRUTH_OR_DARE)
-            "wordgame" -> navigate(HomeScreen.WORD_GAME)
-        }
-    }
+    var selectedRitualId by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
 
     Box {
         Scaffold(
@@ -217,13 +170,9 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                         )
                         BottomBarItem(
                             icon = Icons.Filled.Star,
-                            label = stringResource(R.string.tab_play),
-                            selected = screen == HomeScreen.HUB || screen == HomeScreen.NOTE ||
-                                screen == HomeScreen.DRAW || screen == HomeScreen.HISTORY ||
-                                screen == HomeScreen.TIC_TAC_TOE || screen == HomeScreen.LUDO ||
-                                screen == HomeScreen.TRUTH_OR_DARE ||
-                                screen == HomeScreen.WORD_GAME,
-                            onClick = { navigate(HomeScreen.HUB) },
+                            label = stringResource(R.string.tab_vibe),
+                            selected = screen == HomeScreen.VIBE || screen == HomeScreen.RITUAL_DETAIL,
+                            onClick = { navigate(HomeScreen.VIBE) },
                         )
                     }
                 }
@@ -240,110 +189,6 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                     animationSpec = tween(durationMillis = 250),
                 ) { target ->
                     when (target) {
-                        HomeScreen.HUB -> GamesHubScreen(
-                            onBack = { navigate(HomeScreen.CHAT) },
-                            onSendNote = { navigate(HomeScreen.NOTE) },
-                            onDrawNote = { navigate(HomeScreen.DRAW) },
-                            onNoteHistory = { navigate(HomeScreen.HISTORY) },
-                            onTicTacToe = { startGame("tictactoe") },
-                            onLudo = { startGame("ludo") },
-                            onTruthOrDare = { startGame("truthdare") },
-                            onWordGame = { startGame("wordgame") },
-                            myName = myName,
-                        )
-                        HomeScreen.NOTE -> SendNoteScreen(
-                            repository = noteRepository,
-                            onBack = { navigate(HomeScreen.HUB) },
-                            onHistoryClick = { navigate(HomeScreen.HISTORY) },
-                            onDrawClick = { navigate(HomeScreen.DRAW) },
-                        )
-                        HomeScreen.DRAW -> DrawNoteScreen(
-                            repository = noteRepository,
-                            onBack = { navigate(HomeScreen.HUB) },
-                        )
-                        HomeScreen.HISTORY -> NotesHistoryScreen(
-                            repository = noteRepository,
-                            onBack = { navigate(HomeScreen.HUB) },
-                        )
-                        HomeScreen.TIC_TAC_TOE -> TicTacToeScreen(
-                            onBack = { navigate(HomeScreen.HUB) },
-                            myName = myName,
-                            partnerName = partnerName,
-                            myPhotoUrl = myProfile?.photoUrl.orEmpty(),
-                            partnerPhotoUrl = partner?.photoUrl.orEmpty(),
-                            gameId = activeGameId,
-                            gameRepository = gameRepository,
-                            myUid = chatRepository.myUid,
-                            chatRepository = chatRepository,
-                            onInvitePartner = {
-                                val board = mapOf(
-                                    "cells" to List(9) { "" },
-                                    "currentPlayer" to "X",
-                                )
-                                val gid = gameRepository.createGame("tictactoe", myName, board)
-                                chatRepository.sendGameInvite(gid, "tictactoe")
-                                activeGameId = gid
-                            },
-                        )
-                        HomeScreen.LUDO -> LudoScreen(
-                            onBack = { navigate(HomeScreen.HUB) },
-                            myName = myName,
-                            partnerName = partnerName,
-                            gameId = activeGameId,
-                            gameRepository = gameRepository,
-                            myUid = chatRepository.myUid,
-                            chatRepository = chatRepository,
-                            onInvitePartner = {
-                                val board = mapOf(
-                                    "p1Tokens" to List(4) { mapOf("place" to 0, "tp" to -1, "hs" to -1) },
-                                    "p2Tokens" to List(4) { mapOf("place" to 0, "tp" to -1, "hs" to -1) },
-                                    "turn" to 1,
-                                    "diceValue" to 1,
-                                    "phase" to "roll",
-                                    "p1Wins" to 0,
-                                    "p2Wins" to 0,
-                                )
-                                val gid = gameRepository.createGame("ludo", myName, board)
-                                chatRepository.sendGameInvite(gid, "ludo")
-                                activeGameId = gid
-                            },
-                        )
-                        HomeScreen.TRUTH_OR_DARE -> TruthOrDareScreen(
-                            onBack = { navigate(HomeScreen.HUB) },
-                            myName = myName,
-                            partnerName = partnerName,
-                            gameId = activeGameId,
-                            gameRepository = gameRepository,
-                            myUid = chatRepository.myUid,
-                            chatRepository = chatRepository,
-                            onInvitePartner = {
-                                val board = mapOf(
-                                    "currentTurn" to "p1",
-                                    "spins" to 0,
-                                )
-                                val gid = gameRepository.createGame("truthdare", myName, board)
-                                chatRepository.sendGameInvite(gid, "truthdare")
-                                activeGameId = gid
-                            },
-                        )
-                        HomeScreen.WORD_GAME -> WordConnectionScreen(
-                            onBack = { navigate(HomeScreen.HUB) },
-                            myName = myName,
-                            partnerName = partnerName,
-                            gameId = activeGameId,
-                            gameRepository = gameRepository,
-                            myUid = chatRepository.myUid,
-                            onInvitePartner = {
-                                val board = mapOf(
-                                    "phase" to "p1",
-                                    "currentRound" to 0,
-                                )
-                                val gid = gameRepository.createGame("wordgame", myName, board)
-                                chatRepository.sendGameInvite(gid, "wordgame")
-                                activeGameId = gid
-                            },
-                            chatRepository = chatRepository,
-                        )
                         HomeScreen.SETTINGS -> SettingsScreen(
                             onBack = { navigate(HomeScreen.CHAT) },
                             onLoggedOut = onLoggedOut,
@@ -371,23 +216,25 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                             repository = usRepository,
                             onBack = { navigate(HomeScreen.US) },
                             onRemind = { title ->
-                                homeScope.launch {
-                                    runCatching { chatRepository.send(context.getString(R.string.notification_reminder, title)) }
-                                }
+                                scope.launch { runCatching { chatRepository.send(context.getString(R.string.notification_reminder, title)) } }
                             },
                         )
                         HomeScreen.CHAT -> ChatScreen(
                             repository = chatRepository,
                             onSettingsClick = { navigate(HomeScreen.SETTINGS) },
-                            onGameClick = { gameId, gameType ->
-                                activeGameId = gameId
-                                when (gameType) {
-                                    "tictactoe" -> navigate(HomeScreen.TIC_TAC_TOE)
-                                    "ludo" -> navigate(HomeScreen.LUDO)
-                                    "truthdare" -> navigate(HomeScreen.TRUTH_OR_DARE)
-                                    "wordgame" -> navigate(HomeScreen.WORD_GAME)
-                                }
+                            onGameClick = { _, _ -> },
+                        )
+                        HomeScreen.VIBE -> VibeScreen(
+                            repository = vibeRepository,
+                            onRitualDetail = { id ->
+                                selectedRitualId = id
+                                navigate(HomeScreen.RITUAL_DETAIL)
                             },
+                        )
+                        HomeScreen.RITUAL_DETAIL -> RitualDetailScreen(
+                            repository = vibeRepository,
+                            ritualId = selectedRitualId ?: "",
+                            onBack = { navigate(HomeScreen.VIBE) },
                         )
                     }
                 }

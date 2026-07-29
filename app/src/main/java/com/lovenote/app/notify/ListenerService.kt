@@ -17,9 +17,7 @@ import com.google.firebase.firestore.Query
 import com.lovenote.app.MainActivity
 import com.lovenote.app.R
 import com.lovenote.app.chat.Message
-import com.lovenote.app.notes.Note
-import com.lovenote.app.notes.NoteCache
-import com.lovenote.app.widget.WidgetRefreshWorker
+
 
 /**
  * Keeps a live Firestore connection while the app is closed so messages and
@@ -126,21 +124,6 @@ class ListenerService : Service() {
                             else -> message.body
                         },
                     )
-                }
-            }
-
-        coupleRegistrations += db.collection("couples").document(cid).collection("notes")
-            .orderBy("sentAt", Query.Direction.DESCENDING).limit(1)
-            .addSnapshotListener { snap, _ ->
-                val doc = snap?.documents?.firstOrNull() ?: return@addSnapshotListener
-                val note = Note.fromMap(doc.id, doc.data ?: emptyMap())
-                if (note.senderUid == uid) return@addSnapshotListener
-                val millis = note.sentAt?.toDate()?.time ?: return@addSnapshotListener
-                NoteCache.save(this, note)
-                WidgetRefreshWorker.refreshNow(this)
-                if (!AppVisibility.appVisible && millis > NotifyState.lastNoteMillis(this)) {
-                    NotifyState.setLastNote(this, millis)
-                    Notifier.notifyNote(this, note.text.ifBlank { "🎨 A doodle for you" })
                 }
             }
 

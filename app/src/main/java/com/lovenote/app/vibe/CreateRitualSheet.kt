@@ -1,0 +1,300 @@
+package com.lovenote.app.vibe
+
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+fun CreateRitualSheet(
+    onDismiss: () -> Unit,
+    onCreate: (name: String, description: String, frequency: String, actionType: String, reminderTime: String, reminderDays: List<Int>, customPrompt: String?) -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var step by remember { mutableIntStateOf(0) }
+    var name by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+    var frequency by remember { mutableStateOf("daily") }
+    var actionType by remember { mutableStateOf("text") }
+    var reminderTime by remember { mutableStateOf("09:00") }
+    var customPrompt by remember { mutableStateOf("") }
+    var reminderDays = remember { mutableStateListOf<Int>() }
+
+    val actionTypes = listOf("text" to "Text", "voice_note" to "Voice", "photo" to "Photo", "ping" to "Ping", "mood" to "Mood", "custom" to "Custom")
+    val dayLabels = listOf("Sun" to 0, "Mon" to 1, "Tue" to 2, "Wed" to 3, "Thu" to 4, "Fri" to 5, "Sat" to 6)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp)
+                .verticalScroll(rememberScrollState()),
+        ) {
+            if (step > 0) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { step-- }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "Step ${step + 1} of 4",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+
+            when (step) {
+                0 -> {
+                    Text(
+                        text = "Name your ritual",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("Ritual name") },
+                        placeholder = { Text("e.g. Morning Coffee Check") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = description,
+                        onValueChange = { description = it },
+                        label = { Text("Description (optional)") },
+                        placeholder = { Text("What's this ritual about?") },
+                        minLines = 2,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Button(
+                        onClick = { step = 1 },
+                        enabled = name.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                    ) { Text("Next") }
+                }
+
+                1 -> {
+                    Text(
+                        text = "How often?",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        listOf("daily" to "Daily", "weekly" to "Weekly", "monthly" to "Monthly").forEachIndexed { idx, (value, label) ->
+                            SegmentedButton(
+                                selected = frequency == value,
+                                onClick = { frequency = value },
+                                shape = SegmentedButtonDefaults.itemShape(idx, 3),
+                            ) { Text(label) }
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    if (frequency == "weekly") {
+                        Text(
+                            text = "On which days?",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            dayLabels.forEach { (label, idx) ->
+                                val selected = idx in reminderDays
+                                FilterChip(
+                                    selected = selected,
+                                    onClick = {
+                                        if (selected) reminderDays.remove(idx) else reminderDays.add(idx)
+                                    },
+                                    label = { Text(label) },
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                    }
+                    if (frequency == "monthly") {
+                        Text(
+                            text = "On which day of the month?",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            (1..28).forEach { day ->
+                                val selected = day in reminderDays
+                                FilterChip(
+                                    selected = selected,
+                                    onClick = {
+                                        if (selected) reminderDays.remove(day) else reminderDays.add(day)
+                                    },
+                                    label = { Text(day.toString()) },
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                    }
+                    OutlinedTextField(
+                        value = reminderTime,
+                        onValueChange = { reminderTime = it },
+                        label = { Text("Remind at") },
+                        placeholder = { Text("HH:mm") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Button(
+                        onClick = { step = 2 },
+                        enabled = when (frequency) {
+                            "daily" -> true
+                            "weekly" -> reminderDays.isNotEmpty()
+                            "monthly" -> reminderDays.isNotEmpty()
+                            else -> true
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                    ) { Text("Next") }
+                }
+
+                2 -> {
+                    Text(
+                        text = "Type of action",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        actionTypes.forEach { (value, label) ->
+                            val selected = actionType == value
+                            FilterChip(
+                                selected = selected,
+                                onClick = { actionType = value },
+                                label = { Text(label) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                ),
+                            )
+                        }
+                    }
+                    if (actionType == "custom") {
+                        Spacer(Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = customPrompt,
+                            onValueChange = { customPrompt = it },
+                            label = { Text("Prompt to show at reminder time") },
+                            placeholder = { Text("What should we ask or remind you to do?") },
+                            minLines = 2,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                        )
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Button(
+                        onClick = { step = 3 },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                    ) { Text("Next") }
+                }
+
+                3 -> {
+                    Text(
+                        text = "Review",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    ReviewRow("Name", name)
+                    if (description.isNotBlank()) ReviewRow("Description", description)
+                    ReviewRow("Frequency", frequency.replaceFirstChar { it.uppercase() })
+                    val actionLabel = actionTypes.firstOrNull { it.first == actionType }?.second ?: actionType
+                    ReviewRow("Action", actionLabel)
+                    ReviewRow("Reminder", reminderTime)
+                    if (frequency == "weekly" && reminderDays.isNotEmpty()) {
+                        val daysText = reminderDays.sorted().map { day -> dayLabels.firstOrNull { it.second == day }?.first ?: day.toString() }.joinToString(", ")
+                        ReviewRow("Days", daysText)
+                    }
+                    Spacer(Modifier.height(20.dp))
+                    Button(
+                        onClick = {
+                            onDismiss()
+                            onCreate(name, description, frequency, actionType, reminderTime, reminderDays.toList(), customPrompt.ifBlank { null })
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                    ) { Text("Create Ritual") }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReviewRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
