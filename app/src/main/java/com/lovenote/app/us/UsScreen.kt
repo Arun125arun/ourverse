@@ -285,7 +285,6 @@ fun UsScreen(
                 ) {
                     Text(stringResource(R.string.todos_button))
                 }
-                }
             }
 
 
@@ -475,6 +474,7 @@ fun UsScreen(
             )
         }
     }
+}
 
 @Composable
 private fun CoupleHero(
