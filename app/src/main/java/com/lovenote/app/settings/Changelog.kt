@@ -3,6 +3,11 @@ package com.lovenote.app.settings
 /** Release notes shown in the "What's new" dialog after each update. */
 object Changelog {
     private val NOTES = mapOf(
+        55L to listOf(
+            "▶️ In-app audio player — tap a song to play it right inside OurVerse",
+            "🔗 Add a direct audio link (mp3/m4a) when sharing songs",
+            "🗑 Remove button on your shared songs",
+        ),
         54L to listOf(
             "🎵 Shared Soundtrack — share songs and react with emojis in the new Vibe tab",
             "🔁 Couple's Rituals — design custom relationship habits and track streaks",
