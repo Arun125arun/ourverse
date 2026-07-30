@@ -1,5 +1,6 @@
 package com.lovenote.app
 
+import android.app.Application
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateFloatAsState
@@ -41,9 +42,12 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lovenote.app.call.CallManager
 import com.lovenote.app.call.CallOverlay
 import com.lovenote.app.chat.ChatRepository
+import com.lovenote.app.chat.ChatViewModel
 import com.lovenote.app.R
 import com.lovenote.app.chat.ChatScreen
 import com.lovenote.app.notify.AppVisibility
@@ -57,8 +61,10 @@ import com.lovenote.app.us.MemoriesScreen
 import com.lovenote.app.us.TodosScreen
 import com.lovenote.app.us.UsRepository
 import com.lovenote.app.us.UsScreen
+import com.lovenote.app.us.UsViewModel
 import com.lovenote.app.vibe.VibeRepository
 import com.lovenote.app.vibe.VibeScreen
+import com.lovenote.app.vibe.VibeViewModel
 import com.lovenote.app.rituals.RitualDetailScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -72,10 +78,32 @@ internal enum class HomeScreen {
 @Composable
 internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
     val context = LocalContext.current
+    val app = context.applicationContext as Application
     val chatRepository = remember(coupleId) { ChatRepository(coupleId) }
     val usRepository = remember(coupleId) { UsRepository(coupleId) }
     val vibeRepository = remember(coupleId) { VibeRepository(coupleId) }
     val storyRepository = remember(coupleId) { StoryRepository(coupleId) }
+    val chatViewModel: ChatViewModel = viewModel(
+        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                ChatViewModel(app, chatRepository) as T
+        },
+    )
+    val usViewModel: UsViewModel = viewModel(
+        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                UsViewModel(usRepository) as T
+        },
+    )
+    val vibeViewModel: VibeViewModel = viewModel(
+        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                VibeViewModel(vibeRepository) as T
+        },
+    )
     val partner by chatRepository.partnerProfile().collectAsState(initial = null)
     val myProfile by chatRepository.myProfile().collectAsState(initial = null)
     var screen by remember { mutableStateOf(HomeScreen.CHAT) }
@@ -195,7 +223,7 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                             chatRepository = chatRepository,
                         )
                         HomeScreen.US -> UsScreen(
-                            repository = usRepository,
+                            vm = usViewModel,
                             onMemoriesClick = { navigate(HomeScreen.MEMORIES) },
                             onTodosClick = { navigate(HomeScreen.TODOS) },
                             onPingClick = { navigate(HomeScreen.PING) },
@@ -220,18 +248,17 @@ internal fun Home(coupleId: String, onLoggedOut: () -> Unit) {
                             },
                         )
                         HomeScreen.CHAT -> ChatScreen(
-                            repository = chatRepository,
+                            vm = chatViewModel,
                             onSettingsClick = { navigate(HomeScreen.SETTINGS) },
-                            onGameClick = { _, _ -> },
                         )
                         HomeScreen.VIBE -> VibeScreen(
-                            repository = vibeRepository,
+                            vm = vibeViewModel,
                             onRitualDetail = { id ->
                                 selectedRitualId = id
                                 navigate(HomeScreen.RITUAL_DETAIL)
                             },
                             onShareSong = { uri, source, title, artist, albumArt, audioUrl ->
-                                scope.launch { runCatching { vibeRepository.shareSong(uri, source, title, artist, albumArt, audioUrl) } }
+                                scope.launch { runCatching { vibeViewModel.shareSong(uri, source, title, artist, albumArt, audioUrl) } }
                             },
                         )
                         HomeScreen.RITUAL_DETAIL -> RitualDetailScreen(

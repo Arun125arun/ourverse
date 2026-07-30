@@ -75,7 +75,8 @@ object CallManager {
     private var appContext: Context? = null
 
     private val db get() = FirebaseFirestore.getInstance()
-    private fun callDoc() = db.collection("couples").document(coupleId!!)
+    private fun callDoc() = db.collection("couples")
+        .document(requireNotNull(coupleId) { "callDoc() called before watch()" })
         .collection("call").document("current")
 
     private fun ensureFactory(context: Context): PeerConnectionFactory {
@@ -250,7 +251,8 @@ object CallManager {
             capturer = cap
             surfaceHelper = SurfaceTextureHelper.create("capture", eglBase.eglBaseContext)
             videoSource = f.createVideoSource(cap.isScreencast)
-            cap.initialize(surfaceHelper, context, videoSource!!.capturerObserver)
+            val vs = videoSource ?: return
+            cap.initialize(surfaceHelper, context, vs.capturerObserver)
             cap.startCapture(960, 540, 24)
             frontCamera = true
             cameraVideoTrack = f.createVideoTrack("video0", videoSource)
@@ -277,7 +279,8 @@ object CallManager {
         )
         screenHelper = SurfaceTextureHelper.create("screen", eglBase.eglBaseContext)
         screenSource = f.createVideoSource(true)
-        cap.initialize(screenHelper, context, screenSource!!.capturerObserver)
+        val ss = screenSource ?: return
+        cap.initialize(screenHelper, context, ss.capturerObserver)
         cap.startCapture(metrics.widthPixels / 2, metrics.heightPixels / 2, 15)
         screenCapturer = cap
         val track = f.createVideoTrack("screen0", screenSource)

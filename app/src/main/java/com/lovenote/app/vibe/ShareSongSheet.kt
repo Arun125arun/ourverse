@@ -102,9 +102,10 @@ fun ShareSongSheet(
                 )
                 Spacer(Modifier.height(8.dp))
 
-                if (fetchError != null) {
+                val error = fetchError
+                if (error != null) {
                     Text(
-                        text = fetchError!!,
+                        text = error,
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
                     )

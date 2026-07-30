@@ -70,7 +70,8 @@ object Questions {
         formatter.format(Date(millis))
 
     fun indexForDate(dateKey: String): Int {
-        val epochDay = formatter.parse(dateKey)!!.time / 86_400_000L
+        val parsed = formatter.parse(dateKey) ?: return 0
+        val epochDay = parsed.time / 86_400_000L
         return (epochDay % ALL.size).toInt()
     }
 

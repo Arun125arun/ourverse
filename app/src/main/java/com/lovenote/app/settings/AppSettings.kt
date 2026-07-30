@@ -42,7 +42,7 @@ object AppSettings {
     fun load(context: Context) {
         val p = prefs(context)
         themeMode = runCatching {
-            ThemeMode.valueOf(p.getString("themeMode", ThemeMode.SYSTEM.name)!!)
+            ThemeMode.valueOf(p.getString("themeMode", ThemeMode.SYSTEM.name) ?: ThemeMode.SYSTEM.name)
         }.getOrDefault(ThemeMode.SYSTEM)
         accentName = p.getString("accent", DEFAULT_ACCENT)
             .takeIf { it in ACCENTS || (it == DYNAMIC && supportsDynamic()) }

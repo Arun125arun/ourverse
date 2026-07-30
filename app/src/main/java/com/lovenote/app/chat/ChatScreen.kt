@@ -116,10 +116,11 @@ private const val TYPING_HEARTBEAT_MILLIS = 2_000L
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ChatScreen(
-    repository: ChatRepository,
+    vm: ChatViewModel,
     onSettingsClick: () -> Unit,
     onGameClick: (gameId: String, gameType: String) -> Unit = { _, _ -> },
 ) {
+    val repository = vm.repository
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     // null = still loading (so the empty state doesn't flash on entry)
@@ -1011,45 +1012,4 @@ fun ChatScreen(
     }
 }
 
-private fun presenceLabel(lastActiveMillis: Long?, now: Long): String? {
-    if (lastActiveMillis == null) return null
-    val minutes = (now - lastActiveMillis) / 60_000L
-    return when {
-        minutes < 2 -> "Active now"
-        minutes < 60 -> "Active ${minutes}m ago"
-        minutes < 60 * 24 -> "Active ${minutes / 60}h ago"
-        else -> null
-    }
-}
 
-/** "typing" with three softly bouncing dots. */
-@Composable
-private fun TypingDots() {
-    val transition = rememberInfiniteTransition(label = "typing")
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text = "typing",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        repeat(3) { index ->
-            val alpha by transition.animateFloat(
-                initialValue = 0.2f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(500, delayMillis = index * 160),
-                    repeatMode = RepeatMode.Reverse,
-                ),
-                label = "dot$index",
-            )
-            Text(
-                text = ".",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
-            )
-        }
-    }
-}
-
-private fun daysTogether(anniversaryMillis: Long): Long =
-    (System.currentTimeMillis() - anniversaryMillis) / 86_400_000L + 1

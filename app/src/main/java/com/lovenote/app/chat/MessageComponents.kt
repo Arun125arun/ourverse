@@ -464,9 +464,10 @@ internal fun FullscreenPhoto(message: Message, onDismiss: () -> Unit) {
                 .clickable(onClick = onDismiss),
             contentAlignment = Alignment.Center,
         ) {
+            val bmp = bitmap
             when {
-                bitmap != null -> Image(
-                    bitmap = bitmap!!,
+                bmp != null -> Image(
+                    bitmap = bmp,
                     contentDescription = "Photo",
                     contentScale = ContentScale.Fit,
                     modifier = Modifier.fillMaxWidth(),

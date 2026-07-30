@@ -239,7 +239,7 @@ fun RitualDetailScreen(
                             Column(modifier = Modifier.weight(1f)) {
                                 if (!log.note.isNullOrBlank()) {
                                     Text(
-                                        text = log.note!!,
+                                        text = log.note,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )

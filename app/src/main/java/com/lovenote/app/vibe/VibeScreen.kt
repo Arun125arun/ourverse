@@ -73,10 +73,11 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun VibeScreen(
-    repository: VibeRepository,
+    vm: VibeViewModel,
     onRitualDetail: (String) -> Unit,
     onShareSong: (uri: String, source: String, title: String, artist: String, albumArtUrl: String?, audioUrl: String?) -> Unit = { _, _, _, _, _, _ -> },
 ) {
+    val repository = vm.repository
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val songs by repository.songs().collectAsState(initial = emptyList())
@@ -95,10 +96,11 @@ fun VibeScreen(
     }
 
     LaunchedEffect(playingSong) {
-        if (playingSong?.audioUrl != null) {
+        val url = playingSong?.audioUrl
+        if (url != null) {
             player.apply {
                 stop()
-                setMediaItem(MediaItem.fromUri(playingSong!!.audioUrl!!))
+                setMediaItem(MediaItem.fromUri(url))
                 prepare()
                 playWhenReady = true
                 play()
