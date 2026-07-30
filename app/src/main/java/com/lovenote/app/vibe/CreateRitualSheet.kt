@@ -1,5 +1,6 @@
 package com.lovenote.app.vibe
 
+import com.lovenote.app.R
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -41,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -58,8 +60,8 @@ fun CreateRitualSheet(
     var customPrompt by remember { mutableStateOf("") }
     var reminderDays = remember { mutableStateListOf<Int>() }
 
-    val actionTypes = listOf("text" to "Text", "voice_note" to "Voice", "photo" to "Photo", "ping" to "Ping", "mood" to "Mood", "custom" to "Custom")
-    val dayLabels = listOf("Sun" to 0, "Mon" to 1, "Tue" to 2, "Wed" to 3, "Thu" to 4, "Fri" to 5, "Sat" to 6)
+    val actionTypes = listOf("text" to stringResource(R.string.ritual_text_action), "voice_note" to stringResource(R.string.ritual_voice_action), "photo" to stringResource(R.string.ritual_photo_action), "ping" to stringResource(R.string.ritual_ping_action), "mood" to stringResource(R.string.ritual_mood_action), "custom" to stringResource(R.string.ritual_custom_action))
+    val dayLabels = listOf(stringResource(R.string.ritual_sun) to 0, stringResource(R.string.ritual_mon) to 1, stringResource(R.string.ritual_tue) to 2, stringResource(R.string.ritual_wed) to 3, stringResource(R.string.ritual_thu) to 4, stringResource(R.string.ritual_fri) to 5, stringResource(R.string.ritual_sat) to 6)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -76,7 +78,7 @@ fun CreateRitualSheet(
             if (step > 0) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = { step-- }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.ritual_back_description))
                     }
                     Spacer(Modifier.width(8.dp))
                     Text(
@@ -91,7 +93,7 @@ fun CreateRitualSheet(
             when (step) {
                 0 -> {
                     Text(
-                        text = "Name your ritual",
+                        text = stringResource(R.string.ritual_name_title),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
@@ -99,8 +101,8 @@ fun CreateRitualSheet(
                     OutlinedTextField(
                         value = name,
                         onValueChange = { name = it },
-                        label = { Text("Ritual name") },
-                        placeholder = { Text("e.g. Morning Coffee Check") },
+                        label = { Text(stringResource(R.string.ritual_name_label)) },
+                        placeholder = { Text(stringResource(R.string.ritual_name_placeholder)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
@@ -109,8 +111,8 @@ fun CreateRitualSheet(
                     OutlinedTextField(
                         value = description,
                         onValueChange = { description = it },
-                        label = { Text("Description (optional)") },
-                        placeholder = { Text("What's this ritual about?") },
+                        label = { Text(stringResource(R.string.ritual_description_label)) },
+                        placeholder = { Text(stringResource(R.string.ritual_description_placeholder)) },
                         minLines = 2,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
@@ -121,18 +123,18 @@ fun CreateRitualSheet(
                         enabled = name.isNotBlank(),
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
-                    ) { Text("Next") }
+                    ) { Text(stringResource(R.string.ritual_next_button)) }
                 }
 
                 1 -> {
                     Text(
-                        text = "How often?",
+                        text = stringResource(R.string.ritual_how_often_title),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Spacer(Modifier.height(12.dp))
                     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                        listOf("daily" to "Daily", "weekly" to "Weekly", "monthly" to "Monthly").forEachIndexed { idx, (value, label) ->
+                        listOf("daily" to stringResource(R.string.ritual_daily), "weekly" to stringResource(R.string.ritual_weekly), "monthly" to stringResource(R.string.ritual_monthly)).forEachIndexed { idx, (value, label) ->
                             SegmentedButton(
                                 selected = frequency == value,
                                 onClick = { frequency = value },
@@ -143,7 +145,7 @@ fun CreateRitualSheet(
                     Spacer(Modifier.height(16.dp))
                     if (frequency == "weekly") {
                         Text(
-                            text = "On which days?",
+                            text = stringResource(R.string.ritual_which_days_label),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -164,7 +166,7 @@ fun CreateRitualSheet(
                     }
                     if (frequency == "monthly") {
                         Text(
-                            text = "On which day of the month?",
+                            text = stringResource(R.string.ritual_which_day_month_label),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -186,8 +188,8 @@ fun CreateRitualSheet(
                     OutlinedTextField(
                         value = reminderTime,
                         onValueChange = { reminderTime = it },
-                        label = { Text("Remind at") },
-                        placeholder = { Text("HH:mm") },
+                        label = { Text(stringResource(R.string.ritual_remind_at_label)) },
+                        placeholder = { Text(stringResource(R.string.ritual_remind_at_placeholder)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
@@ -203,12 +205,12 @@ fun CreateRitualSheet(
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
-                    ) { Text("Next") }
+                    ) { Text(stringResource(R.string.ritual_next_button)) }
                 }
 
                 2 -> {
                     Text(
-                        text = "Type of action",
+                        text = stringResource(R.string.ritual_action_type_title),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
@@ -231,8 +233,8 @@ fun CreateRitualSheet(
                         OutlinedTextField(
                             value = customPrompt,
                             onValueChange = { customPrompt = it },
-                            label = { Text("Prompt to show at reminder time") },
-                            placeholder = { Text("What should we ask or remind you to do?") },
+                            label = { Text(stringResource(R.string.ritual_prompt_label)) },
+                            placeholder = { Text(stringResource(R.string.ritual_prompt_placeholder)) },
                             minLines = 2,
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(14.dp),
@@ -243,25 +245,25 @@ fun CreateRitualSheet(
                         onClick = { step = 3 },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
-                    ) { Text("Next") }
+                    ) { Text(stringResource(R.string.ritual_next_button)) }
                 }
 
                 3 -> {
                     Text(
-                        text = "Review",
+                        text = stringResource(R.string.ritual_review_title),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Spacer(Modifier.height(16.dp))
-                    ReviewRow("Name", name)
-                    if (description.isNotBlank()) ReviewRow("Description", description)
-                    ReviewRow("Frequency", frequency.replaceFirstChar { it.uppercase() })
+                    ReviewRow(stringResource(R.string.ritual_review_name), name)
+                    if (description.isNotBlank()) ReviewRow(stringResource(R.string.ritual_review_description), description)
+                    ReviewRow(stringResource(R.string.ritual_review_frequency), frequency.replaceFirstChar { it.uppercase() })
                     val actionLabel = actionTypes.firstOrNull { it.first == actionType }?.second ?: actionType
-                    ReviewRow("Action", actionLabel)
-                    ReviewRow("Reminder", reminderTime)
+                    ReviewRow(stringResource(R.string.ritual_review_action), actionLabel)
+                    ReviewRow(stringResource(R.string.ritual_review_reminder), reminderTime)
                     if (frequency == "weekly" && reminderDays.isNotEmpty()) {
                         val daysText = reminderDays.sorted().map { day -> dayLabels.firstOrNull { it.second == day }?.first ?: day.toString() }.joinToString(", ")
-                        ReviewRow("Days", daysText)
+                        ReviewRow(stringResource(R.string.ritual_review_days), daysText)
                     }
                     Spacer(Modifier.height(20.dp))
                     Button(
@@ -271,7 +273,7 @@ fun CreateRitualSheet(
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
-                    ) { Text("Create Ritual") }
+                    ) { Text(stringResource(R.string.ritual_create_button)) }
                 }
             }
         }

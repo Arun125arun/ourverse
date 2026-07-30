@@ -555,17 +555,10 @@ class UsRepository(
     /** True if the partner has unread pings. */
     fun hasUnreadPings(): Flow<Boolean> =
         coupleRef.collection("pings")
-            .whereEqualTo("senderUid", myUid)
+            .whereNotEqualTo("senderUid", myUid)
             .whereEqualTo("opened", false)
             .snapshots()
-            .map { false } // my pings, not relevant
-            .combine(
-                coupleRef.collection("pings")
-                    .whereNotEqualTo("senderUid", myUid)
-                    .whereEqualTo("opened", false)
-                    .snapshots()
-                    .map { it.size() > 0 },
-            ) { _, hasUnread -> hasUnread }
+            .map { it.size() > 0 }
             .fallbackTo(false)
 
     // --- Time Capsule Messages ---

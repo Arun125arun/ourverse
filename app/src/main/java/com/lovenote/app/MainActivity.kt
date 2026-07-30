@@ -79,10 +79,10 @@ class MainActivity : ComponentActivity() {
                     AlertDialog(
                         onDismissRequest = { showWhatsNew = false },
                         confirmButton = {
-                            TextButton(onClick = { showWhatsNew = false }) { Text("Nice") }
+                            TextButton(onClick = { showWhatsNew = false }) { Text(stringResource(R.string.whats_new_confirm)) }
                         },
                         title = {
-                            Text("What's new in ${UpdateChecker.installedVersionName(this)}")
+                            Text(stringResource(R.string.whats_new_title, UpdateChecker.installedVersionName(this)))
                         },
                         text = {
                             Column {

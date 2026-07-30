@@ -1,5 +1,6 @@
 package com.lovenote.app.us
 
+import com.lovenote.app.R
 import android.graphics.BitmapFactory
 import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -70,6 +71,7 @@ import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -85,15 +87,15 @@ fun MemoriesScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Our story 📖") },
+                title = { Text(stringResource(R.string.memories_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_description_back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { showAdd = true }) {
-                        Icon(Icons.Filled.Add, contentDescription = "Add a memory")
+                        Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.content_description_add_memory))
                     }
                 },
             )
@@ -117,18 +119,18 @@ fun MemoriesScreen(
                         ),
                         label = "beat",
                     )
+                val heartDesc = stringResource(R.string.content_description_heart)
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = "\u2764",
                         fontSize = 42.sp,
                         modifier = Modifier
                             .scale(beat)
-                            .semantics { contentDescription = "Heart" },
+                            .semantics { contentDescription = heartDesc },
                     )
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        text = "Save the moments that matter \u2014 your first date, " +
-                            "a trip, an ordinary day that felt special \u2764",
+                        text = stringResource(R.string.memories_empty_text),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.secondary,
                     )
@@ -211,7 +213,7 @@ private fun MemoryCard(memory: Memory, onDelete: () -> Unit) {
                 IconButton(onClick = onDelete) {
                     Icon(
                         Icons.Filled.Delete,
-                        contentDescription = "Delete",
+                        contentDescription = stringResource(R.string.content_description_delete),
                         tint = MaterialTheme.colorScheme.secondary,
                     )
                 }
@@ -250,13 +252,13 @@ private fun AddMemoryDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add a memory") },
+        title = { Text(stringResource(R.string.add_memory_dialog_title)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("What happened? ❤") },
+                    label = { Text(stringResource(R.string.memories_what_happened_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -266,7 +268,7 @@ private fun AddMemoryDialog(
                         dateState.selectedDateMillis?.let {
                             SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
                                 .format(Date(it))
-                        } ?: "Pick the date",
+                        } ?: stringResource(R.string.memories_pick_date),
                     )
                 }
                 OutlinedButton(
@@ -282,9 +284,9 @@ private fun AddMemoryDialog(
                 ) {
                     Text(
                         when {
-                            encoding -> "Adding photo…"
-                            photo != null -> "Photo added ✓ (tap to change)"
-                            else -> "Add a photo (optional)"
+                            encoding -> stringResource(R.string.memories_adding_photo)
+                            photo != null -> stringResource(R.string.memories_photo_added)
+                            else -> stringResource(R.string.memories_add_photo_optional)
                         },
                     )
                 }
@@ -296,10 +298,10 @@ private fun AddMemoryDialog(
                     dateState.selectedDateMillis?.let { onAdd(title, it, photo) }
                 },
                 enabled = title.isNotBlank() && !encoding && dateState.selectedDateMillis != null,
-            ) { Text("Save") }
+            ) { Text(stringResource(R.string.save)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         },
     )
 
@@ -307,7 +309,7 @@ private fun AddMemoryDialog(
         DatePickerDialog(
             onDismissRequest = { pickDate = false },
             confirmButton = {
-                TextButton(onClick = { pickDate = false }) { Text("OK") }
+                TextButton(onClick = { pickDate = false }) { Text(stringResource(R.string.ok_button)) }
             },
         ) {
             DatePicker(state = dateState)

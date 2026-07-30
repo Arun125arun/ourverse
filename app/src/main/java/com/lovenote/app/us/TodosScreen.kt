@@ -1,5 +1,6 @@
 package com.lovenote.app.us
 
+import com.lovenote.app.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -56,10 +58,10 @@ fun TodosScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Our to-dos 📋") },
+                title = { Text(stringResource(R.string.todos_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_description_back))
                     }
                 },
             )
@@ -75,7 +77,7 @@ fun TodosScreen(
                 OutlinedTextField(
                     value = draft,
                     onValueChange = { draft = it },
-                    placeholder = { Text("Add something to do…") },
+                    placeholder = { Text(stringResource(R.string.todos_placeholder)) },
                     singleLine = true,
                     modifier = Modifier.weight(1f),
                 )
@@ -90,7 +92,7 @@ fun TodosScreen(
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "Add",
+                        contentDescription = stringResource(R.string.content_description_add),
                         tint = MaterialTheme.colorScheme.primary,
                     )
                 }
@@ -106,8 +108,7 @@ fun TodosScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "Plan things together — groceries, trips, chores. " +
-                            "Tap 🔔 on any task to remind your partner ❤",
+                        text = stringResource(R.string.todos_empty_text),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.secondary,
                     )
@@ -156,7 +157,7 @@ fun TodosScreen(
                                     IconButton(onClick = { onRemind(todo.title) }) {
                                         Icon(
                                             Icons.Filled.Notifications,
-                                            contentDescription = "Remind partner",
+                                            contentDescription = stringResource(R.string.content_description_remind_partner),
                                             tint = MaterialTheme.colorScheme.primary,
                                         )
                                     }
@@ -166,7 +167,7 @@ fun TodosScreen(
                                 }) {
                                     Icon(
                                         Icons.Filled.Delete,
-                                        contentDescription = "Delete",
+                                        contentDescription = stringResource(R.string.content_description_delete),
                                         tint = MaterialTheme.colorScheme.secondary,
                                     )
                                 }

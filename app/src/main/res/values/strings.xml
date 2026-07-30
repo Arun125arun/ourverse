@@ -257,4 +257,128 @@
     <string name="story_gallery">Gallery</string>
     <string name="story_caption_placeholder">Add a caption…</string>
     <string name="story_share">Share story</string>
+
+    <!-- v0.55c: Hardened strings -->
+    <string name="vibe_title">Vibe</string>
+    <string name="vibe_share_song_description">Share a song</string>
+    <string name="vibe_our_soundtrack">🎵 Our Soundtrack</string>
+    <string name="vibe_no_songs_title">No songs yet</string>
+    <string name="vibe_no_songs_subtitle">Share a song with your partner — it appears here instantly.</string>
+    <string name="vibe_share_first_song">Share your first song</string>
+    <string name="vibe_our_rituals">🔄 Our Rituals</string>
+    <string name="vibe_templates_button">Templates</string>
+    <string name="vibe_new_ritual_button">+ New</string>
+    <string name="vibe_no_rituals_title">No rituals yet</string>
+    <string name="vibe_no_rituals_subtitle">Create a custom ritual or pick from templates to build daily connection habits.</string>
+    <string name="vibe_browse_templates">Browse templates</string>
+    <string name="vibe_stop_description">Stop</string>
+    <string name="vibe_album_art_description">Album art</string>
+    <string name="vibe_you">You</string>
+    <string name="vibe_partner">Partner</string>
+    <string name="vibe_remove_song_description">Remove song</string>
+    <string name="vibe_done_today">Done today</string>
+    <string name="vibe_due">Due</string>
+    <string name="vibe_ritual_templates_title">Ritual Templates</string>
+    <string name="vibe_ritual_templates_description">Choose a pre-built ritual inspired by relationship science.</string>
+    <string name="vibe_cancel">Cancel</string>
+    <string name="ritual_back_description">Back</string>
+    <string name="ritual_name_title">Name your ritual</string>
+    <string name="ritual_name_label">Ritual name</string>
+    <string name="ritual_name_placeholder">e.g. Morning Coffee Check</string>
+    <string name="ritual_description_label">Description (optional)</string>
+    <string name="ritual_description_placeholder">What\'s this ritual about?</string>
+    <string name="ritual_next_button">Next</string>
+    <string name="ritual_how_often_title">How often?</string>
+    <string name="ritual_daily">Daily</string>
+    <string name="ritual_weekly">Weekly</string>
+    <string name="ritual_monthly">Monthly</string>
+    <string name="ritual_which_days_label">On which days?</string>
+    <string name="ritual_which_day_month_label">On which day of the month?</string>
+    <string name="ritual_remind_at_label">Remind at</string>
+    <string name="ritual_remind_at_placeholder">HH:mm</string>
+    <string name="ritual_action_type_title">Type of action</string>
+    <string name="ritual_text_action">Text</string>
+    <string name="ritual_voice_action">Voice</string>
+    <string name="ritual_photo_action">Photo</string>
+    <string name="ritual_ping_action">Ping</string>
+    <string name="ritual_mood_action">Mood</string>
+    <string name="ritual_custom_action">Custom</string>
+    <string name="ritual_prompt_label">Prompt to show at reminder time</string>
+    <string name="ritual_prompt_placeholder">What should we ask or remind you to do?</string>
+    <string name="ritual_review_title">Review</string>
+    <string name="ritual_review_name">Name</string>
+    <string name="ritual_review_description">Description</string>
+    <string name="ritual_review_frequency">Frequency</string>
+    <string name="ritual_review_action">Action</string>
+    <string name="ritual_review_reminder">Reminder</string>
+    <string name="ritual_review_days">Days</string>
+    <string name="ritual_create_button">Create Ritual</string>
+    <string name="ritual_sun">Sun</string>
+    <string name="ritual_mon">Mon</string>
+    <string name="ritual_tue">Tue</string>
+    <string name="ritual_wed">Wed</string>
+    <string name="ritual_thu">Thu</string>
+    <string name="ritual_fri">Fri</string>
+    <string name="ritual_sat">Sat</string>
+
+    <!-- CallOverlay -->
+    <string name="call_status_calling">Calling...</string>
+    <string name="call_status_incoming_video">Incoming video call</string>
+    <string name="call_status_incoming_voice">Incoming voice call</string>
+    <string name="call_status_connected">Connected</string>
+    <string name="call_tap_to_answer">Tap to answer</string>
+    <string name="call_decline">Decline</string>
+    <string name="call_accept">Accept</string>
+    <string name="call_mute">Mute</string>
+    <string name="call_unmute">Unmute</string>
+    <string name="call_speaker">Speaker</string>
+    <string name="call_flip">Flip</string>
+    <string name="call_share">Share</string>
+    <string name="call_end">End</string>
+
+    <!-- UsPingRow -->
+    <string name="ping_quick_ping">Quick ping</string>
+    <string name="ping_more">More</string>
+
+    <!-- ShareSongSheet -->
+    <string name="share_song_title">Share a song</string>
+    <string name="share_paste_link">Paste link</string>
+    <string name="share_enter_manually">Enter manually</string>
+    <string name="share_link_label">Spotify / YouTube link</string>
+    <string name="share_link_placeholder">https://open.spotify.com/track/...</string>
+    <string name="share_fetching">Fetching song details...</string>
+    <string name="share_fetch_error">Couldn\'t find that song. Add it manually.</string>
+    <string name="share_fetch_details">Fetch details</string>
+    <string name="share_audio_link_label">Audio link (optional)</string>
+    <string name="share_audio_link_placeholder">https://example.com/song.mp3</string>
+    <string name="share_audio_link_hint">Paste a direct audio URL (mp3, m4a) to play inside the app.</string>
+    <string name="share_anyway">Share anyway</string>
+    <string name="share_song_title_label">Song title</string>
+    <string name="share_artist_label">Artist name</string>
+    <string name="share_button">Share</string>
+    <string name="unknown">Unknown</string>
+    <string name="by_artist">by %1$s</string>
+
+    <!-- MemoriesScreen -->
+    <string name="memories_title">Our story 📖</string>
+    <string name="content_description_add_memory">Add a memory</string>
+    <string name="memories_empty_text">Save the moments that matter — your first date, a trip, an ordinary day that felt special ❤</string>
+    <string name="add_memory_dialog_title">Add a memory</string>
+    <string name="memories_what_happened_label">What happened? ❤</string>
+    <string name="memories_pick_date">Pick the date</string>
+    <string name="memories_adding_photo">Adding photo…</string>
+    <string name="memories_photo_added">Photo added ✓ (tap to change)</string>
+    <string name="memories_add_photo_optional">Add a photo (optional)</string>
+
+    <!-- TodosScreen -->
+    <string name="todos_title">Our to-dos 📋</string>
+    <string name="todos_placeholder">Add something to do…</string>
+    <string name="content_description_add">Add</string>
+    <string name="todos_empty_text">Plan things together — groceries, trips, chores. Tap 🔔 on any task to remind your partner ❤</string>
+    <string name="content_description_remind_partner">Remind partner</string>
+
+    <!-- MainActivity -->
+    <string name="whats_new_confirm">Nice</string>
+    <string name="whats_new_title">What\'s new in %1$s</string>
+
 </resources>

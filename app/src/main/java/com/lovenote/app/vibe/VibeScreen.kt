@@ -2,6 +2,7 @@ package com.lovenote.app.vibe
 
 import android.content.Intent
 import android.net.Uri
+import com.lovenote.app.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -69,6 +70,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -171,7 +173,7 @@ fun VibeScreen(
     Box {
         Scaffold(
             topBar = {
-                TopAppBar(title = { Text("Vibe") })
+                TopAppBar(title = { Text(stringResource(R.string.vibe_title)) })
             },
             floatingActionButton = {
                 FilledIconButton(
@@ -179,7 +181,7 @@ fun VibeScreen(
                     modifier = Modifier.size(56.dp),
                     shape = CircleShape,
                 ) {
-                    Icon(Icons.Filled.Add, contentDescription = "Share a song")
+                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.vibe_share_song_description))
                 }
             },
         ) { padding ->
@@ -194,7 +196,7 @@ fun VibeScreen(
                 item {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "\uD83C\uDFB5 Our Soundtrack",
+                        text = stringResource(R.string.vibe_our_soundtrack),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary,
@@ -206,9 +208,9 @@ fun VibeScreen(
                     item {
                         EmptyStateCard(
                             emoji = "\uD83C\uDFB5",
-                            title = "No songs yet",
-                            subtitle = "Share a song with your partner \u2014 it appears here instantly.",
-                            actionLabel = "Share your first song",
+                            title = stringResource(R.string.vibe_no_songs_title),
+                            subtitle = stringResource(R.string.vibe_no_songs_subtitle),
+                            actionLabel = stringResource(R.string.vibe_share_first_song),
                             onAction = { showShareSheet = true },
                         )
                     }
@@ -272,7 +274,7 @@ fun VibeScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "\uD83D\uDD01 Our Rituals",
+                            text = stringResource(R.string.vibe_our_rituals),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.primary,
@@ -283,14 +285,14 @@ fun VibeScreen(
                                 shape = RoundedCornerShape(12.dp),
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                             ) {
-                                Text("Templates", style = MaterialTheme.typography.labelSmall)
+                                Text(stringResource(R.string.vibe_templates_button), style = MaterialTheme.typography.labelSmall)
                             }
                             Button(
                                 onClick = { showCreateRitual = true },
                                 shape = RoundedCornerShape(12.dp),
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                             ) {
-                                Text("+ New", style = MaterialTheme.typography.labelSmall)
+                                Text(stringResource(R.string.vibe_new_ritual_button), style = MaterialTheme.typography.labelSmall)
                             }
                         }
                     }
@@ -302,9 +304,9 @@ fun VibeScreen(
                     item {
                         EmptyStateCard(
                             emoji = "\uD83D\uDD01",
-                            title = "No rituals yet",
-                            subtitle = "Create a custom ritual or pick from templates to build daily connection habits.",
-                            actionLabel = "Browse templates",
+                            title = stringResource(R.string.vibe_no_rituals_title),
+                            subtitle = stringResource(R.string.vibe_no_rituals_subtitle),
+                            actionLabel = stringResource(R.string.vibe_browse_templates),
                             onAction = { showTemplates = true },
                         )
                     }
@@ -382,7 +384,7 @@ fun VibeScreen(
                     }) {
                         Icon(
                             Icons.Filled.Close,
-                            contentDescription = "Stop",
+                            contentDescription = stringResource(R.string.vibe_stop_description),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -431,7 +433,7 @@ private fun SongCard(
                 if (!song.albumArtUrl.isNullOrEmpty()) {
                     AsyncImage(
                         model = song.albumArtUrl,
-                        contentDescription = "Album art",
+                        contentDescription = stringResource(R.string.vibe_album_art_description),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                     )
@@ -463,7 +465,7 @@ private fun SongCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = if (isMine) "You" else (partnerName ?: "Partner"),
+                    text = if (isMine) stringResource(R.string.vibe_you) else (partnerName ?: stringResource(R.string.vibe_partner)),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                 )
@@ -494,7 +496,7 @@ private fun SongCard(
             if (isMine) {
                 Icon(
                     Icons.Filled.Close,
-                    contentDescription = "Remove song",
+                    contentDescription = stringResource(R.string.vibe_remove_song_description),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                     modifier = Modifier
                         .padding(start = 4.dp)
@@ -547,8 +549,8 @@ private fun RitualCard(ritual: Ritual, onClick: () -> Unit) {
                     val status = if (ritual.lastCompletedAtMillis != null) {
                         val lastDay = SimpleDateFormat("yyyy-MM-dd", Locale.US)
                             .format(Date(ritual.lastCompletedAtMillis))
-                        if (lastDay == today) "Done today" else "Due"
-                    } else "Due"
+                        if (lastDay == today) stringResource(R.string.vibe_done_today) else stringResource(R.string.vibe_due)
+                    } else stringResource(R.string.vibe_due)
                     Text(
                         text = status,
                         style = MaterialTheme.typography.labelSmall,
@@ -630,11 +632,11 @@ private fun TemplatePickerDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Ritual Templates") },
+        title = { Text(stringResource(R.string.vibe_ritual_templates_title)) },
         text = {
             Column {
                 Text(
-                    text = "Choose a pre-built ritual inspired by relationship science.",
+                    text = stringResource(R.string.vibe_ritual_templates_description),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -675,7 +677,7 @@ private fun TemplatePickerDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.vibe_cancel)) }
         },
     )
 }

@@ -1,5 +1,6 @@
 package com.lovenote.app.vibe
 
+import com.lovenote.app.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,10 +26,12 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -55,6 +58,7 @@ fun ShareSongSheet(
     var fetchError by remember { mutableStateOf<String?>(null) }
     var isFetching by remember { mutableStateOf(false) }
     var audioLink by remember { mutableStateOf("") }
+    val context = LocalContext.current
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -69,7 +73,7 @@ fun ShareSongSheet(
                 .verticalScroll(rememberScrollState()),
         ) {
             Text(
-                text = "Share a song",
+                text = stringResource(R.string.share_song_title),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -80,12 +84,12 @@ fun ShareSongSheet(
                     selected = mode == 0,
                     onClick = { mode = 0; fetchError = null },
                     shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                ) { Text("Paste link") }
+                ) { Text(stringResource(R.string.share_paste_link)) }
                 SegmentedButton(
                     selected = mode == 1,
                     onClick = { mode = 1; fetchError = null },
                     shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                ) { Text("Enter manually") }
+                ) { Text(stringResource(R.string.share_enter_manually)) }
             }
 
             Spacer(Modifier.height(16.dp))
@@ -94,8 +98,8 @@ fun ShareSongSheet(
                 OutlinedTextField(
                     value = uriInput,
                     onValueChange = { uriInput = it; fetchError = null },
-                    label = { Text("Spotify / YouTube link") },
-                    placeholder = { Text("https://open.spotify.com/track/...") },
+                    label = { Text(stringResource(R.string.share_link_label)) },
+                    placeholder = { Text(stringResource(R.string.share_link_placeholder)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
@@ -114,7 +118,7 @@ fun ShareSongSheet(
 
                 if (isFetching) {
                     Text(
-                        text = "Fetching song details...",
+                        text = stringResource(R.string.share_fetching),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -129,13 +133,13 @@ fun ShareSongSheet(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text(
-                            text = fetchedTitle ?: "Unknown",
+                            text = fetchedTitle ?: stringResource(R.string.unknown),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         if (fetchedArtist != null) {
                             Text(
-                                text = "by ${fetchedArtist}",
+                                text = stringResource(R.string.by_artist, fetchedArtist!!),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -157,7 +161,7 @@ fun ShareSongSheet(
                                 fetchedArtist = result.second
                                 fetchedAlbumArt = result.third
                             } else {
-                                fetchError = "Couldn't find that song. Add it manually."
+                                fetchError = context.getString(R.string.share_fetch_error)
                             }
                             isFetching = false
                         }
@@ -165,7 +169,7 @@ fun ShareSongSheet(
                     enabled = uriInput.isNotBlank() && !isFetching,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
-                ) { Text("Fetch details") }
+                ) { Text(stringResource(R.string.share_fetch_details)) }
 
                 Spacer(Modifier.height(8.dp))
 
@@ -173,15 +177,15 @@ fun ShareSongSheet(
                 OutlinedTextField(
                     value = audioLink,
                     onValueChange = { audioLink = it },
-                    label = { Text("Audio link (optional)") },
-                    placeholder = { Text("https://example.com/song.mp3") },
+                    label = { Text(stringResource(R.string.share_audio_link_label)) },
+                    placeholder = { Text(stringResource(R.string.share_audio_link_placeholder)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "Paste a direct audio URL (mp3, m4a) to play inside the app.",
+                    text = stringResource(R.string.share_audio_link_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -193,18 +197,18 @@ fun ShareSongSheet(
                         val artist = fetchedArtist ?: "Unknown"
                         onShare(uriInput.trim(), "spotify", title, artist, fetchedAlbumArt, audioLink.trim().ifBlank { null })
                     },
-                    enabled = uriInput.isNotBlank() && (fetchedTitle != null || uriInput.isNotBlank()),
+                    enabled = uriInput.isNotBlank(),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.secondary,
                     ),
-                ) { Text("Share anyway") }
+                ) { Text(stringResource(R.string.share_anyway)) }
             } else {
                 OutlinedTextField(
                     value = manualTitle,
                     onValueChange = { manualTitle = it },
-                    label = { Text("Song title") },
+                    label = { Text(stringResource(R.string.share_song_title_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
@@ -213,7 +217,7 @@ fun ShareSongSheet(
                 OutlinedTextField(
                     value = manualArtist,
                     onValueChange = { manualArtist = it },
-                    label = { Text("Artist name") },
+                    label = { Text(stringResource(R.string.share_artist_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
@@ -222,15 +226,15 @@ fun ShareSongSheet(
                 OutlinedTextField(
                     value = audioLink,
                     onValueChange = { audioLink = it },
-                    label = { Text("Audio link (optional)") },
-                    placeholder = { Text("https://example.com/song.mp3") },
+                    label = { Text(stringResource(R.string.share_audio_link_label)) },
+                    placeholder = { Text(stringResource(R.string.share_audio_link_placeholder)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "Paste a direct audio URL (mp3, m4a) to play inside the app.",
+                    text = stringResource(R.string.share_audio_link_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -244,7 +248,7 @@ fun ShareSongSheet(
                     enabled = manualTitle.isNotBlank() || manualArtist.isNotBlank(),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
-                ) { Text("Share") }
+                ) { Text(stringResource(R.string.share_button)) }
             }
             Spacer(Modifier.height(8.dp))
         }

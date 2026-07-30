@@ -1,5 +1,6 @@
 package com.lovenote.app.us
 
+import com.lovenote.app.R
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -25,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
@@ -54,7 +56,7 @@ internal fun QuickPingRow(
             )
             Spacer(Modifier.width(6.dp))
             Text(
-                text = "Quick ping",
+                text = stringResource(R.string.ping_quick_ping),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
             )
@@ -94,7 +96,7 @@ internal fun QuickPingRow(
                 modifier = Modifier.clickable(onClick = onPingClick),
             ) {
                 Text(
-                    text = "More",
+                    text = stringResource(R.string.ping_more),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),

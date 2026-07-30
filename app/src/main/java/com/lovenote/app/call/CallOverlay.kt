@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -185,13 +186,13 @@ fun CallOverlay(partnerName: String, partnerPhoto: String) {
                 }
                 Text(
                     text = when (state) {
-                        is CallManager.State.Outgoing -> "Calling..."
+                        is CallManager.State.Outgoing -> stringResource(R.string.call_status_calling)
                         is CallManager.State.Incoming ->
-                            if (isVideo) "Incoming video call" else "Incoming voice call"
+                            if (isVideo) stringResource(R.string.call_status_incoming_video) else stringResource(R.string.call_status_incoming_voice)
                         is CallManager.State.Active ->
                             CallManager.connectedAtMillis
                                 ?.let { durationLabel(now - it) }
-                                ?: "Connected"
+                                ?: stringResource(R.string.call_status_connected)
                         else -> ""
                     },
                     color = Color(0xFFB0B0B0),
@@ -205,7 +206,7 @@ fun CallOverlay(partnerName: String, partnerPhoto: String) {
                     LaunchedEffect(Unit) { Notifier.vibrate(context) }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "Tap to answer",
+                            text = stringResource(R.string.call_tap_to_answer),
                             color = Color.White.copy(alpha = 0.5f),
                             fontSize = 13.sp,
                         )
@@ -214,12 +215,12 @@ fun CallOverlay(partnerName: String, partnerPhoto: String) {
                             RoundButton(
                                 painter = painterResource(R.drawable.ic_call_end),
                                 background = Color(0xFFD32F2F),
-                                label = "Decline",
+                                label = stringResource(R.string.call_decline),
                             ) { CallManager.decline() }
                             RoundButton(
                                 icon = Icons.Filled.Call,
                                 background = Color(0xFF2E7D32),
-                                label = "Accept",
+                                label = stringResource(R.string.call_accept),
                             ) { CallManager.accept(context) }
                         }
                     }
@@ -241,23 +242,23 @@ fun CallOverlay(partnerName: String, partnerPhoto: String) {
                             ControlButton(
                                 painter = painterResource(if (CallManager.muted) R.drawable.ic_mic_off else R.drawable.ic_mic),
                                 active = !CallManager.muted,
-                                label = if (CallManager.muted) "Unmute" else "Mute",
+                                label = if (CallManager.muted) stringResource(R.string.call_unmute) else stringResource(R.string.call_mute),
                             ) { CallManager.toggleMute() }
                             ControlButton(
                                 painter = painterResource(if (CallManager.speakerOn) R.drawable.ic_volume_up else R.drawable.ic_volume_mute),
                                 active = CallManager.speakerOn,
-                                label = "Speaker",
+                                label = stringResource(R.string.call_speaker),
                             ) { CallManager.toggleSpeaker() }
                             if (isVideo) {
                                 ControlButton(
                                     icon = Icons.Filled.Refresh,
                                     active = true,
-                                    label = "Flip",
+                                    label = stringResource(R.string.call_flip),
                                 ) { CallManager.switchCamera() }
                                 ControlButton(
                                     painter = painterResource(R.drawable.ic_screen_share),
                                     active = CallManager.screenSharing,
-                                    label = "Share",
+                                    label = stringResource(R.string.call_share),
                                 ) {
                                     if (CallManager.screenSharing) {
                                         CallManager.stopScreenShare(context)
@@ -275,7 +276,7 @@ fun CallOverlay(partnerName: String, partnerPhoto: String) {
                             background = Color(0xFFD32F2F),
                             size = 72.dp,
                             iconSize = 32.dp,
-                            label = "End",
+                            label = stringResource(R.string.call_end),
                         ) { CallManager.hangup() }
                     }
                 }

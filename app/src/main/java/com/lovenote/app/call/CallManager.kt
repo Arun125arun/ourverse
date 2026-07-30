@@ -2,6 +2,8 @@ package com.lovenote.app.call
 
 import android.content.Context
 import android.media.AudioManager
+import android.os.Build
+import android.os.Build.VERSION_CODES
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -211,7 +213,12 @@ object CallManager {
 
     fun toggleSpeaker() {
         speakerOn = !speakerOn
-        appContext?.getSystemService(AudioManager::class.java)?.isSpeakerphoneOn = speakerOn
+        val audio = appContext?.getSystemService(AudioManager::class.java) ?: return
+        if (Build.VERSION.SDK_INT >= VERSION_CODES.TIRAMISU) {
+            audio.setParameters("speaker_on=${if (speakerOn) "true" else "false"}")
+        } else {
+            @Suppress("DEPRECATION") audio.isSpeakerphoneOn = speakerOn
+        }
     }
 
     fun switchCamera() {
