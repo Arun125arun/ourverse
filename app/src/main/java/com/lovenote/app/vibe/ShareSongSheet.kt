@@ -257,16 +257,18 @@ fun ShareSongSheet(
 
 private fun fetchTrackMetadata(uri: String): Triple<String, String, String?>? {
     val trackId = extractTrackId(uri) ?: return null
-    val oembedUrl = "https://open.spotify.com/oembed?url=spotify:track:$trackId"
-    val conn = URL(oembedUrl).openConnection() as HttpURLConnection
-    conn.connectTimeout = 5000
-    conn.readTimeout = 5000
-    val json = conn.inputStream.bufferedReader().use { it.readText() }
-    val obj = JSONObject(json)
-    val title = obj.optString("title", null) ?: return null
-    val artist = obj.optString("author_name", "Unknown")
-    val albumArt = obj.optString("thumbnail_url", null)
-    return Triple(title, artist, albumArt)
+    return try {
+        val oembedUrl = "https://open.spotify.com/oembed?url=spotify:track:$trackId"
+        val conn = URL(oembedUrl).openConnection() as HttpURLConnection
+        conn.connectTimeout = 5000
+        conn.readTimeout = 5000
+        val json = conn.inputStream.bufferedReader().use { it.readText() }
+        val obj = JSONObject(json)
+        val title = obj.optString("title", null) ?: return null
+        val artist = obj.optString("author_name", "Unknown")
+        val albumArt = obj.optString("thumbnail_url", null)
+        Triple(title, artist, albumArt)
+    } catch (_: Exception) { null }
 }
 
 internal fun extractTrackId(uri: String): String? {

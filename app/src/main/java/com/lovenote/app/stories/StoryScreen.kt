@@ -357,7 +357,7 @@ fun StoryScreen(
                                 val uri = pendingPhotoUri ?: return@Button
                                 scope.launch {
                                     runCatching {
-                                        val photo = PhotoEncoder.encode(context, uri)
+                                        val photo = PhotoEncoder.encode(context, uri) ?: return@launch
                                         repository.addStory(photo, captionDraft, System.currentTimeMillis() + STORY_EXPIRY_MILLIS)
                                     }
                                 }

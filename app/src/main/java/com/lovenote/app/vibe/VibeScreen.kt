@@ -546,15 +546,13 @@ private fun RitualCard(ritual: Ritual, onClick: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.width(12.dp))
-                    val status = if (ritual.lastCompletedAtMillis != null) {
-                        val lastDay = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-                            .format(Date(ritual.lastCompletedAtMillis))
-                        if (lastDay == today) stringResource(R.string.vibe_done_today) else stringResource(R.string.vibe_due)
-                    } else stringResource(R.string.vibe_due)
+                    val doneToday = ritual.lastCompletedAtMillis?.let {
+                        SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(it)) == today
+                    } ?: false
                     Text(
-                        text = status,
+                        text = if (doneToday) stringResource(R.string.vibe_done_today) else stringResource(R.string.vibe_due),
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (status == "Done today") MaterialTheme.colorScheme.tertiary
+                        color = if (doneToday) MaterialTheme.colorScheme.tertiary
                         else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }

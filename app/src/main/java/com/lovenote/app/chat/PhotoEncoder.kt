@@ -19,19 +19,21 @@ object PhotoEncoder {
     private const val MAX_DIMENSION = 1280
     private const val MAX_BYTES = 700_000
 
-    suspend fun encode(context: Context, uri: Uri): String = withContext(Dispatchers.IO) {
-        // Camera JPEGs store rotation as EXIF metadata, which is lost when
-        // re-encoding — read it first and bake it into the pixels.
-        val orientation = context.contentResolver.openInputStream(uri)?.use { stream ->
-            ExifInterface(stream).getAttributeInt(
-                ExifInterface.TAG_ORIENTATION,
-                ExifInterface.ORIENTATION_NORMAL,
-            )
-        } ?: ExifInterface.ORIENTATION_NORMAL
+    suspend fun encode(context: Context, uri: Uri): String? = withContext(Dispatchers.IO) {
+        val orientation = try {
+            context.contentResolver.openInputStream(uri)?.use { stream ->
+                ExifInterface(stream).getAttributeInt(
+                    ExifInterface.TAG_ORIENTATION,
+                    ExifInterface.ORIENTATION_NORMAL,
+                )
+            } ?: ExifInterface.ORIENTATION_NORMAL
+        } catch (_: Exception) { null } ?: return@withContext null
 
-        val source = context.contentResolver.openInputStream(uri)?.use { stream ->
-            BitmapFactory.decodeStream(stream)
-        } ?: error("Couldn't read that photo")
+        val source = try {
+            context.contentResolver.openInputStream(uri)?.use { stream ->
+                BitmapFactory.decodeStream(stream)
+            }
+        } catch (_: Exception) { null } ?: return@withContext null
 
         val scale = MAX_DIMENSION.toFloat() / maxOf(source.width, source.height)
         val scaled = if (scale < 1f) {
@@ -52,7 +54,7 @@ object PhotoEncoder {
             quality -= 10
             bytes = compress(bitmap, quality)
         }
-        check(bytes.size <= MAX_BYTES) { "That photo is too large to send" }
+        if (bytes.size > MAX_BYTES) return@withContext null
         Base64.encodeToString(bytes, Base64.NO_WRAP)
     }
 
